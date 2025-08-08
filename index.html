@@ -52,6 +52,7 @@
     <nav>
       <a href="#">Acasă</a>
       <a href="#">Categorii</a>
+      <a href="furnizori.html">Furnizori</a>
       <a href="#">Colaborează</a>
       <a href="#">Contact</a>
     </nav>
@@ -79,18 +80,26 @@
     </div>
 
     <div class="selector-zona">
-      <h3>Selectează zona și serviciul:</h3>
-      <label for="judet">Județ:</label>
-      <select id="judet"><option>Alege județul</option></select>
+  <h3>Selectează zona și serviciul:</h3>
 
-      <label for="oras">Oraș:</label>
-      <select id="oras"><option>Alege orașul</option></select>
+  <label for="judet">Județ:</label>
+  <select id="judet" aria-label="Județ">
+    <option value="" selected>Alege județul</option>
+  </select>
 
-      <label for="serviciu">Serviciu:</label>
-      <select id="serviciu"><option>Alege serviciul</option></select>
+  <label for="oras">Oraș:</label>
+  <select id="oras" aria-label="Oraș">
+    <option value="" selected>Alege orașul</option>
+  </select>
 
-      <button onclick="cauta()">Caută</button>
-    </div>
+  <label for="serviciu">Serviciu:</label>
+  <select id="serviciu" aria-label="Serviciu">
+    <option value="" selected>Alege serviciul</option>
+  </select>
+
+  <button type="button" onclick="gotoFurnizori()">Caută</button>
+</div>
+
   </section>
 
   <!-- SERVICII POPULARE -->
@@ -195,7 +204,20 @@
       }
     }
   </script>
+ <script>
+  function gotoFurnizori() {
+    const judet = document.getElementById('judet')?.value || '';
+    const oras = document.getElementById('oras')?.value || '';
+    const serviciu = document.getElementById('serviciu')?.value || '';
 
+    const params = new URLSearchParams();
+    if (judet) params.set('judet', judet);
+    if (oras) params.set('oras', oras);
+    if (serviciu) params.set('service', serviciu);
+
+    window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
+  }
+ </script>
   <!-- Scriptul tău principal -->
   <script src="script.js"></script>
 </body>
