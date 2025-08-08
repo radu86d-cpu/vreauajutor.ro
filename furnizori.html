@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Furnizori disponibili</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#fafafa; color:#222; }
+    .wrap { max-width: 900px; margin: 2rem auto; padding: 1rem; }
+    h1 { margin: 0 0 1rem; font-size: 1.8rem; }
+    .card {
+      border:1px solid #eee; background:#fff; border-radius:12px;
+      padding:12px; margin:10px 0; box-shadow: 0 1px 2px rgba(0,0,0,.03);
+    }
+    .muted { color:#555; margin:.25rem 0 .5rem; }
+    .row { margin:.25rem 0; }
+    .label { color:#666; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Furnizori disponibili</h1>
+    <div id="providers-list">Se încarcă...</div>
+  </main>
+
+  <script>
+    async function loadProviders(filters = {}) {
+      // eliminate valorile goale din filtre
+      const params = new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(filters).filter(([_, v]) => v != null && String(v).trim() !== '')
+        )
+      );
+
+      // funcția Netlify (providers.js) – nu modifica calea
+      const url = '/.netlify/functions/providers' + (params.toString() ? '?' + params.toString() : '');
+
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('Răspuns invalid');
+        const items = await res.json();
+
+        const el = document.getElementById('providers-list');
+        if (!items || !items.length) {
+          el.innerHTML = '<p>Nu s-au găsit furnizori.</p>';
+          return;
+        }
+
+        el.innerHTML = items.map(p => `
+          <article class="card">
+            <h3 style="margin:0 0 6px">${p.company_name}</h3>
+            <p class="muted">${p.description ?? ''}</p>
+            <p class="row"><span class="label">Serviciu:</span> <b>${p.service_name}</b></p>
+            <p class="row"><span class="label">Localitate:</span> <b>${p.oras}</b>, <b>${p.judet}</b></p>
+            <p class="row"><span class="label">Telefon:</span> <b>${p.phone ?? '-'}</b> &nbsp; <span class="label">Email:</span> <b>${p.email ?? '-'}</b></p>
+          </article>
+        `).join('');
+      } catch (e) {
+        document.getElementById('providers-list').textContent = 'Eroare la încărcare: ' + e.message;
+      }
+    }
+
+    // Pornește încărcarea la deschiderea paginii
+    document.addEventListener('DOMContentLoaded', () => loadProviders());
+
+    // EXEMPLE de filtrare (poți testa astfel):
+    // document.addEventListener('DOMContentLoaded', () =>
+    //   loadProviders({ judet: 'București', oras: 'București', service: 'Curățenie' })
+    // );
+  </script>
+</body>
+</html>
