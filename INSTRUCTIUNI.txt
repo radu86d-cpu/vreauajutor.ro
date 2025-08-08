@@ -1,0 +1,33 @@
+INSTRUCTIUNI DE COPIERE (MINI PATCH - FARA IMAGINI)
+
+Ce contine acest pachet:
+- chatbot.html
+- chatbot.css
+- server/ (server.js, package.json, api_key.env, README.txt)
+
+Unde sa le pui:
+1) Copiaza **chatbot.html** si **chatbot.css** in RADACINA site-ului tau,
+   exact langa **index.html**, **style.css**, **script.js** (nu suprascriu nimic existent).
+
+2) Copiaza folderul **server/** oriunde doresti in calculator (de ex. in radacina proiectului):
+   vreauajutor_integrat/server/
+
+Cum pornesti:
+A) Backend (chatbot):
+   - Deschide Command Prompt in folderul `server`
+   - Ruleaza:  npm install
+   - Editeaza `server/api_key.env` si pune cheia ta:  OPENAI_API_KEY=sk-...
+   - Ruleaza:  npm start
+   - Serverul va porni la: http://localhost:3000  (endpoint: POST /chat)
+
+B) Frontend (site):
+   - In folderul site-ului (unde ai index.html / chatbot.html) ruleaza:  npx http-server -p 8081
+   - Deschide in browser:  http://localhost:8081/chatbot.html
+   - Optional, daca backend-ul ruleaza in alta parte:  http://localhost:8081/chatbot.html?api=http://ALT_HOST:ALT_PORT/chat
+
+Observatii:
+- Nu este nevoie sa modifici index.html sau stilurile existente.
+- Imaginile NU sunt incluse; foloseste-le pe cele pe care le ai deja.
+- Daca vrei un link in meniu catre chatbot, adauga in nav:
+    <a href="chatbot.html">Chat</a>
+  (optional, doar daca iti doresti; nu afecteaza layout-ul actual)

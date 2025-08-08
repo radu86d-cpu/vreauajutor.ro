@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AjutorBot - Chat AI</title>
+  <link rel="stylesheet" href="chatbot.css" />
+
+  <script>
+    // Optional: permite setarea endpoint-ului prin: ?api=http://localhost:3000/chat
+    (function () {
+      const api = new URL(location.href).searchParams.get('api');
+      if (api) window.CHATBOT_API_URL = api;
+    })();
+  </script>
+</head>
+<body>
+  <div class="ajb-container">
+    <div class="ajb-header"><h1 class="ajb-title">AjutorBot 🤖</h1></div>
+
+    <div class="chat-container">
+      <div id="chat-box" class="chat-box"></div>
+
+      <div class="input-area">
+        <input type="text" id="user-input" placeholder="Scrie mesajul tău..." />
+        <button onclick="sendMessage()">Trimite</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ordinea de prioritate: window.CHATBOT_API_URL (din <head>) → ?api=… → implicit local
+    const API_URL =
+      window.CHATBOT_API_URL ||
+      new URLSearchParams(location.search).get('api') ||
+      'http://localhost:3000/chat';
+
+    async function sendMessage() {
+      const inputField = document.getElementById('user-input');
+      const message = (inputField.value || '').trim();
+      if (!message) return;
+
+      appendMessage('Tu', message);
+      inputField.value = '';
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+
+        if (!response.ok) {
+          throw new Error('Request failed: ' + response.status + ' ' + response.statusText);
+        }
+
+        const data = await response.json();
+        appendMessage('AjutorBot', data.reply ?? 'Răspuns gol de la server.');
+      } catch (err) {
+        console.error(err);
+        appendMessage('AjutorBot', 'Nu pot contacta serverul. Verifică dacă rulează pe http://localhost:3000 și dacă ai pus OPENAI_API_KEY.');
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const chatBox = document.getElementById('chat-box');
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message');
+      messageDiv.innerHTML = '<strong>' + sender + ':</strong> ' + text;
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>

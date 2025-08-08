@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VreauAjutor.ro</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <script>AOS.init();</script>
+</head>
+
+<body>
+  <!-- MODAL autentificare/înregistrare (mutat corect în <body>) -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="inchideModal()">×</span>
+
+      <div class="tab-buttons">
+        <button onclick="schimbaTab('login')" id="tab-login" class="active">Autentificare</button>
+        <button onclick="schimbaTab('register')" id="tab-register">Înregistrare</button>
+      </div>
+
+      <div class="tab-content" id="loginForm">
+        <input type="text" id="login_email" placeholder="Email">
+        <input type="password" id="login_password" placeholder="Parolă">
+        <button onclick="autentificare()">Autentificare</button>
+      </div>
+
+      <div class="tab-content" id="registerForm" style="display:none;">
+        <input type="text" id="register_name" placeholder="Nume complet">
+        <input type="email" id="register_email" placeholder="Email">
+        <input type="password" id="register_password" placeholder="Parolă">
+        <input type="text" id="register_location" placeholder="Localitate">
+        <select id="register_type">
+          <option value="">Selectează tipul</option>
+          <option value="client">Client</option>
+          <option value="firma">Firmă</option>
+        </select>
+        <button onclick="inregistrare()">Înregistrare</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <img src="imagini-chatgpt/logo.png" alt="Vreau Ajutor">
+      <h1>VreauAjutor.ro</h1>
+    </div>
+    <nav>
+      <a href="#">Acasă</a>
+      <a href="#">Categorii</a>
+      <a href="#">Colaborează</a>
+      <a href="#">Contact</a>
+    </nav>
+    <div class="auth-buttons">
+      <button onclick="openLogin()">Autentificare</button>
+      <button onclick="openRegister()">Înregistrare</button>
+    </div>
+  </header>
+
+  <!-- SLIDER + SELECTOR -->
+  <section class="sectiune-slider-selector">
+    <div class="slider-modern">
+      <div class="slider-container">
+        <div class="slides" id="slides">
+          <img src="imagini-chatgpt/curatenie.png" alt="Curățenie">
+          <img src="imagini-chatgpt/instal.png" alt="Instalator">
+          <img src="imagini-chatgpt/mecanic.png" alt="Mecanic">
+          <img src="imagini-chatgpt/transport.png" alt="Transport">
+          <img src="imagini-chatgpt/bone.png" alt="Bone">
+          <img src="imagini-chatgpt/electricieni.png" alt="Electricieni">
+        </div>
+        <button class="prev" onclick="moveSlide(-1)">‹</button>
+        <button class="next" onclick="moveSlide(1)">›</button>
+      </div>
+    </div>
+
+    <div class="selector-zona">
+      <h3>Selectează zona și serviciul:</h3>
+      <label for="judet">Județ:</label>
+      <select id="judet"><option>Alege județul</option></select>
+
+      <label for="oras">Oraș:</label>
+      <select id="oras"><option>Alege orașul</option></select>
+
+      <label for="serviciu">Serviciu:</label>
+      <select id="serviciu"><option>Alege serviciul</option></select>
+
+      <button onclick="cauta()">Caută</button>
+    </div>
+  </section>
+
+  <!-- SERVICII POPULARE -->
+  <section class="servicii-populare">
+    <h2>Servicii Populare</h2>
+    <div class="servicii-container">
+      <div class="serviciu-box">
+        <img src="curatenie.png" alt="Curățenie">
+        <p>Curățenie locuințe, birouri, spații comerciale</p>
+      </div>
+      <div class="serviciu-box">
+        <img src="instal.png" alt="Instalator">
+        <p>Reparații instalații sanitare, țevi, robineți</p>
+      </div>
+      <div class="serviciu-box">
+        <img src="electricieni.png" alt="Electrician">
+        <p>Panouri, prize, iluminat, reparații electrice</p>
+      </div>
+      <div class="serviciu-box">
+        <img src="bone.png" alt="Bone">
+        <p>Îngrijire copii, dus/adus, supraveghere</p>
+      </div>
+      <div class="serviciu-box">
+        <img src="electrocasnice.png" alt="Electrocasnice">
+        <p>Reparații electrocasnice, frigidere, mașini de spălat</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUM FUNCȚIONEAZĂ -->
+  <section class="cum-functioneaza">
+    <h2>Cum funcționează</h2>
+    <ol>
+      <li>Selectezi județul, orașul și serviciul</li>
+      <li>Primești lista firmelor disponibile</li>
+      <li>Plasezi comanda sau iei legătura direct</li>
+    </ol>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2025 VreauAjutor.ro – Toate drepturile rezervate.</p>
+  </footer>
+
+  <!-- AjutorBot – widget plutitor -->
+  <div id="ajb-widget" class="minimized">
+    <div class="ajb-header" onclick="toggleAjb()">
+      <span>AjutorBot 🤖</span>
+      <span style="margin-left:auto;opacity:.6;font-size:12px;">Click pentru a deschide</span>
+    </div>
+    <div class="ajb-body">
+      <div id="ajb-messages"></div>
+      <div class="ajb-input">
+        <input id="ajb-input" type="text" placeholder="Scrie mesajul tău..." onkeydown="if(event.key==='Enter') ajbSend()" />
+        <button onclick="ajbSend()">Trimite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scriptul widgetului (endpoints + logica) -->
+  <script>
+    // Prioritate: ?api=..., altfel default local
+    const AJB_API =
+  new URLSearchParams(location.search).get('api') ||
+  '/chat'; // ← acum lovește funcția Netlify prin redirectul din netlify.toml
+
+    function toggleAjb(){
+      const w = document.getElementById('ajb-widget');
+      w.classList.toggle('minimized');
+      if (!w.classList.contains('minimized')) {
+        setTimeout(() => document.getElementById('ajb-input').focus(), 0);
+      }
+    }
+
+    function ajbAppend(sender, text){
+      const box = document.getElementById('ajb-messages');
+      const d = document.createElement('div');
+      d.style.margin = '6px 0';
+      d.innerHTML = '<strong>' + sender + ':</strong> ' + (text || '');
+      box.appendChild(d);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function ajbSend(){
+      const inp = document.getElementById('ajb-input');
+      const txt = (inp.value || '').trim();
+      if(!txt) return;
+      ajbAppend('Tu', txt);
+      inp.value = '';
+      try{
+        const r = await fetch(AJB_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: txt })
+        });
+        if (!r.ok) throw new Error('Request failed: ' + r.status + ' ' + r.statusText);
+        const data = await r.json();
+        ajbAppend('AjutorBot', data.reply ?? 'Răspuns gol de la server.');
+      }catch(e){
+        console.error(e);
+        ajbAppend('AjutorBot', 'Nu pot contacta serverul. Verifică dacă rulează pe http://localhost:3000 și dacă ai pus OPENAI_API_KEY.');
+      }
+    }
+  </script>
+
+  <!-- Scriptul tău principal -->
+  <script src="script.js"></script>
+</body>
+</html>

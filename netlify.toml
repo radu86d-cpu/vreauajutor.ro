@@ -1,0 +1,15 @@
+[build]
+  command = ""
+  publish = "."
+
+[functions]
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Map /chat -> funcția serverless
+[[redirects]]
+  from = "/chat"
+  to = "/.netlify/functions/chat"
+  status = 200

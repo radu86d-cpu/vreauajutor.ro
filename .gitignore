@@ -1,0 +1,18 @@
+# Nu urca serverul local sau dependențe
+server/
+node_modules/
+
+# Secrete / fișiere env
+*.env
+.env
+api_key.env
+
+# Fișiere de sistem / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Artefacte de build
+dist/
+build/
