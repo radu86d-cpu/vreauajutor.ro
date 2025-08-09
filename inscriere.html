@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Înscriere furnizor</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9}
+    .wrap{max-width:720px;margin:2rem auto;background:#fff;padding:16px;border-radius:12px;border:1px solid #e6e6e6}
+    label{display:block;margin:.5rem 0 .25rem}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
+    button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#0f62fe;color:#fff;cursor:pointer}
+    .msg{margin-top:12px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Înscriere furnizor</h1>
+
+    <form id="f">
+      <label>Companie *</label>
+      <input id="company_name" required/>
+
+      <label>Serviciu *</label>
+      <select id="service_name" required>
+        <option value="">Alege serviciul</option>
+      </select>
+
+      <label>Județ *</label>
+      <input id="judet" required placeholder="ex: București, Cluj, Bihor"/>
+
+      <label>Oraș *</label>
+      <input id="oras" required placeholder="ex: București, Oradea, Turda"/>
+
+      <label>Telefon</label>
+      <input id="phone" placeholder="07..."/>
+
+      <label>Email</label>
+      <input id="email" type="email" placeholder="contact@..."/>
+
+      <label>Descriere</label>
+      <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
+
+      <button type="submit">Trimite</button>
+      <div class="msg" id="msg"></div>
+    </form>
+  </main>
+
+  <script>
+    // Populăm serviciile din funcția ta /lists (o ai deja)
+    (async function loadServices(){
+      try{
+        const r = await fetch('/.netlify/functions/lists');
+        const { services=[] } = await r.json();
+        const sel = document.getElementById('service_name');
+        services.forEach(s=>{
+          const o = document.createElement('option');
+          o.value = s; o.textContent = s;
+          sel.appendChild(o);
+        });
+      }catch(e){/* e ok, poți completa manual */}
+    })();
+
+    document.getElementById('f').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Trimit...';
+
+      const payload = {
+        company_name: document.getElementById('company_name').value,
+        service_name: document.getElementById('service_name').value,
+        judet:        document.getElementById('judet').value,
+        oras:         document.getElementById('oras').value,
+        phone:        document.getElementById('phone').value,
+        email:        document.getElementById('email').value,
+        description:  document.getElementById('description').value
+      };
+
+      try{
+        const r = await fetch('/.netlify/functions/register_provider', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if(!r.ok) throw new Error(data.error || 'Eroare necunoscută');
+
+        msg.style.color = 'green';
+        msg.textContent = 'Înscriere reușită! Mulțumim.';
+        ev.target.reset();
+      }catch(e){
+        msg.style.color = 'crimson';
+        msg.textContent = 'Eroare: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>
