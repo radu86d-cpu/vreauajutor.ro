@@ -24,44 +24,42 @@
   </main>
 
   <script>
-    async function loadProviders(filters = {}) {
-      // eliminate valorile goale din filtre
-      const params = new URLSearchParams(
-        Object.fromEntries(
-          Object.entries(filters).filter(([_, v]) => v != null && String(v).trim() !== '')
-        )
-      );
+async function loadProviders(filters = {}) {
+  const params = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v != null && String(v).trim() !== '')
+    )
+  );
 
-      // funcția Netlify (providers.js) – nu modifica calea
-      const url = '/.netlify/functions/providers' + (params.toString() ? '?' + params.toString() : '');
+  const url = '/.netlify/functions/providers' + (params.toString() ? '?' + params.toString() : '');
 
-      try {
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error('Răspuns invalid');
-        const items = await res.json();
+  try {
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('Răspuns invalid');
+    const items = await res.json();
 
-        const el = document.getElementById('providers-list');
-        if (!items || !items.length) {
-          el.innerHTML = '<p>Nu s-au găsit furnizori.</p>';
-          return;
-        }
-
-        el.innerHTML = items.map(p => `
-          <article class="card">
-            <h3 style="margin:0 0 6px">${p.company_name}</h3>
-            <p class="muted">${p.description ?? ''}</p>
-            <p class="row"><span class="label">Serviciu:</span> <b>${p.service_name}</b></p>
-            <p class="row"><span class="label">Localitate:</span> <b>${p.oras}</b>, <b>${p.judet}</b></p>
-            <p class="row"><span class="label">Telefon:</span> <b>${p.phone ?? '-'}</b> &nbsp; <span class="label">Email:</span> <b>${p.email ?? '-'}</b></p>
-          </article>
-        `).join('');
-      } catch (e) {
-        document.getElementById('providers-list').textContent = 'Eroare la încărcare: ' + e.message;
-      }
+    const el = document.getElementById('providers-list');
+    if (!items || !items.length) {
+      el.innerHTML = '<p>Nu s-au găsit furnizori.</p>';
+      return;
     }
 
-    // Pornește încărcarea la deschiderea paginii
-    <script>
+    el.innerHTML = items.map(p => `
+      <article class="card">
+        <h3 style="margin:0 0 6px">${p.company_name}</h3>
+        <p class="muted">${p.description ?? ''}</p>
+        <p class="row"><span class="label">Serviciu:</span> <b>${p.service_name}</b></p>
+        <p class="row"><span class="label">Localitate:</span> <b>${p.oras}</b>, <b>${p.judet}</b></p>
+        <p class="row"><span class="label">Telefon:</span> <b>${p.phone ?? '-'}</b>
+           &nbsp; <span class="label">Email:</span> <b>${p.email ?? '-'}</b></p>
+      </article>
+    `).join('');
+  } catch (e) {
+    document.getElementById('providers-list').textContent = 'Eroare la încărcare: ' + e.message;
+  }
+}
+
+// pornește încărcarea cu filtrele din URL
 document.addEventListener('DOMContentLoaded', () => {
   const p = new URLSearchParams(location.search);
   const filters = {
@@ -71,13 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   loadProviders(filters);
 });
+
+/* EXEMPLE de test:
+document.addEventListener('DOMContentLoaded', () => {
+  loadProviders({ judet: 'București', oras: 'București', service: 'Curățenie' });
+});
+*/
 </script>
-
-
-    // EXEMPLE de filtrare (poți testa astfel):
-    // document.addEventListener('DOMContentLoaded', () =>
-    //   loadProviders({ judet: 'București', oras: 'București', service: 'Curățenie' })
-    // );
-  </script>
 </body>
 </html>
