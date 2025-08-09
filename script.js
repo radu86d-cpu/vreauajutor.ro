@@ -1,4 +1,3 @@
-
 function afiseazaFormular(tip) {
   const loginForm = document.getElementById("loginForm");
   const registerForm = document.getElementById("registerForm");
@@ -15,11 +14,8 @@ function afiseazaFormular(tip) {
   }
 }
 
-// slider + populare formular + servicii
+// doar slider-ul (popularea listelor se face acum din index.html prin /.netlify/functions/lists)
 window.onload = function () {
-  populateJudete();
-  populateServicii();
-
   let slideIndex = 0;
   const slides = document.getElementById("slides");
   const totalSlides = slides?.children.length || 0;
@@ -30,68 +26,19 @@ window.onload = function () {
     }
   }
 
-  function moveSlide(direction) {
+  window.moveSlide = function (direction) {
     slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
     showSlide(slideIndex);
-  }
-
-  window.moveSlide = moveSlide;
+  };
 
   if (totalSlides > 0) {
     setInterval(() => {
-      moveSlide(1);
+      window.moveSlide(1);
     }, 5000);
   }
 };
 
-async function populateJudete() {
-  try {
-    const response = await fetch("judete_orase_servicii.json");
-    const data = await response.json();
-
-    const judetSelect = document.getElementById("judet");
-    const orasSelect = document.getElementById("oras");
-
-    if (!judetSelect || !orasSelect) return;
-
-    judetSelect.innerHTML = "<option>Alege județul</option>";
-
-    for (let judet in data) {
-      const opt = document.createElement("option");
-      opt.value = judet;
-      opt.innerText = judet;
-      judetSelect.appendChild(opt);
-    }
-
-    judetSelect.onchange = function () {
-      orasSelect.innerHTML = "<option>Alege orașul</option>";
-      const orase = Object.keys(data[this.value] || {});
-      orase.forEach(oras => {
-        const opt = document.createElement("option");
-        opt.value = oras;
-        opt.innerText = oras;
-        orasSelect.appendChild(opt);
-      });
-    };
-  } catch (err) {
-    console.error("Eroare la încărcarea județelor:", err);
-  }
-}
-
-function populateServicii() {
-  const servicii = ["Curățenie", "Instalator", "Electrician", "Bone", "Transport"];
-  const serviciuSelect = document.getElementById("serviciu");
-
-  if (!serviciuSelect) return;
-
-  serviciuSelect.innerHTML = "<option>Alege serviciul</option>";
-  servicii.forEach(serv => {
-    const opt = document.createElement("option");
-    opt.value = serv;
-    opt.innerText = serv;
-    serviciuSelect.appendChild(opt);
-  });
-}
+// ----- autentificare / înregistrare (rămân la fel) -----
 function openLogin() {
   document.getElementById("authModal").style.display = "block";
   document.getElementById("loginForm").style.display = "block";
