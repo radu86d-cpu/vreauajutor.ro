@@ -218,6 +218,67 @@
     window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
   }
  </script>
+  <script>
+// Populează servicii + județe la load
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const r = await fetch('/.netlify/functions/lists');
+    if (!r.ok) throw new Error('Nu pot lua listele');
+    const { services, judete } = await r.json();
+
+    const selServ = document.getElementById('serviciu');
+    const selJudet = document.getElementById('judet');
+
+    // servicii
+    services.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      selServ.appendChild(opt);
+    });
+
+    // județe
+    judete.forEach(j => {
+      const opt = document.createElement('option');
+      opt.value = j;
+      opt.textContent = j;
+      selJudet.appendChild(opt);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+// Când se schimbă județul, refacem orașele
+document.getElementById('judet').addEventListener('change', async (ev) => {
+  const judet = ev.target.value;
+  const selOras = document.getElementById('oras');
+
+  // reset orase
+  selOras.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = 'Alege orașul';
+  selOras.appendChild(first);
+
+  if (!judet) return;
+
+  try {
+    const r = await fetch('/.netlify/functions/lists?judet=' + encodeURIComponent(judet));
+    if (!r.ok) throw new Error('Nu pot lua orașele');
+    const { orase } = await r.json();
+
+    orase.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = o;
+      selOras.appendChild(opt);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+});
+</script>
   <!-- Scriptul tău principal -->
   <script src="script.js"></script>
 </body>
