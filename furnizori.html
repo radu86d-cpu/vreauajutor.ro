@@ -61,7 +61,18 @@
     }
 
     // Pornește încărcarea la deschiderea paginii
-    document.addEventListener('DOMContentLoaded', () => loadProviders());
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(location.search);
+  const filters = {
+    judet:   p.get('judet')   || '',
+    oras:    p.get('oras')    || '',
+    service: p.get('service') || ''
+  };
+  loadProviders(filters);
+});
+</script>
+
 
     // EXEMPLE de filtrare (poți testa astfel):
     // document.addEventListener('DOMContentLoaded', () =>
