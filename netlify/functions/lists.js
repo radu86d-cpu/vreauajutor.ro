@@ -6,64 +6,78 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-const ok = (body) => ({
-  statusCode: 200,
-  headers: {
+exports.handler = async (event) => {
+  const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*'
-  },
-  body: JSON.stringify(body)
-});
+  };
 
-exports.handler = async (event) => {
   try {
-    const params = event.queryStringParameters || {};
-    const mode  = (params.mode || '').trim();   // <-- nou
-    const judet = (params.judet || '').trim();
+    const p = event.queryStringParameters || {};
+    const mode  = (p.mode || '').trim();        // "" | "signup"
+    const judet = (p.judet || '').trim();
 
-    // ==========  A) INSCRIERE: citim din `locations`  ==========
-    if (mode === 'locations') {
-      // orase pentru un judet
-      if (judet) {
+    // 1) Branch "orașe pentru un județ"
+    if (judet) {
+      if (mode === 'signup') {
+        // orașe din locations (toate, pentru formularul de înscriere)
         const { data, error } = await supabase
           .from('locations')
-          .select('oras, judet')
-          .ilike('judet', judet)             // tolerant la majuscule/diacritice
-          .order('oras', { ascending: true });
+          .select('oras')
+          .eq('judet', judet)
+          .limit(5000);
         if (error) throw error;
-
-        const orase = [...new Set((data || []).map(r => r.oras))];
-        return ok({ orase });
+        const orase = Array.from(new Set((data || []).map(r => r.oras)))
+          .sort((a,b)=>a.localeCompare(b,'ro'));
+        return { statusCode: 200, headers, body: JSON.stringify({ orase }) };
+      } else {
+        // orașe derivate din furnizori activi (pentru pagina principală)
+        const { data, error } = await supabase
+          .from('providers')
+          .select('oras, is_active')
+          .eq('judet', judet)
+          .eq('is_active', true)
+          .limit(5000);
+        if (error) throw error;
+        const orase = Array.from(new Set((data || []).map(r => r.oras)))
+          .sort((a,b)=>a.localeCompare(b,'ro'));
+        return { statusCode: 200, headers, body: JSON.stringify({ orase }) };
       }
-
-      // lista completa de judete
-      const { data, error } = await supabase
-        .from('locations')
-        .select('judet')
-        .order('judet', { ascending: true });
-      if (error) throw error;
-
-      const judete = [...new Set((data || []).map(r => r.judet))];
-      return ok({ judete });
     }
 
-    // ==========  B) PAGINA PRINCIPALĂ: servicii + județe cu furnizori  ==========
+    // 2) Branch "liste generale"
+    if (mode === 'signup') {
+      // pentru formularul de înscriere:
+      // - servicii (din services)
+      // - județe (toate din locations)
+      const [svcRes, locRes] = await Promise.all([
+        supabase.from('services').select('name').order('name', { ascending: true }),
+        supabase.from('locations').select('judet').limit(50000)
+      ]);
+      if (svcRes.error) throw svcRes.error;
+      if (locRes.error) throw locRes.error;
+
+      const services = (svcRes.data || []).map(s => s.name);
+      const judete   = Array.from(new Set((locRes.data || []).map(r => r.judet)))
+        .sort((a,b)=>a.localeCompare(b,'ro'));
+
+      return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
+    }
+
+    // 3) Implicit (pagina principală): servicii + județe DOAR cu furnizori activi
     const [svcRes, provRes] = await Promise.all([
       supabase.from('services').select('name').order('name', { ascending: true }),
-      supabase.from('v_public_providers').select('judet') // doar active, via view
+      supabase.from('providers').select('judet, is_active').eq('is_active', true).limit(5000)
     ]);
     if (svcRes.error) throw svcRes.error;
     if (provRes.error) throw provRes.error;
 
     const services = (svcRes.data || []).map(s => s.name);
-    const judete   = [...new Set((provRes.data || []).map(r => r.judet))].sort((a,b)=>a.localeCompare(b,'ro'));
-    return ok({ services, judete });
+    const judete   = Array.from(new Set((provRes.data || []).map(r => r.judet)))
+      .sort((a,b)=>a.localeCompare(b,'ro'));
 
+    return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
   } catch (e) {
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: e.message })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }
 };
