@@ -286,3 +286,7 @@ nav a:hover {
 @media (max-width: 480px){
   #ajb-widget { width: calc(100vw - 24px); right: 12px; left: 12px; }
 }
+/* în style.css */
+.cta-suppliers {
+  font-weight: 600;
+}
