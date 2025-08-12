@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Oferă servicii – VreauAjutor.ro</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap{max-width:800px;margin:40px auto;background:#fff;border:1px solid #eee;border-radius:16px;padding:20px}
+  .muted{color:#555}
+  .grid{display:grid;gap:10px}
+  .agree{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .btn{padding:10px 16px;border:0;border-radius:10px;background:#0f62fe;color:#fff;cursor:pointer}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Alătură-te ca furnizor</h1>
+    <p class="muted">Listează-ți afacerea și primește cereri direct de la clienți din zona ta.</p>
+
+    <div class="grid">
+      <ul>
+        <li>Apari în căutări pe județ/oraș + serviciu</li>
+        <li>Poți adăuga produse/servicii cu preț</li>
+        <li>Controlezi datele de contact și descrierea</li>
+      </ul>
+
+      <label class="agree">
+        <input id="agree" type="checkbox">
+        <span>Sunt de acord cu <a href="termeni.html" target="_blank">Termenii și Condițiile</a>.</span>
+      </label>
+
+      <button id="start" class="btn" disabled>Începe înscrierea</button>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('agree').addEventListener('change', (e)=>{
+      document.getElementById('start').disabled = !e.target.checked;
+    });
+    document.getElementById('start').addEventListener('click', ()=>{
+      // mergem la formularul tău existent
+      location.href = 'inscriere.html';
+    });
+  </script>
+</body>
+</html>
