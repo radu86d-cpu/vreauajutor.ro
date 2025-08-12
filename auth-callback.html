@@ -1,30 +1,31 @@
 <!doctype html>
 <html lang="ro">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Autentificare…</title>
-<style>
-  body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:grid;place-items:center;height:100vh}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Se finalizează autentificarea…</title>
 </head>
 <body>
-  <div>Se verifică autentificarea…</div>
+  <p>Te autentifici, te rugăm așteaptă…</p>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = 'https://zkmpcnoxibcbdxgvhbig.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbXBjbm94aWJjYmR4Z3ZoYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2ODQ4NDQsImV4cCI6MjA3MDI2MDg0NH0.m5X_7nPZa71VrzYXLR389DjchbDziLEjw5gm4enbFD8';
-    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     (async () => {
-      const { data: { session } } = await supa.auth.getSession();
-      if (session?.user) {
-        // opțional: păstrezi puține date local pentru UI
-        localStorage.setItem('user', JSON.stringify({ id: session.user.id, email: session.user.email }));
-        location.href = '/'; // înapoi pe homepage
-      } else {
-        document.body.innerHTML = '<p>Eroare la autentificare. Încercați din nou.</p>';
+      try {
+        // Luăm cheile din funcția Netlify (ENV), NU din cod
+        const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
+
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // opțional: poți verifica sesiunea / erorile
+        await supa.auth.getSession();
+
+        // redirecționează înapoi în site
+        window.location.href = '/?signedIn=1';
+      } catch (e) {
+        console.error('Auth callback error:', e);
+        document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă.</p>';
       }
     })();
   </script>
