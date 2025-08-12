@@ -33,12 +33,12 @@
         <input type="email" id="register_email" placeholder="Email">
         <input type="password" id="register_password" placeholder="Parolă">
         <input type="text" id="register_location" placeholder="Localitate">
-        <select id="register_type">
-          <option value="">Selectează tipul</option>
-          <option value="client">Client</option>
-          <option value="firma">Firmă</option>
         </select>
         <button onclick="inregistrare()">Înregistrare</button>
+        <button type="button" id="googleSignIn" style="width:100%;margin-top:8px">
+  Continuă cu Google
+</button>
+
       </div>
     </div>
   </div>
@@ -279,6 +279,25 @@ document.getElementById('judet').addEventListener('change', async (ev) => {
   }
 });
 </script>
+  <!-- Supabase JS (v2) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // COMPLETEAZĂ cu valorile tale (din Supabase > Project Settings > API)
+  const SUPABASE_URL = 'https://zkmpcnoxibcbdxgvhbig.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbXBjbm94aWJjYmR4Z3ZoYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2ODQ4NDQsImV4cCI6MjA3MDI2MDg0NH0.m5X_7nPZa71VrzYXLR389DjchbDziLEjw5gm4enbFD8';
+
+  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  document.getElementById('googleSignIn')?.addEventListener('click', async () => {
+    await supa.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/auth-callback.html'
+      }
+    });
+  });
+</script>
+
   <!-- Scriptul tău principal -->
   <script src="script.js"></script>
 </body>
