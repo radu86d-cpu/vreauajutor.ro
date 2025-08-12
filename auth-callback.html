@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Autentificare…</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;display:grid;place-items:center;height:100vh}
+</style>
+</head>
+<body>
+  <div>Se verifică autentificarea…</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://XXXXXXXXXXXX.supabase.co';
+    const SUPABASE_ANON_KEY = 'ey...';
+    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    (async () => {
+      const { data: { session } } = await supa.auth.getSession();
+      if (session?.user) {
+        // opțional: păstrezi puține date local pentru UI
+        localStorage.setItem('user', JSON.stringify({ id: session.user.id, email: session.user.email }));
+        location.href = '/'; // înapoi pe homepage
+      } else {
+        document.body.innerHTML = '<p>Eroare la autentificare. Încercați din nou.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
