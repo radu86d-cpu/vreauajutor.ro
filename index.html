@@ -239,6 +239,31 @@
   }
  </script>
   <script>
+async function heroSearch(){
+  const q = (document.getElementById('heroQuery').value || '').trim();
+  if(!q) return;
+  try{
+    // încercăm să recunoaștem un serviciu sau un județ din text
+    const r = await fetch('/.netlify/functions/lists', { cache:'no-store' });
+    const { services = [], judete = [] } = await r.json();
+    const lower = q.toLowerCase();
+
+    const svc = services.find(s => lower.includes(s.toLowerCase()));
+    const jud = judete.find(j => lower.includes(j.toLowerCase()));
+
+    const params = new URLSearchParams();
+    if (svc) params.set('service', svc);
+    if (jud) params.set('judet', jud);
+    if (!svc && !jud) params.set('service', q); // fallback: tratăm tot inputul ca serviciu
+
+    location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
+  }catch(e){
+    // fallback simplu
+    location.href = 'furnizori.html?service=' + encodeURIComponent(q);
+  }
+}
+</script>
+  <script>
 // Populează servicii + județe la load
 document.addEventListener('DOMContentLoaded', async () => {
   try {
