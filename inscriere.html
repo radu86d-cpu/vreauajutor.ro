@@ -97,19 +97,51 @@
       console.error('Nu pot încărca listele:', e);
     }
   });
+</script>
+<!-- Supabase SDK (dacă nu e deja în pagină) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  // submit formular
+<!-- Submit nou: ia tokenul și îl trimite la funcția Netlify -->
+  
+<script>
+(async () => {
+  const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   document.getElementById('f').addEventListener('submit', async (ev) => {
     ev.preventDefault();
+
+    // --- NOU: ia butonul de submit și blochează-l
+    const form = ev.target;
+    const btn  = form.querySelector('button[type="submit"]');
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.textContent = 'Se trimite...';
+
     const msg = document.getElementById('msg');
     msg.style.color = '';
     msg.textContent = 'Trimit...';
 
+    // user trebuie să fie autentificat
+    const { data: { session } } = await supa.auth.getSession();
+    if (!session?.access_token) {
+      msg.style.color = 'crimson';
+      msg.textContent = 'Trebuie să fii autentificat (butonul „Autentificare”).';
+
+      // --- NOU: deblochează butonul înainte de return
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      btn.textContent = originalLabel;
+      return;
+    }
+
     const payload = {
-      company_name: document.getElementById('company_name').value,
+      company_name: document.getElementById('company_name').value.trim(),
       service_name: document.getElementById('service_name').value,
-      judet:        document.getElementById('reg_judet').value,  // ← corect
-      oras:         document.getElementById('reg_oras').value,   // ← corect
+      judet:        document.getElementById('reg_judet').value,
+      oras:         document.getElementById('reg_oras').value,
       phone:        document.getElementById('phone').value,
       email:        document.getElementById('email').value,
       description:  document.getElementById('description').value
@@ -118,22 +150,32 @@
     try {
       const r = await fetch('/.netlify/functions/register_provider', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + session.access_token
+        },
         body: JSON.stringify(payload)
       });
+
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
 
       msg.style.color = 'green';
       msg.textContent = 'Înscriere reușită! Mulțumim.';
-      ev.target.reset();
-      // după reset, blocăm din nou orașele
+      form.reset();
       document.getElementById('reg_oras').disabled = true;
     } catch (e) {
       msg.style.color = 'crimson';
       msg.textContent = 'Eroare: ' + e.message;
+    } finally {
+      // --- NOU: deblochează butonul indiferent de rezultat
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      btn.textContent = originalLabel;
     }
   });
+})();
 </script>
+
 </body>
 </html>
