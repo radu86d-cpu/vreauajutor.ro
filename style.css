@@ -390,3 +390,9 @@ button.google-btn:focus-visible {
 @media (max-width: 600px){
   .hero-search { flex-direction: column; }
 }
+.hero-search-band{background:#004080;padding:16px 0}
+.hero-search{max-width:640px;margin:0 auto;display:flex;gap:8px}
+.hero-search input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+.hero-search button{padding:10px 16px;border-radius:8px;border:0;background:#fff;color:#004080;font-weight:600}
+.link-suppliers{display:inline-block;margin-left:12px;color:#ffeb3b;text-decoration:underline}
+.link-suppliers:hover{opacity:.9}
