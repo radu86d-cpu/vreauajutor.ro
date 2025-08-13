@@ -75,11 +75,12 @@
   </header>
   <!-- HERO SEARCH (bandă albastră deasupra sliderului) -->
 <section class="hero-search-band" role="search">
-  <div class="hero-search">
-    <input id="heroQuery" type="text" placeholder="Ex: curățenie Cluj-Napoca" aria-label="Caută servicii sau oraș">
-    <button type="button" onclick="heroSearch()">Caută</button>
-  </div>
+  <form class="hero-search" onsubmit="heroSearch(); return false;">
+    <input id="heroQuery" type="search" placeholder="Ex: curățenie Cluj-Napoca" aria-label="Caută servicii sau oraș">
+    <button type="submit">Caută</button>
+  </form>
 </section>
+
 
 
   <!-- SLIDER + SELECTOR -->
@@ -239,30 +240,44 @@
   }
  </script>
   <script>
+['judet','oras','serviciu'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('keydown', e=>{
+    if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
+  });
+});
+</script>
+  <script>
+function normalizeRO(s){
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,''); // scoate diacriticele
+}
+
 async function heroSearch(){
   const q = (document.getElementById('heroQuery').value || '').trim();
   if(!q) return;
+
   try{
-    // încercăm să recunoaștem un serviciu sau un județ din text
     const r = await fetch('/.netlify/functions/lists', { cache:'no-store' });
     const { services = [], judete = [] } = await r.json();
-    const lower = q.toLowerCase();
 
-    const svc = services.find(s => lower.includes(s.toLowerCase()));
-    const jud = judete.find(j => lower.includes(j.toLowerCase()));
+    const nQ = normalizeRO(q);
+    const svc = services.find(s => nQ.includes(normalizeRO(s)));
+    const jud = judete.find(j => nQ.includes(normalizeRO(j)));
 
     const params = new URLSearchParams();
     if (svc) params.set('service', svc);
     if (jud) params.set('judet', jud);
-    if (!svc && !jud) params.set('service', q); // fallback: tratăm tot inputul ca serviciu
+    if (!svc && !jud) params.set('service', q);
 
     location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
   }catch(e){
-    // fallback simplu
     location.href = 'furnizori.html?service=' + encodeURIComponent(q);
   }
 }
 </script>
+
   <script>
 // Populează servicii + județe la load
 document.addEventListener('DOMContentLoaded', async () => {
