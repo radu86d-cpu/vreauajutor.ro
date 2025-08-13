@@ -15,51 +15,75 @@ function afiseazaFormular(tip) {
 }
 
 // doar slider-ul (popularea listelor se face acum din index.html prin /.netlify/functions/lists)
-window.onload = function () {
+document.addEventListener('DOMContentLoaded', () => {
   let slideIndex = 0;
-  const slides = document.getElementById("slides");
+  const slides = document.getElementById('slides');
   const totalSlides = slides?.children.length || 0;
 
-  function showSlide(index) {
-    if (slides) {
-      slides.style.transform = `translateX(-${index * 100}%)`;
-    }
+  function showSlide(index){
+    if (slides) slides.style.transform = `translateX(-${index * 100}%)`;
   }
 
-  window.moveSlide = function (direction) {
+  window.moveSlide = function(direction){
+    if (!totalSlides) return;               // protecție dacă nu sunt imagini
     slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
     showSlide(slideIndex);
   };
 
-  if (totalSlides > 0) {
-    setInterval(() => {
-      window.moveSlide(1);
-    }, 5000);
+  if (totalSlides > 0){
+    showSlide(0);                           // aliniază la start
+    setInterval(() => window.moveSlide(1), 5000);
   }
-};
+});
 
 // ----- autentificare / înregistrare (rămân la fel) -----
-function openLogin() {
-  document.getElementById("authModal").style.display = "block";
-  document.getElementById("loginForm").style.display = "block";
-  document.getElementById("registerForm").style.display = "none";
-  document.getElementById("tab-login").classList.add("active");
-  document.getElementById("tab-register").classList.remove("active");
+function openLogin(){
+  const modal = document.getElementById('authModal');
+  const login  = document.getElementById('loginForm');
+  const reg    = document.getElementById('registerForm');
+
+  if (modal) modal.style.display = 'block';
+  if (login) login.style.display = 'block';
+  if (reg)   reg.style.display   = 'none';
+
+  document.getElementById('tab-login')?.classList.add('active');
+  document.getElementById('tab-register')?.classList.remove('active');
+
+  // focus pe email
+  document.getElementById('login_email')?.focus();
 }
 
-function openRegister() {
-  document.getElementById("authModal").style.display = "block";
-  document.getElementById("loginForm").style.display = "none";
-  document.getElementById("registerForm").style.display = "block";
-  document.getElementById("tab-login").classList.remove("active");
-  document.getElementById("tab-register").classList.add("active");
+function openRegister(){
+  const modal = document.getElementById('authModal');
+  const login  = document.getElementById('loginForm');
+  const reg    = document.getElementById('registerForm');
+
+  if (modal) modal.style.display = 'block';
+  if (login) login.style.display = 'none';
+  if (reg)   reg.style.display   = 'block';
+
+  document.getElementById('tab-login')?.classList.remove('active');
+  document.getElementById('tab-register')?.classList.add('active');
+
+  // focus pe email register
+  document.getElementById('register_email')?.focus();
 }
 
-function inchideModal() {
-  document.getElementById("authModal").style.display = "none";
+function inchideModal(){
+  const m = document.getElementById('authModal');
+  if (m) m.style.display = 'none';
 }
 
-function schimbaTab(tab) {
-  if (tab === "login") openLogin();
-  else if (tab === "register") openRegister();
+function schimbaTab(tab){
+  if (tab === 'login') openLogin();
+  else if (tab === 'register') openRegister();
 }
+
+// extra UX: Esc + click în overlay închide modalul
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') inchideModal();
+});
+document.getElementById('authModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'authModal') inchideModal();
+});
+
