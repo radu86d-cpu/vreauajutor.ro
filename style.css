@@ -306,3 +306,39 @@ nav a:hover {
 .google-btn:active{
   background: #fff;
 }
+/* Google Sign-In: stil alb, modern (suprascrie .tab-content button) */
+#authModal .tab-content button.google-btn,
+button.google-btn {
+  background: #fff !important;
+  color: #1f1f1f !important;
+  border: 1px solid #dadce0 !important;   /* .tab-content button avea border:none */
+  box-shadow: 0 1px 1px rgba(0,0,0,.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  font-weight: 600;
+}
+
+#authModal .tab-content button.google-btn:hover,
+button.google-btn:hover {
+  background: #fff !important;            /* rămâne alb la hover */
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+#authModal .tab-content button.google-btn:active,
+button.google-btn:active {
+  background: #fff !important;
+}
+
+.google-btn .google-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  line-height: 0;
+}
+
+button.google-btn:focus-visible {
+  outline: 2px solid #1a73e8;             /* accesibilitate */
+  outline-offset: 2px;
+}
