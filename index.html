@@ -23,10 +23,13 @@
       </div>
 
       <div class="tab-content" id="loginForm">
-        <input type="text" id="login_email" placeholder="Email">
-        <input type="password" id="login_password" placeholder="Parolă">
-        <button onclick="autentificare()">Autentificare</button>
-      </div>
+  <input type="email" id="login_email" name="email" placeholder="Email"
+         autocomplete="username" required>
+  <input type="password" id="login_password" name="password" placeholder="Parolă"
+         autocomplete="current-password" required>
+  <button onclick="autentificare()">Autentificare</button>
+</div>
+
 
       <div class="tab-content" id="registerForm" style="display:none;">
         <input type="text" id="register_name" placeholder="Nume complet">
@@ -66,9 +69,9 @@
       <a href="ofera-servicii.html" class="cta-suppliers">Oferă servicii</a>
       <a href="#">Contact</a>
     </nav>
-    <div class="auth-buttons">
-  <button onclick="openLogin()">Autentificare</button>
-  <button onclick="openRegister()">Înregistrare</button>
+ <div class="auth-buttons">
+  <button id="btnLogin" onclick="openLogin()">Autentificare</button>
+  <button id="btnRegister" onclick="openRegister()">Înregistrare</button>
   <a href="ofera-servicii.html" class="link-suppliers">Oferă servicii (pentru firme)</a>
 </div>
 
@@ -340,23 +343,75 @@ document.getElementById('judet').addEventListener('change', async (ev) => {
 });
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(async () => {
-  try {
-    const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
-    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- INIT + Google + header greet -->
+<script id="auth-init">
+  window.supa = null;
 
-    document.getElementById('googleSignIn')?.addEventListener('click', async () => {
-      await supa.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + '/auth-callback.html' }
+  (async () => {
+    try {
+      const r = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
+      window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // Google
+      document.getElementById('googleSignIn')?.addEventListener('click', async () => {
+        await window.supa.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin + '/auth-callback.html' }
+        });
       });
-    });
-  } catch (e) {
-    console.error('ENV load failed', e);
+
+      // Afișează "Salut, email" + buton de Ieșire
+      const { data:{ user } } = await window.supa.auth.getUser();
+      if (user) {
+        const box = document.querySelector('.auth-buttons');
+        if (box) {
+          // dacă vrei să ascunzi butoanele, adaugă ID-uri în HTML: id="btnLogin" și id="btnRegister"
+          document.getElementById('btnLogin')?.remove();
+          document.getElementById('btnRegister')?.remove();
+
+          const hi = document.createElement('div');
+          hi.style.fontSize = '13px'; hi.style.opacity = '.9';
+          hi.textContent = `Salut, ${user.email}`;
+
+          const out = document.createElement('button');
+          out.textContent = 'Ieșire';
+          out.style.padding = '6px 10px';
+          out.onclick = async () => { await window.supa.auth.signOut(); location.reload(); };
+
+          box.append(hi, out);
+        }
+      }
+    } catch(e) { console.error('ENV load failed', e); }
+  })();
+</script>
+
+<!-- Email/parolă – folosite de butoanele din modal -->
+<script id="auth-email-pass">
+  async function inregistrare(){
+    const email = document.getElementById('register_email')?.value?.trim();
+    const pass  = document.getElementById('register_password')?.value?.trim();
+    if (!window.supa) return alert('Auth indisponibil');
+    if (!email || !pass) return alert('Completează email + parolă');
+
+    const { error } = await window.supa.auth.signUp({ email, password: pass });
+    if (error) return alert('Eroare: ' + error.message);
+    alert('Cont creat! Verifică email-ul pentru confirmare.');
+    document.getElementById('authModal').style.display = 'none';
   }
-})();
+
+  async function autentificare(){
+    const email = document.getElementById('login_email')?.value?.trim();
+    const pass  = document.getElementById('login_password')?.value?.trim();
+    if (!window.supa) return alert('Auth indisponibil');
+    if (!email || !pass) return alert('Completează email + parolă');
+
+    const { error } = await window.supa.auth.signInWithPassword({ email, password: pass });
+    if (error) return alert('Eroare: ' + error.message);
+    alert('Autentificat!');
+    document.getElementById('authModal').style.display = 'none';
+    location.reload();
+  }
 </script>
 
 
