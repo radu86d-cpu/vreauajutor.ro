@@ -8,26 +8,27 @@
 <body>
   <p>Te autentifici, te rugăm așteaptă…</p>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    (async () => {
-      try {
-        // Luăm cheile din funcția Netlify (ENV), NU din cod
-        const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  (async () => {
+    try {
+      // ia cheile din funcția Netlify (fără a le pune în cod)
+      const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
+      const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // PASUL IMPORTANT: schimbă "code"-ul din URL pe o sesiune
+      const { error } = await supa.auth.exchangeCodeForSession(window.location.href);
+      if (error) throw error;
 
-        // opțional: poți verifica sesiunea / erorile
-        await supa.auth.getSession();
+      // redirecționează înapoi în site (folosește replace ca să nu rămână în istoricul „Înapoi”)
+      location.replace('/');
+    } catch (e) {
+      console.error('Auth callback error:', e);
+      document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă.</p>';
+    }
+  })();
+</script>
 
-        // redirecționează înapoi în site
-        window.location.href = '/?signedIn=1';
-      } catch (e) {
-        console.error('Auth callback error:', e);
-        document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă.</p>';
-      }
-    })();
-  </script>
 </body>
 </html>
