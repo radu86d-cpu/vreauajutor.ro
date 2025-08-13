@@ -324,6 +324,38 @@ nav a:hover {
     max-height: 80dvh;                    /* mai bine cu tastatura deschisă pe mobil */
   }
 }
+#ajb-widget .ajb-header{
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+#ajb-widget .ajb-input{
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#ajb-widget .ajb-input input{
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+#ajb-widget .ajb-input button{
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #004080;
+  color: #fff;
+}
 
 
 /* în style.css */
