@@ -269,19 +269,63 @@ nav a:hover {
 }
 
 /* --- AjutorBot widget (plutitor) --- */
-#ajb-widget { position: fixed; bottom: 16px; right: 16px; width: 320px; max-height: 60vh;
-  box-shadow: 0 8px 24px rgba(0,0,0,.15); border-radius: 12px; overflow: hidden; background: #fff;
-  font-family: inherit; z-index: 9999; border: 1px solid #eee; }
-#ajb-widget.minimized .ajb-body { display: none; }
-#ajb-widget .ajb-header { padding: 10px 12px; cursor: pointer; font-weight: 600; display:flex; align-items:center; gap:8px; background:#fff; }
-#ajb-widget .ajb-body { padding: 8px; background:#fff; }
-#ajb-messages { height: 220px; overflow: auto; border: 1px solid #eee; padding: 8px; border-radius: 8px; background: #fff; }
-#ajb-widget .ajb-input { display: flex; gap: 8px; margin-top: 8px; }
-#ajb-widget .ajb-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
-#ajb-widget .ajb-input button { padding: 8px 12px; border: 0; border-radius: 8px; cursor: pointer; }
-@media (max-width: 480px){
-  #ajb-widget { width: calc(100vw - 24px); right: 12px; left: 12px; }
+/* --- AjutorBot widget (plutitor) — versiune curată --- */
+#ajb-widget{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 320px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;                       /* desktop/tablet */
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 998;                           /* sub .modal (999) */
 }
+
+#ajb-widget .ajb-body{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;                       /* păstrăm colțurile, scroll-ul e pe #ajb-messages */
+}
+
+#ajb-widget .ajb-input{
+  flex: 0 0 auto;                         /* bara de input rămâne jos */
+}
+
+#ajb-widget.minimized .ajb-body{
+  display: none;                          /* ascunde corpul când e minimizat */
+}
+
+#ajb-messages{
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-height: 140px;
+  overflow-y: auto;                       /* permite scroll în listă */
+  -webkit-overflow-scrolling: touch;      /* inerție pe iOS */
+  touch-action: pan-y;                    /* gest vertical pe mobil */
+  overscroll-behavior: contain;           /* nu „trage” body-ul */
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+@media (max-width: 600px){
+  #ajb-widget{
+    width: calc(100vw - 24px);
+    left: 12px;
+    right: 12px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    max-height: 80dvh;                    /* mai bine cu tastatura deschisă pe mobil */
+  }
+}
+
+
 /* în style.css */
 .cta-suppliers {
   font-weight: 600;
