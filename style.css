@@ -290,3 +290,19 @@ nav a:hover {
 .cta-suppliers {
   font-weight: 600;
 }
+/* pune asta la finalul style.css */
+.google-btn{
+  background: #fff !important;
+  color: #1f1f1f !important;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 1px rgba(0,0,0,.06);
+}
+
+.google-btn:hover{
+  background: #fff;           /* rămâne alb la hover */
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.google-btn:active{
+  background: #fff;
+}
