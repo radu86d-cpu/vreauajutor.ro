@@ -25,12 +25,12 @@
   </script>
 </head>
 
-
 <body>
   <!-- MODAL autentificare/înregistrare (mutat corect în <body>) -->
-  <div id="authModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="inchideModal()">×</span>
+  <div id="authModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="modal-content">
+    <h2 id="authTitle" class="sr-only">Autentificare sau înregistrare</h2>
+    <button type="button" class="close" aria-label="Închide modalul" onclick="inchideModal()">×</button>
 
       <div class="tab-buttons">
         <button onclick="schimbaTab('login')" id="tab-login" class="active">Autentificare</button>
