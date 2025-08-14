@@ -77,6 +77,8 @@ nav a:hover {
   width: 100%;
 }
 
+.slides > * { min-width: 100%; flex-shrink: 0; }
+
 .slides img {
   width: 100%;
   height: auto;
