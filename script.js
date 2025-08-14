@@ -1,89 +1,121 @@
-function afiseazaFormular(tip) {
-  const loginForm = document.getElementById("loginForm");
-  const registerForm = document.getElementById("registerForm");
-
-  if (loginForm) loginForm.style.display = "none";
-  if (registerForm) registerForm.style.display = "none";
-
-  if (tip === "login" && loginForm) {
-    loginForm.style.display = "block";
-    loginForm.scrollIntoView({ behavior: "smooth" });
-  } else if (tip === "register" && registerForm) {
-    registerForm.style.display = "block";
-    registerForm.scrollIntoView({ behavior: "smooth" });
-  }
-}
-
-// doar slider-ul (popularea listelor se face acum din index.html prin /.netlify/functions/lists)
-document.addEventListener('DOMContentLoaded', () => {
+(() => {
+  // ---------- SLIDER ----------
   let slideIndex = 0;
   const slides = document.getElementById('slides');
-  const totalSlides = slides?.children.length || 0;
+  const totalSlides = slides ? slides.children.length : 0;
+  const container = document.querySelector('.slider-container');
 
-  function showSlide(index){
-    if (slides) slides.style.transform = `translateX(-${index * 100}%)`;
-  }
+  const showSlide = (i) => {
+    if (slides) slides.style.transform = `translateX(-${i * 100}%)`;
+  };
 
-  window.moveSlide = function(direction){
-    if (!totalSlides) return;               // protecție dacă nu sunt imagini
+  window.moveSlide = function(direction) {
+    if (!totalSlides) return;
     slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
     showSlide(slideIndex);
   };
 
-  if (totalSlides > 0){
-    showSlide(0);                           // aliniază la start
-    setInterval(() => window.moveSlide(1), 5000);
+  // autoplay (pauză când tab-ul nu e activ / hover)
+  let autoplay = null;
+  const start = () => {
+    if (totalSlides > 0 && !autoplay) autoplay = setInterval(() => window.moveSlide(1), 5000);
+  };
+  const stop = () => {
+    if (autoplay) { clearInterval(autoplay); autoplay = null; }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (totalSlides > 0) showSlide(0);
+    start();
+  });
+
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  container?.addEventListener('mouseenter', stop);
+  container?.addEventListener('mouseleave', start);
+
+  // control din tastatură
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); window.moveSlide(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
+  });
+
+  // ---------- MODAL LOGIN/REGISTER ----------
+  const modal = document.getElementById('authModal');
+  const btnTabLogin    = document.getElementById('tab-login');
+  const btnTabRegister = document.getElementById('tab-register');
+  const login  = document.getElementById('loginForm');
+  const reg    = document.getElementById('registerForm');
+
+  let lastFocused = null;
+  let focusTrapHandler = null;
+
+  function trapFocus(e){
+    if (e.key !== 'Tab' || !modal) return;
+    const focusables = modal.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const arr = Array.from(focusables).filter(el => !el.disabled && el.offsetParent !== null);
+    if (!arr.length) return;
+
+    const first = arr[0], last = arr[arr.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
   }
-});
 
-// ----- autentificare / înregistrare (rămân la fel) -----
-function openLogin(){
-  const modal = document.getElementById('authModal');
-  const login  = document.getElementById('loginForm');
-  const reg    = document.getElementById('registerForm');
+  function openModal(){
+    if (!modal) return;
+    lastFocused = document.activeElement;
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    focusTrapHandler = trapFocus;
+    document.addEventListener('keydown', focusTrapHandler);
+  }
 
-  if (modal) modal.style.display = 'block';
-  if (login) login.style.display = 'block';
-  if (reg)   reg.style.display   = 'none';
+  function closeModal(){
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', focusTrapHandler);
+    focusTrapHandler = null;
+    lastFocused?.focus?.();
+  }
 
-  document.getElementById('tab-login')?.classList.add('active');
-  document.getElementById('tab-register')?.classList.remove('active');
+  window.openLogin = function() {
+    openModal();
+    if (login) login.style.display = 'block';
+    if (reg)   reg.style.display   = 'none';
+    btnTabLogin?.classList.add('active');
+    btnTabRegister?.classList.remove('active');
+    document.getElementById('login_email')?.focus();
+  };
 
-  // focus pe email
-  document.getElementById('login_email')?.focus();
-}
+  window.openRegister = function() {
+    openModal();
+    if (login) login.style.display = 'none';
+    if (reg)   reg.style.display   = 'block';
+    btnTabLogin?.classList.remove('active');
+    btnTabRegister?.classList.add('active');
+    document.getElementById('register_email')?.focus();
+  };
 
-function openRegister(){
-  const modal = document.getElementById('authModal');
-  const login  = document.getElementById('loginForm');
-  const reg    = document.getElementById('registerForm');
+  window.inchideModal = closeModal;
 
-  if (modal) modal.style.display = 'block';
-  if (login) login.style.display = 'none';
-  if (reg)   reg.style.display   = 'block';
+  window.schimbaTab = function(tab){
+    if (tab === 'login') window.openLogin();
+    else if (tab === 'register') window.openRegister();
+  };
 
-  document.getElementById('tab-login')?.classList.remove('active');
-  document.getElementById('tab-register')?.classList.add('active');
+  // compat: vechiul nume
+  window.afiseazaFormular = window.schimbaTab;
 
-  // focus pe email register
-  document.getElementById('register_email')?.focus();
-}
-
-function inchideModal(){
-  const m = document.getElementById('authModal');
-  if (m) m.style.display = 'none';
-}
-
-function schimbaTab(tab){
-  if (tab === 'login') openLogin();
-  else if (tab === 'register') openRegister();
-}
-
-// extra UX: Esc + click în overlay închide modalul
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') inchideModal();
-});
-document.getElementById('authModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'authModal') inchideModal();
-});
-
+  // Escape + click în overlay
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal(); // mai sigur decât test după id
+  });
+})();
