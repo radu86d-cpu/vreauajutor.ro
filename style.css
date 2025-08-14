@@ -83,6 +83,7 @@ nav a:hover {
 
 
 .slides img {
+  display: block;
   width: 100%;
   height: auto;
   border-radius: 16px;
@@ -457,6 +458,10 @@ nav a:focus-visible,
 .tab-buttons button:focus-visible,
 .tab-content button:focus-visible,
 .selector-zona button:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+#authModal .close:focus-visible {
   outline: 2px solid #1a73e8;
   outline-offset: 2px;
 }
