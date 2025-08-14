@@ -143,6 +143,35 @@
   <select id="serviciu" aria-label="Serviciu">
     <option value="" selected>Alege serviciul</option>
   </select>
+<button type="button"
+        class="advanced-toggle"
+        id="btnAdv"
+        aria-expanded="false"
+        aria-controls="advanced-panel"
+        onclick="toggleAdvanced()">
+  Căutare avansată
+</button>
+
+<div id="advanced-panel" class="advanced-panel" hidden>
+  <label for="price_max">Preț maxim (lei)</label>
+  <input type="number" id="price_max" min="0" step="1" inputmode="numeric" placeholder="ex: 300">
+
+  <label for="rating_min">Rating minim</label>
+  <select id="rating_min">
+    <option value="">Indiferent</option>
+    <option value="3">3+</option>
+    <option value="4">4+</option>
+    <option value="4.5">4.5+</option>
+  </select>
+
+  <label class="chk">
+    <input type="checkbox" id="available_today"> Disponibil azi
+  </label>
+
+  <label class="chk">
+    <input type="checkbox" id="has_photos"> Numai cu fotografii
+  </label>
+</div>
 
   <button type="button" onclick="gotoFurnizori()">Caută</button>
 </div>
