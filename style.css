@@ -477,3 +477,51 @@ nav a:focus-visible,
   white-space: nowrap; 
   border: 0;
 }
+/* ===== Căutare avansată (în selector) ===== */
+.advanced-toggle{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  background:#fff;
+  color:#004080;
+  font-weight:600;
+  cursor:pointer;
+}
+.advanced-toggle:hover{ filter: brightness(0.98); }
+
+.advanced-panel{
+  margin-top:10px;
+  padding:12px;
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:8px;
+}
+.advanced-panel label{
+  display:block;
+  font-size:13px;
+  margin-top:8px;
+}
+.advanced-panel input,
+.advanced-panel select{
+  width:100%;
+  padding:8px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  margin-top:4px;
+}
+.advanced-panel .chk{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  font-size:14px;
+}
+
+/* focus vizibil (ai deja regula generală, dar asigurăm și butonul nou) */
+.advanced-toggle:focus-visible,
+.advanced-panel input:focus-visible,
+.advanced-panel select:focus-visible {
+  outline:2px solid #1a73e8;
+  outline-offset:2px;
+}
