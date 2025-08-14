@@ -295,20 +295,55 @@
       }
     }
   </script>
- <script>
+<script>
+  function toggleAdvanced(){
+    const panel = document.getElementById('advanced-panel');
+    const btn   = document.getElementById('btnAdv');
+    const isHidden = panel.hasAttribute('hidden');
+    if (isHidden){
+      panel.removeAttribute('hidden');
+      btn.setAttribute('aria-expanded','true');
+      // focus pe primul câmp când se deschide
+      setTimeout(()=> document.getElementById('price_max')?.focus(), 0);
+    } else {
+      panel.setAttribute('hidden','');
+      btn.setAttribute('aria-expanded','false');
+    }
+  }
+
   function gotoFurnizori() {
-    const judet = document.getElementById('judet')?.value || '';
-    const oras = document.getElementById('oras')?.value || '';
+    const judet    = document.getElementById('judet')?.value || '';
+    const oras     = document.getElementById('oras')?.value || '';
     const serviciu = document.getElementById('serviciu')?.value || '';
 
+    // câmpuri avansate
+    const priceMax = document.getElementById('price_max')?.value?.trim() || '';
+    const ratingMin= document.getElementById('rating_min')?.value || '';
+    const today    = document.getElementById('available_today')?.checked || false;
+    const photos   = document.getElementById('has_photos')?.checked || false;
+
     const params = new URLSearchParams();
-    if (judet) params.set('judet', judet);
-    if (oras) params.set('oras', oras);
+    if (judet)    params.set('judet', judet);
+    if (oras)     params.set('oras', oras);
     if (serviciu) params.set('service', serviciu);
+
+    // atașăm DOAR ce e completat/bifat
+    if (priceMax) params.set('pmax', priceMax);
+    if (ratingMin)params.set('rmin', ratingMin);
+    if (today)    params.set('today', '1');
+    if (photos)   params.set('photos', '1');
 
     window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
   }
- </script>
+
+  // opțional: Enter în câmpurile avansate => pornește căutarea
+  ['price_max','rating_min'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('keydown', e=>{
+      if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
+    });
+  });
+</script>
+
   <script>
 ['judet','oras','serviciu'].forEach(id=>{
   document.getElementById(id)?.addEventListener('keydown', e=>{
