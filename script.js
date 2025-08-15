@@ -9,15 +9,20 @@
     if (slides) slides.style.transform = `translateX(-${i * 100}%)`;
   };
 
+  // expune pentru butoanele HTML
   window.moveSlide = function(direction) {
     if (!totalSlides) return;
     slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
     showSlide(slideIndex);
   };
 
-  // autoplay (pauză când tab-ul nu e activ / hover)
+  // respectă preferința de mișcare redusă
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // autoplay (pauză când tab-ul nu e activ / hover / focus în slider)
   let autoplay = null;
   const start = () => {
+    if (prefersReducedMotion.matches) return; // nu autoredăm dacă userul preferă mai puțină mișcare
     if (totalSlides > 0 && !autoplay) autoplay = setInterval(() => window.moveSlide(1), 5000);
   };
   const stop = () => {
@@ -29,13 +34,18 @@
     start();
   });
 
+  prefersReducedMotion.addEventListener?.('change', e => { e.matches ? stop() : start(); });
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   container?.addEventListener('mouseenter', stop);
   container?.addEventListener('mouseleave', start);
+  container?.addEventListener('focusin', stop);
+  container?.addEventListener('focusout', start);
 
-  // control din tastatură
+  // control din tastatură — nu interceptăm când scrii în input/textarea/select
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); window.moveSlide(-1); }
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (['input','textarea','select'].includes(tag) || e.target.isContentEditable) return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); window.moveSlide(-1); }
     if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
   });
 
@@ -69,6 +79,7 @@
     if (!modal) return;
     lastFocused = document.activeElement;
     modal.style.display = 'block';
+    modal.setAttribute('aria-hidden','false');
     document.body.style.overflow = 'hidden';
     focusTrapHandler = trapFocus;
     document.addEventListener('keydown', focusTrapHandler);
@@ -77,6 +88,7 @@
   function closeModal(){
     if (!modal) return;
     modal.style.display = 'none';
+    modal.setAttribute('aria-hidden','true');
     document.body.style.overflow = '';
     document.removeEventListener('keydown', focusTrapHandler);
     focusTrapHandler = null;
@@ -116,6 +128,6 @@
     if (e.key === 'Escape') closeModal();
   });
   modal?.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal(); // mai sigur decât test după id
+    if (e.target === modal) closeModal();
   });
 })();
