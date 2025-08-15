@@ -141,6 +141,12 @@ nav a:hover {
   border: none;
   cursor: pointer;
 }
+/* Face butonul "Căutare avansată" alb, peste stilul general din .selector-zona button */
+.selector-zona button.advanced-toggle{
+  background: #fff;
+  color: #004080;
+  border: 1px solid #ccc;
+}
 
 .selector-zona button:hover {
   background: #005f99;
@@ -524,4 +530,17 @@ nav a:focus-visible,
 .advanced-panel select:focus-visible {
   outline:2px solid #1a73e8;
   outline-offset:2px;
+}
+/* Menține butonul "Căutare avansată" alb și la hover */
+.selector-zona button.advanced-toggle{
+  background: #fff;
+  color: #004080;
+  border: 1px solid #ccc;
+}
+
+.selector-zona button.advanced-toggle:hover{
+  background: #fff;            /* NU devine albastru la hover */
+  color: #004080;
+  filter: brightness(0.98);    /* același efect subtil ca înainte */
+  border-color: #bbb;          /* mic accent, opțional */
 }
