@@ -30,7 +30,9 @@
   <div id="authModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <div class="modal-content">
     <h2 id="authTitle" class="sr-only">Autentificare sau înregistrare</h2>
-    <button type="button" class="close" aria-label="Închide modalul" onclick="inchideModal()">×</button>
+    <button type="button" class="close" aria-label="Închide modalul" onclick="inchideModal()">
+  <span aria-hidden="true">×</span>
+</button>
 
       <div class="tab-buttons">
         <button onclick="schimbaTab('login')" id="tab-login" class="active">Autentificare</button>
@@ -42,7 +44,7 @@
          autocomplete="username" required>
   <input type="password" id="login_password" name="password" placeholder="Parolă"
          autocomplete="current-password" required>
-  <button onclick="autentificare()">Autentificare</button>
+  <button type="button" onclick="autentificare()">Autentificare</button>
 </div>
 
 
@@ -52,7 +54,7 @@
   <input type="password" id="register_password" placeholder="Parolă" autocomplete="new-password">
   <input type="text" id="register_location" placeholder="Localitate" autocomplete="address-level2">
 
-  <button onclick="inregistrare()">Înregistrare</button>
+  <button type="button" onclick="inregistrare()">Înregistrare</button>
 
   <button type="button" id="googleSignIn" class="google-btn" aria-label="Continuă cu Google">
     <span class="google-icon" aria-hidden="true">
