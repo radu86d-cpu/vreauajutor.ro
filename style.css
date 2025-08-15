@@ -1,461 +1,164 @@
 /* ======= STIL GENERAL ======= */
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background: #f8f8f8;
-  color: #333;
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:#f8f8f8;
+  color:#333;
 }
 
 /* ======= HEADER ======= */
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #004080;
-  padding: 10px 30px;
-  color: white;
-  flex-wrap: wrap;
-  gap: 10px;
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#004080;
+  padding:10px 30px;
+  color:#fff;
+  flex-wrap:wrap;
+  gap:10px;
 }
-
-.logo {
-  display: flex;
-  align-items: center;
+.logo{display:flex;align-items:center;}
+.logo img{height:50px;margin-right:10px;}
+nav{display:flex;flex-wrap:wrap;gap:10px;}
+nav a{
+  color:#fff;
+  text-decoration:none;
+  font-weight:bold;
+  padding:5px 10px;
+  transition:background .3s;
 }
+nav a:hover{background:#0066cc;border-radius:5px;}
 
-.logo img {
-  height: 50px;
-  margin-right: 10px;
+/* ======= SLIDER + SELECTOR ======= */
+.sectiune-slider-selector{
+  display:flex;justify-content:center;align-items:flex-start;flex-wrap:nowrap;
+  gap:30px;margin:40px auto;max-width:1200px;
 }
-
-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.slider-modern{flex:0 0 70%;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.2);}
+.slider-container{position:relative;width:100%;overflow:hidden;}
+.slides{display:flex;transition:transform .5s ease;width:100%;will-change:transform;}
+.slides>*{min-width:100%;flex-shrink:0;}
+.slides img{display:block;width:100%;height:auto;border-radius:16px;}
+.prev,.next{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(0,0,0,.4);color:#fff;font-size:24px;border:none;padding:10px;
+  cursor:pointer;z-index:1;border-radius:50%;
 }
+.prev{left:10px;} .next{right:10px;}
 
-nav a {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  padding: 5px 10px;
-  transition: background 0.3s;
+.selector-zona{
+  flex:0 0 28%;background:#f9f9f9;border-radius:16px;padding:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
 }
-
-nav a:hover {
-  background: #0066cc;
-  border-radius: 5px;
-}
-
-/* ======= SLIDER ȘI SELECTOR COMBINATE ======= */
-.sectiune-slider-selector {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 30px;
-  margin: 40px auto;
-  max-width: 1200px;
-}
-
-.slider-modern {
-  flex: 0 0 70%;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.slider-container {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-.slides {
-  display: flex;
-  transition: transform 0.5s ease;
-  width: 100%;
-  will-change: transform;
-}
-
-
-.slides > * { min-width: 100%; flex-shrink: 0; }
-
-
-.slides img {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 16px;
-}
-
-.prev, .next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0,0,0,0.4);
-  color: white;
-  font-size: 24px;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
-  z-index: 1;
-  border-radius: 50%;
-}
-
-.prev { left: 10px; }
-.next { right: 10px; }
-
-.selector-zona {
-  flex: 0 0 28%;
-  background: #f9f9f9;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.selector-zona h3 {
-  font-size: 18px;
-  margin-bottom: 15px;
-  text-align: center;
-}
-
+.selector-zona h3{font-size:18px;margin-bottom:15px;text-align:center;}
 .selector-zona label,
 .selector-zona select,
-.selector-zona button {
-  width: 100%;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-
+.selector-zona button{width:100%;margin-bottom:12px;font-size:14px;}
 .selector-zona select,
-.selector-zona button {
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+.selector-zona button{padding:8px;border-radius:8px;border:1px solid #ccc;}
+.selector-zona button{background:#007acc;color:#fff;border:none;cursor:pointer;}
+.selector-zona button:hover{background:#005f99;}
+
+@media (max-width:768px){
+  .sectiune-slider-selector{flex-direction:column;align-items:center;}
+  .slider-modern,.selector-zona{width:90%;max-width:100%;}
 }
 
-.selector-zona button {
-  background: #007acc;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-/* Face butonul "Căutare avansată" alb, peste stilul general din .selector-zona button */
-.selector-zona button.advanced-toggle{
-  background: #fff;
-  color: #004080;
-  border: 1px solid #ccc;
-}
-
-.selector-zona button:hover {
-  background: #005f99;
-}
-
-@media (max-width: 768px) {
-  .sectiune-slider-selector {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .slider-modern,
-  .selector-zona {
-    width: 90%;
-    max-width: 100%;
-  }
-}
 /* ==== MODAL AUTENTIFICARE ==== */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 999;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
+.modal{
+  display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;
+  background-color:rgba(0,0,0,.5);
 }
-
-.modal-content {
-  background: #fff;
-  margin: 80px auto;
-  padding: 30px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+.modal-content{
+  background:#fff;margin:80px auto;padding:30px;border-radius:12px;
+  width:90%;max-width:400px;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.3);
 }
+.close{position:absolute;right:16px;top:10px;font-size:24px;cursor:pointer;color:#999;}
 
-.close {
-  position: absolute;
-  right: 16px;
-  top: 10px;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
+.tab-buttons{display:flex;justify-content:space-around;margin-bottom:20px;}
+.tab-buttons button{padding:10px;width:50%;border:none;background:#eee;cursor:pointer;font-weight:bold;}
+.tab-buttons .active{background:#007acc;color:#fff;}
+
+.tab-content input,.tab-content select{
+  width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;
 }
-
-.tab-buttons {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 20px;
+.tab-content button{
+  width:100%;padding:10px;background:#007acc;color:#fff;border:none;border-radius:8px;
+  font-weight:bold;cursor:pointer;
 }
+.tab-content button:hover{background:#005f99;}
 
-.tab-buttons button {
-  padding: 10px;
-  width: 50%;
-  border: none;
-  background: #eee;
-  cursor: pointer;
-  font-weight: bold;
+/* ======= SECȚIUNE SERVICII ======= */
+.servicii-populare{background:#f4f8fc;padding:40px 0;text-align:center;}
+.servicii-container{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin-top:20px;}
+.serviciu-box{
+  background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.1);
+  overflow:hidden;width:200px;transition:transform .3s,box-shadow .3s;
 }
+.serviciu-box:hover{transform:scale(1.05);box-shadow:0 8px 20px rgba(0,0,0,.2);}
+.serviciu-box img{display:block;width:100%;height:140px;object-fit:cover;border-bottom:1px solid #eee;}
+.serviciu-box p{margin:10px;font-size:14px;color:#333;}
 
-.tab-buttons .active {
-  background: #007acc;
-  color: white;
-}
-
-.tab-content input,
-.tab-content select {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.tab-content button {
-  width: 100%;
-  padding: 10px;
-  background: #007acc;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.tab-content button:hover {
-  background: #005f99;
-}
-
-.serviciu-box:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.servicii-populare {
-  background-color: #f4f8fc;
-  padding: 40px 0;
-  text-align: center;
-}
-
-.servicii-container {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.serviciu-box {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  overflow: hidden;
-  width: 200px;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.serviciu-box img {
-  display: block;
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  border-bottom: 1px solid #eee;
-}
-
-.serviciu-box p {
-  margin: 10px;
-  font-size: 14px;
-  color: #333;
-}
-
-/* --- AjutorBot widget (plutitor) --- */
-/* --- AjutorBot widget (plutitor) — versiune curată --- */
+/* --- AjutorBot (widget) --- */
 #ajb-widget{
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: 320px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.15);
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid #eee;
-  display: flex;
-  flex-direction: column;
-  max-height: 80vh;                       /* desktop/tablet */
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 998;                           /* sub .modal (999) */
+  position:fixed;right:16px;bottom:16px;width:320px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);border-radius:12px;background:#fff;border:1px solid #eee;
+  display:flex;flex-direction:column;max-height:80vh;padding-bottom:env(safe-area-inset-bottom);z-index:998;
 }
-
-#ajb-widget .ajb-body{
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;                       /* păstrăm colțurile, scroll-ul e pe #ajb-messages */
-}
-
-#ajb-widget .ajb-input{
-  flex: 0 0 auto;                         /* bara de input rămâne jos */
-}
-
-#ajb-widget.minimized .ajb-body{
-  display: none;                          /* ascunde corpul când e minimizat */
-}
-
+#ajb-widget .ajb-body{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;}
+#ajb-widget .ajb-input{flex:0 0 auto;}
+#ajb-widget.minimized .ajb-body{display:none;}
 #ajb-messages{
-  overflow-wrap: anywhere;
-  flex: 1 1 auto;
-  min-height: 140px;
-  overflow-y: auto;                       /* permite scroll în listă */
-  -webkit-overflow-scrolling: touch;      /* inerție pe iOS */
-  touch-action: pan-y;                    /* gest vertical pe mobil */
-  overscroll-behavior: contain;           /* nu „trage” body-ul */
-  border: 1px solid #eee;
-  padding: 8px;
-  border-radius: 8px;
-  background: #fff;
-}
-
-@media (max-width: 600px){
-  #ajb-widget{
-    width: calc(100vw - 24px);
-    left: 12px;
-    right: 12px;
-    bottom: max(16px, env(safe-area-inset-bottom));
-    max-height: 80dvh;                    /* mai bine cu tastatura deschisă pe mobil */
-  }
+  overflow-wrap:anywhere;flex:1 1 auto;min-height:140px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+  border:1px solid #eee;padding:8px;border-radius:8px;background:#fff;
 }
 #ajb-widget .ajb-header{
-  padding: 10px 12px;
-  cursor: pointer;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  padding:10px 12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;
+  background:#fff;border-bottom:1px solid #eee;
+}
+#ajb-widget .ajb-input{display:flex;gap:8px;margin-top:8px;}
+#ajb-widget .ajb-input input{flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;}
+#ajb-widget .ajb-input button{padding:8px 12px;border:0;border-radius:8px;cursor:pointer;background:#004080;color:#fff;}
+
+@media (max-width:600px){
+  #ajb-widget{
+    width:calc(100vw - 24px);left:12px;right:12px;bottom:max(16px, env(safe-area-inset-bottom));
+    max-height:80dvh;
+  }
 }
 
-#ajb-widget .ajb-input{
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
+/* ===== Diverse ===== */
+.cta-suppliers{font-weight:600;}
 
-#ajb-widget .ajb-input input{
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-
-#ajb-widget .ajb-input button{
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #004080;
-  color: #fff;
-}
-
-
-/* în style.css */
-.cta-suppliers {
-  font-weight: 600;
-}
-/* pune asta la finalul style.css */
+/* Google Sign-In (alb, modern) */
 .google-btn{
-  background: #fff !important;
-  color: #1f1f1f !important;
-  border: 1px solid #dadce0;
-  box-shadow: 0 1px 1px rgba(0,0,0,.06);
+  background:#fff !important;color:#1f1f1f !important;border:1px solid #dadce0 !important;
+  box-shadow:0 1px 1px rgba(0,0,0,.06);
+  display:flex;align-items:center;justify-content:center;gap:.5rem;font-weight:600;
 }
+.google-btn:hover{background:#fff !important;box-shadow:0 2px 6px rgba(0,0,0,.08);}
+.google-btn:active{background:#fff !important;}
+.google-btn .google-icon{display:inline-flex;width:18px;height:18px;line-height:0;}
+button.google-btn:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
 
-.google-btn:hover{
-  background: #fff;           /* rămâne alb la hover */
-  box-shadow: 0 2px 6px rgba(0,0,0,.08);
-}
+/* Butoane autentificare + link furnizori */
+.auth-buttons{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+.auth-buttons .link-suppliers{color:#fff;text-decoration:underline;font-size:13px;opacity:.9;}
+.auth-buttons .link-suppliers:hover{opacity:1;}
 
-.google-btn:active{
-  background: #fff;
-}
-/* Google Sign-In: stil alb, modern (suprascrie .tab-content button) */
-#authModal .tab-content button.google-btn,
-button.google-btn {
-  background: #fff !important;
-  color: #1f1f1f !important;
-  border: 1px solid #dadce0 !important;   /* .tab-content button avea border:none */
-  box-shadow: 0 1px 1px rgba(0,0,0,.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  font-weight: 600;
-}
+/* Banda căutare din hero */
+.hero-search-band{background:#004080;padding:16px 0;}
+.hero-search{max-width:640px;margin:0 auto;display:flex;gap:8px;}
+.hero-search input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc;}
+.hero-search input:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
+.hero-search button{padding:10px 16px;border-radius:8px;border:0;background:#fff;color:#004080;font-weight:600;cursor:pointer;transition:filter .15s ease;}
+.hero-search button:hover{filter:brightness(.95);}
+.link-suppliers{display:inline-block;margin-left:12px;color:#ffeb3b;text-decoration:underline;}
+.link-suppliers:hover{opacity:.9;}
+@media (max-width:600px){.hero-search{flex-direction:column;}}
 
-#authModal .tab-content button.google-btn:hover,
-button.google-btn:hover {
-  background: #fff !important;            /* rămâne alb la hover */
-  box-shadow: 0 2px 6px rgba(0,0,0,.08);
-}
-
-#authModal .tab-content button.google-btn:active,
-button.google-btn:active {
-  background: #fff !important;
-}
-
-.google-btn .google-icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  line-height: 0;
-}
-
-button.google-btn:focus-visible {
-  outline: 2px solid #1a73e8;             /* accesibilitate */
-  outline-offset: 2px;
-}
-/* buton/text "Oferă servicii" sub login/register din header */
-.auth-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-.auth-buttons .link-suppliers {
-  color: #fff;
-  text-decoration: underline;
-  font-size: 13px;
-  opacity: .9;
-}
-.auth-buttons .link-suppliers:hover { opacity: 1; }
-/* banda albastră + chenarul de căutare */
-.hero-search-band{background:#004080;padding:16px 0}
-.hero-search{max-width:640px;margin:0 auto;display:flex;gap:8px}
-.hero-search input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
-.hero-search input:focus-visible{
-  outline: 2px solid #1a73e8;
-  outline-offset: 2px;
-}
-.hero-search button{padding:10px 16px;border-radius:8px;border:0;background:#fff;color:#004080;font-weight:600}
-.hero-search button { cursor: pointer; transition: filter .15s ease; }
-.hero-search button:hover{ filter: brightness(0.95); }
-.link-suppliers{display:inline-block;margin-left:12px;color:#ffeb3b;text-decoration:underline}
-.link-suppliers:hover{opacity:.9}
-@media (max-width:600px){ .hero-search{ flex-direction: column; } }
-/* ===== Focus vizibil pentru navigare/taste ===== */
+/* Focus vizibil */
 nav a:focus-visible,
 .prev:focus-visible,
 .next:focus-visible,
@@ -463,84 +166,36 @@ nav a:focus-visible,
 #ajb-widget .ajb-header:focus-visible,
 .tab-buttons button:focus-visible,
 .tab-content button:focus-visible,
-.selector-zona button:focus-visible {
-  outline: 2px solid #1a73e8;
-  outline-offset: 2px;
+.selector-zona button:focus-visible,
+#authModal .close:focus-visible{
+  outline:2px solid #1a73e8;outline-offset:2px;
 }
-#authModal .close:focus-visible {
-  outline: 2px solid #1a73e8;
-  outline-offset: 2px;
-}
+
 /* doar pentru cititoare de ecran */
-.sr-only {
-  position: absolute; 
-  width: 1px; 
-  height: 1px; 
-  padding: 0; 
-  margin: -1px; 
-  overflow: hidden; 
-  clip: rect(0 0 0 0); 
-  white-space: nowrap; 
-  border: 0;
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
 }
-/* ===== Căutare avansată (în selector) ===== */
+
+/* ===== Căutare avansată ===== */
 .advanced-toggle{
-  width:100%;
-  padding:8px;
-  border-radius:8px;
-  border:1px solid #ccc;
-  background:#fff;
-  color:#004080;
-  font-weight:600;
-  cursor:pointer;
+  width:100%;padding:8px;border-radius:8px;border:1px solid #ccc;background:#fff;
+  color:#004080;font-weight:600;cursor:pointer;
 }
-.advanced-toggle:hover{ filter: brightness(0.98); }
-
+.advanced-toggle:hover{filter:brightness(.98);}
 .advanced-panel{
-  margin-top:10px;
-  padding:12px;
-  background:#fff;
-  border:1px solid #ddd;
-  border-radius:8px;
+  margin-top:10px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px;
 }
-.advanced-panel label{
-  display:block;
-  font-size:13px;
-  margin-top:8px;
+.advanced-panel label{display:block;font-size:13px;margin-top:8px;}
+.advanced-panel input,.advanced-panel select{
+  width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-top:4px;
 }
-.advanced-panel input,
-.advanced-panel select{
-  width:100%;
-  padding:8px;
-  border:1px solid #ccc;
-  border-radius:8px;
-  margin-top:4px;
-}
-.advanced-panel .chk{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-top:10px;
-  font-size:14px;
-}
+.advanced-panel .chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;}
+.advanced-panel input:focus-visible,.advanced-panel select:focus-visible,
+.advanced-toggle:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
 
-/* focus vizibil (ai deja regula generală, dar asigurăm și butonul nou) */
-.advanced-toggle:focus-visible,
-.advanced-panel input:focus-visible,
-.advanced-panel select:focus-visible {
-  outline:2px solid #1a73e8;
-  outline-offset:2px;
-}
-/* Menține butonul "Căutare avansată" alb și la hover */
-.selector-zona button.advanced-toggle{
-  background: #fff;
-  color: #004080;
-  border: 1px solid #ccc;
-}
-
+/* Asigură override corect față de .selector-zona button:hover */
+.selector-zona button.advanced-toggle{background:#fff;color:#004080;border:1px solid #ccc;}
 .selector-zona button.advanced-toggle:hover{
-  background: #fff;            /* NU devine albastru la hover */
-  color: #004080;
-  filter: brightness(0.98);    /* același efect subtil ca înainte */
-  border-color: #bbb;          /* mic accent, opțional */
+  background:#fff;color:#004080;filter:brightness(.98);border-color:#bbb;
 }
