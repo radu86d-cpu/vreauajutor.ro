@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Furnizor</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
+  .hero{display:flex;gap:16px;align-items:center;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px}
+  .cov{width:140px;height:140px;background:#f2f4f8;border-radius:12px;flex:0 0 140px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .prod{background:#fff;border:1px solid #eee;border-radius:12px;padding:10px}
+  .msgbox{margin-top:12px;display:flex;gap:8px}
+  .btn{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#004080;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div class="cov" id="cover"></div>
+      <div>
+        <h1 id="title"></h1>
+        <div id="meta" style="color:#555"></div>
+        <p id="desc"></p>
+        <div class="msgbox">
+          <input id="msg" placeholder="Scrie un mesaj furnizorului..." style="flex:1;padding:8px;border:1px solid #ccc;border-radius:8px">
+          <button class="btn" onclick="send()">Trimite</button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Servicii/produse</h3>
+    <div id="prods" class="grid"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    let page = null, provider = null;
+    async function boot(){
+      const p = new URLSearchParams(location.search);
+      const slug = p.get('slug');
+      const r = await fetch('/.netlify/functions/provider_page?slug='+encodeURIComponent(slug));
+      const json = await r.json();
+      page = json.page; provider = json.provider;
+
+      document.getElementById('title').textContent = provider.company_name;
+      document.getElementById('meta').textContent = `${provider.judet}${provider.oras?', '+provider.oras:''} · ${provider.service_name}`;
+      document.getElementById('desc').textContent = page.long_description || (provider.description||'');
+
+      const prods = json.products || [];
+      document.getElementById('prods').innerHTML = prods.map(pr=>`
+        <article class="prod">
+          <div style="height:100px;background:#f7f9fc;border-radius:8px;margin-bottom:6px"></div>
+          <strong>${pr.name}</strong><br>
+          <small>${pr.description||''}</small><br>
+          <b>${pr.price || '-'} ${pr.currency}</b>
+        </article>
+      `).join('');
+    }
+
+    async function send(){
+      // gating: dacă nu e logat, deschide modalul tău existent (openLogin())
+      const env = await fetch('/.netlify/functions/spa_env',{cache:'no-store'}).then(r=>r.json());
+      const supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+      const { data:{ session } } = await supa.auth.getSession();
+      if (!session?.access_token){ window.openLogin?.(); return; }
+
+      const body = document.getElementById('msg').value.trim();
+      if (!body) return;
+
+      // trimit mesaj privat către proprietarul acestui provider (server creează camera dacă nu există)
+      const r = await fetch('/.netlify/functions/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+        body: JSON.stringify({ to_provider_id: provider.id, body })
+      });
+      if (r.ok){ document.getElementById('msg').value=''; alert('Mesaj trimis!'); }
+      else { alert('Eroare la trimitere'); }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
