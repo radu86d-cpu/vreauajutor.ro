@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Căutare avansată – VreauAjutor.ro</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .adv-wrap{max-width:1200px;margin:24px auto;padding:0 12px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+    .tab.active{border-color:#004080}
+    .panel{margin-top:14px;border:1px solid #eee;border-radius:12px;background:#fff;padding:12px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:6px 10px;border:1px solid #ddd;border-radius:999px;background:#fafafa;cursor:pointer}
+    .chip.active{border-color:#004080}
+    .filters{display:grid;gap:10px;margin-top:10px}
+    .cta-row{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+    .btn{padding:10px 16px;border:0;border-radius:10px;background:#004080;color:#fff;cursor:pointer}
+    .btn.secondary{background:#fff;color:#004080;border:1px solid #ccc}
+  </style>
+</head>
+<body>
+
+  <!-- header + hero bandă pot fi copiate din index -->
+  <section class="hero-search-band"><form class="hero-search" onsubmit="go();return false;">
+    <input id="q" type="search" placeholder="ex: curățenie Cluj-Napoca" />
+    <button type="submit">Caută</button>
+  </form></section>
+
+  <main class="adv-wrap">
+    <h2>Alege categoria → subcategoria → filtre</h2>
+
+    <div id="cats" class="tabs" aria-label="Categorii"></div>
+    <div id="subs" class="panel" hidden>
+      <div class="chips" id="subs-chips"></div>
+    </div>
+    <div id="filters" class="panel" hidden></div>
+
+    <div class="cta-row">
+      <button class="btn secondary" onclick="location.href='furnizori.html'">Renunță</button>
+      <button class="btn" onclick="apply()">Aplică</button>
+    </div>
+  </main>
+
+  <script>
+    let S = { services:[], subs:[], filters:[] };
+    let sel = { service_id:null, subcat_id:null, filterVals:{} };
+
+    function h(tag, attrs={}, children=[]){
+      const el = document.createElement(tag);
+      Object.entries(attrs||{}).forEach(([k,v])=>{
+        if (k==='class') el.className = v; else el.setAttribute(k,v);
+      });
+      (Array.isArray(children)?children:[children]).forEach(c=>{
+        if (typeof c === 'string') el.appendChild(document.createTextNode(c));
+        else if (c) el.appendChild(c);
+      });
+      return el;
+    }
+
+    async function boot(){
+      const r = await fetch('/.netlify/functions/categories');
+      const json = await r.json();
+      S = json;
+      renderCats();
+    }
+
+    function renderCats(){
+      const wrap = document.getElementById('cats'); wrap.innerHTML='';
+      S.services.forEach(s=>{
+        const b = h('button',{class: 'tab'+(sel.service_id===s.id?' active':''), type:'button'}, s.name);
+        b.onclick = ()=>{ sel.service_id = s.id; sel.subcat_id=null; sel.filterVals={}; renderCats(); renderSubs(); };
+        wrap.appendChild(b);
+      });
+    }
+
+    function renderSubs(){
+      const box = document.getElementById('subs');
+      const chips = document.getElementById('subs-chips'); chips.innerHTML='';
+      const subs = S.subs.filter(x=>x.service_id===sel.service_id);
+      box.hidden = subs.length===0;
+      subs.forEach(sc=>{
+        const c = h('button',{class:'chip'+(sel.subcat_id===sc.id?' active':''), type:'button'}, sc.name);
+        c.onclick = ()=>{ sel.subcat_id=sc.id; sel.filterVals={}; renderSubs(); renderFilters(); };
+        chips.appendChild(c);
+      });
+      renderFilters();
+    }
+
+    function renderFilters(){
+      const box = document.getElementById('filters'); box.innerHTML='';
+      if (!sel.subcat_id){ box.hidden=true; return; }
+      const flts = S.filters.filter(f=>f.subcategory_id===sel.subcat_id);
+      if (!flts.length){ box.hidden=true; return; }
+      box.hidden = false;
+
+      const cont = h('div',{class:'filters'});
+      flts.forEach(f=>{
+        let ctrl;
+        if (f.type==='bool'){
+          ctrl = h('label',{},[
+            h('input',{type:'checkbox', onchange:(e)=> sel.filterVals[f.key]=e.target.checked }),
+            ' ', f.label
+          ]);
+        } else if (f.type==='enum'){
+          ctrl = h('label',{},[
+            f.label, h('br'),
+            (()=>{ const s = h('select',{onchange:(e)=> sel.filterVals[f.key]=e.target.value});
+              s.appendChild(h('option',{value:''},'Indiferent'));
+              (f.options||[]).forEach(opt=> s.appendChild(h('option',{value:opt}, opt)));
+              return s;})()
+          ]);
+        } else { // text/range simplificat
+          ctrl = h('label',{},[
+            f.label, h('br'),
+            h('input',{type:'text', placeholder:'Valoare...', oninput:(e)=> sel.filterVals[f.key]=e.target.value})
+          ]);
+        }
+        cont.appendChild(ctrl);
+      });
+      box.appendChild(cont);
+    }
+
+    function apply(){
+      const params = new URLSearchParams();
+      const svc = S.services.find(s=>s.id===sel.service_id);
+      if (svc) params.set('service', svc.name);
+      if (sel.subcat_id) params.set('subcat', String(sel.subcat_id));
+      Object.entries(sel.filterVals).forEach(([k,v])=>{
+        if (v!=null && String(v).trim()!=='') params.append('f_'+k, String(v));
+      });
+      location.href = 'furnizori.html' + (params.toString()?('?'+params.toString()):'');
+    }
+
+    function go(){ /* optional: folosește căutarea din bandă */ }
+    boot();
+  </script>
+</body>
+</html>
