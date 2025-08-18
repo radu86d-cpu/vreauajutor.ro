@@ -1,80 +1,248 @@
 <!doctype html>
 <html lang="ro">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Furnizori disponibili</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#fafafa; color:#222; }
-    .wrap { max-width: 900px; margin: 2rem auto; padding: 1rem; }
-    h1 { margin: 0 0 1rem; font-size: 1.8rem; }
-    .card {
-      border:1px solid #eee; background:#fff; border-radius:12px;
-      padding:12px; margin:10px 0; box-shadow: 0 1px 2px rgba(0,0,0,.03);
-    }
-    .muted { color:#555; margin:.25rem 0 .5rem; }
-    .row { margin:.25rem 0; }
-    .label { color:#666; }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Furnizori – VreauAjutor.ro</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  :root { --leftW: 25%; --gpad: 12px; }
+  .page{display:flex;flex-direction:column;min-height:100vh;}
+  .hero-search-band{flex:0 0 auto;} /* ai deja stilurile */
+
+  .content{flex:1 1 auto;display:flex;gap:12px;max-width:1200px;margin:12px auto;padding:0 12px;height:calc(100vh - 160px);} /* 160px ~ header+hero approx */
+  .left{flex:0 0 var(--leftW);background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;display:flex;flex-direction:column;min-width:240px}
+  .left.min{--leftW: 12%;}
+  .step{display:none} .step.active{display:block}
+  .left .row{margin-bottom:8px}
+  .left .actions{margin-top:auto;display:flex;gap:8px}
+  .left .toggle{margin-top:8px}
+
+  .right{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;}
+  .right .toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
+  .grid{flex:1 1 auto;display:grid;gap:12px;grid-template-columns:repeat(4,1fr); align-content:start;}
+  .card{background:#fff;border:1px solid #eee;border-radius:14px;overflow:hidden;position:relative}
+  .card .pic{height:120px;background:#f3f6fb}
+  .card .body{padding:10px}
+  .card .meta{font-size:12px;color:#666}
+  .dot{position:absolute;right:8px;top:8px;width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 2px rgba(255,255,255,.8);}
+  .card:hover .reveal{transform:translateY(0)}
+  .reveal{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);color:#fff;padding:8px;transform:translateY(100%);transition:transform .2s}
+
+  .pager{display:flex;justify-content:center;gap:8px;margin-top:8px}
+  .btn{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+  .btn.primary{background:#004080;color:#fff;border-color:#004080}
+</style>
 </head>
-<body>
-  <main class="wrap">
-    <h1>Furnizori disponibili</h1>
-    <div id="providers-list">Se încarcă...</div>
+<body class="page">
+
+  <!-- header + hero la fel ca în index -->
+  <section class="hero-search-band">
+    <form class="hero-search" onsubmit="searchSubmit();return false;">
+      <input id="heroQ" type="search" placeholder="ex: curățenie Cluj-Napoca">
+      <button type="submit">Caută</button>
+    </form>
+  </section>
+
+  <main class="content">
+    <!-- STÂNGA 25% -->
+    <aside id="left" class="left">
+      <strong>Pasul 1</strong>
+      <div id="step1" class="step active">
+        <div class="row">
+          <label>Județ</label>
+          <select id="fil_judet"><option value="">Alege</option></select>
+        </div>
+        <div class="row">
+          <label>Oraș</label>
+          <select id="fil_oras" disabled><option value="">Alege</option></select>
+        </div>
+        <div class="row">
+          <label>Categorie</label>
+          <select id="fil_service"><option value="">Alege</option></select>
+        </div>
+        <div class="actions">
+          <button class="btn primary" onclick="next()">Următorul</button>
+        </div>
+      </div>
+
+      <div id="step2" class="step">
+        <strong>Subcategorii</strong>
+        <div id="subchips" class="row" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <div class="actions">
+          <button class="btn" onclick="prev()">Înapoi</button>
+          <button class="btn primary" onclick="apply()">Aplică</button>
+        </div>
+      </div>
+
+      <button class="btn toggle" onclick="toggleLeft()">Minimizează</button>
+    </aside>
+
+    <!-- DREAPTA 75% -->
+    <section class="right">
+      <div class="toolbar">
+        <button class="btn" onclick="location.href='cautare-avansata.html'">Căutare avansată</button>
+        <select id="sort" class="btn" onchange="reload()">
+          <option value="new">Cele mai noi</option>
+          <option value="old">Cele mai vechi</option>
+          <option value="active">Cele mai active</option>
+        </select>
+      </div>
+
+      <div id="grid" class="grid" aria-live="polite"></div>
+
+      <div class="pager">
+        <button class="btn" onclick="page(-1)">«</button>
+        <span id="pageInfo"></span>
+        <button class="btn" onclick="page(1)">»</button>
+      </div>
+    </section>
   </main>
 
   <script>
-async function loadProviders(filters = {}) {
-  const params = new URLSearchParams(
-    Object.fromEntries(
-      Object.entries(filters).filter(([_, v]) => v != null && String(v).trim() !== '')
-    )
-  );
+    let S = { services:[], subs:[] };
+    let state = { judet:'', oras:'', service:'', subcat:'', page:1, per_page:12 };
 
-  const url = '/.netlify/functions/providers' + (params.toString() ? '?' + params.toString() : '');
-
-  try {
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error('Răspuns invalid');
-    const items = await res.json();
-
-    const el = document.getElementById('providers-list');
-    if (!items || !items.length) {
-      el.innerHTML = '<p>Nu s-au găsit furnizori.</p>';
-      return;
+    function toggleLeft(){
+      const left = document.getElementById('left');
+      left.classList.toggle('min');
+      // 12 carduri normal, 15 când e min
+      state.per_page = left.classList.contains('min') ? 15 : 12;
+      reload();
     }
 
-    el.innerHTML = items.map(p => `
-      <article class="card">
-        <h3 style="margin:0 0 6px">${p.company_name}</h3>
-        <p class="muted">${p.description ?? ''}</p>
-        <p class="row"><span class="label">Serviciu:</span> <b>${p.service_name}</b></p>
-        <p class="row"><span class="label">Localitate:</span> <b>${p.oras}</b>, <b>${p.judet}</b></p>
-        <p class="row"><span class="label">Telefon:</span> <b>${p.phone ?? '-'}</b>
-           &nbsp; <span class="label">Email:</span> <b>${p.email ?? '-'}</b></p>
-      </article>
-    `).join('');
-  } catch (e) {
-    document.getElementById('providers-list').textContent = 'Eroare la încărcare: ' + e.message;
-  }
-}
+    function next(){
+      if (!state.service){ alert('Alege întâi o categorie'); return; }
+      document.getElementById('step1').classList.remove('active');
+      document.getElementById('step2').classList.add('active');
+      renderSubs();
+    }
+    function prev(){
+      document.getElementById('step2').classList.remove('active');
+      document.getElementById('step1').classList.add('active');
+    }
+    function apply(){ reload(); }
 
-// pornește încărcarea cu filtrele din URL
-document.addEventListener('DOMContentLoaded', () => {
-  const p = new URLSearchParams(location.search);
-  const filters = {
-    judet:   p.get('judet')   || '',
-    oras:    p.get('oras')    || '',
-    service: p.get('service') || ''
-  };
-  loadProviders(filters);
-});
+    async function boot(){
+      // liste
+      const lr = await fetch('/.netlify/functions/lists'); const L = await lr.json();
+      fillSel(document.getElementById('fil_service'), L.services);
+      fillSel(document.getElementById('fil_judet'), L.judete);
 
-/* EXEMPLE de test:
-document.addEventListener('DOMContentLoaded', () => {
-  loadProviders({ judet: 'București', oras: 'București', service: 'Curățenie' });
-});
-*/
-</script>
+      // pentru subcategorii
+      const cr = await fetch('/.netlify/functions/categories'); const C = await cr.json();
+      S.services = C.services; S.subs = C.subs;
+
+      // events
+      document.getElementById('fil_judet').onchange = async (e)=>{
+        state.judet = e.target.value; state.oras=''; reloadOrase();
+      };
+      document.getElementById('fil_oras').onchange = (e)=>{ state.oras = e.target.value; };
+      document.getElementById('fil_service').onchange = (e)=>{ state.service = e.target.value; };
+
+      // query inițial din URL
+      const p = new URLSearchParams(location.search);
+      state.judet = p.get('judet') || '';
+      state.oras  = p.get('oras')  || '';
+      state.service = p.get('service') || '';
+      state.subcat  = p.get('subcat')  || '';
+      document.getElementById('fil_judet').value = state.judet;
+      await reloadOrase(true);
+      document.getElementById('fil_service').value = state.service;
+
+      // per_page în funcție de stânga
+      state.per_page = document.getElementById('left').classList.contains('min') ? 15 : 12;
+
+      reload();
+    }
+    function fillSel(sel, arr){
+      sel.innerHTML = '<option value="">Alege</option>';
+      (arr||[]).forEach(v=>{
+        const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+      });
+    }
+    async function reloadOrase(keep=false){
+      const sel = document.getElementById('fil_oras');
+      sel.disabled = true; fillSel(sel, []);
+      if (!state.judet) return;
+      const r = await fetch('/.netlify/functions/lists?judet='+encodeURIComponent(state.judet));
+      const { orase=[] } = await r.json();
+      fillSel(sel, orase);
+      sel.disabled = false;
+      if (keep && state.oras) sel.value = state.oras;
+    }
+
+    function renderSubs(){
+      const box = document.getElementById('subchips'); box.innerHTML='';
+      if (!state.service) return;
+      const svc = S.services.find(s=>s.name===state.service);
+      const subs = (S.subs||[]).filter(sc=>sc.service_id===svc?.id);
+      subs.forEach(sc=>{
+        const b = document.createElement('button');
+        b.className = 'btn'; b.textContent = sc.name;
+        if (String(state.subcat)===String(sc.id)) b.classList.add('primary');
+        b.onclick = ()=>{ state.subcat=String(sc.id); renderSubs(); };
+        box.appendChild(b);
+      });
+    }
+
+    async function reload(){
+      // fetch providers
+      const q = new URLSearchParams();
+      if (state.judet) q.set('judet', state.judet);
+      if (state.oras)  q.set('oras', state.oras);
+      if (state.service) q.set('service', state.service);
+      if (state.subcat)  q.set('subcat', state.subcat);
+      q.set('sort', document.getElementById('sort').value);
+      q.set('page', String(state.page));
+      q.set('per_page', String(state.per_page));
+
+      const url = '/.netlify/functions/providers?'+q.toString();
+      const r = await fetch(url); const { items=[], total=0 } = await r.json();
+
+      // render cards (fără scroll)
+      const grid = document.getElementById('grid'); grid.innerHTML='';
+      items.forEach(p=>{
+        const a = document.createElement('article'); a.className='card';
+        a.innerHTML = `
+          <div class="pic"></div>
+          <div class="body">
+            <div style="display:flex;align-items:center;gap:6px">
+              <h3 style="margin:.25rem 0; font-size:16px">${p.company_name}</h3>
+            </div>
+            <div class="meta">${p.judet}${p.oras?', '+p.oras:''} · ${p.service_name}</div>
+          </div>
+          <div class="reveal">Vezi pagina furnizorului →</div>
+        `;
+        if (p.is_online) {
+          const d = document.createElement('div'); d.className='dot'; a.appendChild(d);
+        }
+        a.onclick = ()=> location.href = '/p.html?slug=' + encodeURIComponent(slugify(p.company_name, p.oras||p.judet));
+        grid.appendChild(a);
+      });
+
+      // page info
+      const maxPage = Math.max(1, Math.ceil(total / state.per_page));
+      document.getElementById('pageInfo').textContent = `Pagina ${state.page} / ${maxPage}`;
+    }
+
+    function page(d){
+      const info = document.getElementById('pageInfo').textContent;
+      const m = /Pagina (\d+) \/ (\d+)/.exec(info);
+      const cur = m ? parseInt(m[1],10) : 1;
+      const max = m ? parseInt(m[2],10) : 1;
+      const nxt = Math.min(max, Math.max(1, cur + d));
+      if (nxt !== cur){ state.page = nxt; reload(); }
+    }
+
+    function slugify(name, loc){
+      return String(name).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') + '-' + String(loc||'').toLowerCase().replace(/\s+/g,'-');
+    }
+
+    function searchSubmit(){
+      // opțional: parsezi textul și setezi state
+      reload();
+    }
+    boot();
+  </script>
 </body>
 </html>
