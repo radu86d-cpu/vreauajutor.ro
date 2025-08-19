@@ -64,20 +64,26 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
     }
 
-    // 3) Implicit (pagina principală): servicii + județe DOAR cu furnizori activi
-    const [svcRes, provRes] = await Promise.all([
-      supabase.from('services').select('name').order('name', { ascending: true }),
-      supabase.from('providers').select('judet, is_active').eq('is_active', true).limit(5000)
-    ]);
-    if (svcRes.error) throw svcRes.error;
-    if (provRes.error) throw provRes.error;
+    // în /netlify/functions/lists.js – la finalul handlerului, în locul "implicit (pagina principală)"
+// 3) Implicit (pagina principală): servicii DOAR cu furnizori activi + lista de județe cu furnizori
+const [svcRes, provRes] = await Promise.all([
+  supabase.from('v_active_services_by_area')
+    .select('service_id, service_name, providers_count'),
+  supabase.from('providers')
+    .select('judet, is_active').eq('is_active', true).limit(5000)
+]);
+if (svcRes.error) throw svcRes.error;
+if (provRes.error) throw provRes.error;
 
-    const services = (svcRes.data || []).map(s => s.name);
-    const judete   = Array.from(new Set((provRes.data || []).map(r => r.judet)))
-      .sort((a,b)=>a.localeCompare(b,'ro'));
+const services = Array.from(
+  new Map(
+    (svcRes.data || [])
+      .filter(r => Number(r.providers_count) > 0)
+      .map(r => [r.service_id, r.service_name])
+  ).values()
+).sort((a,b)=>a.localeCompare(b,'ro'));
 
-    return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
-  } catch (e) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
-  }
-};
+const judete   = Array.from(new Set((provRes.data || []).map(r => r.judet)))
+  .sort((a,b)=>a.localeCompare(b,'ro'));
+
+return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
