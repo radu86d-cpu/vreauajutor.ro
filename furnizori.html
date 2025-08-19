@@ -120,7 +120,10 @@
       document.getElementById('step2').classList.remove('active');
       document.getElementById('step1').classList.add('active');
     }
-    function apply(){ reload(); }
+   function apply(){
+  state.page = 1;   // ← revino pe pagina 1
+  reload();
+}
 
     async function boot(){
       // liste
@@ -129,15 +132,29 @@
       fillSel(document.getElementById('fil_judet'), L.judete);
 
       // pentru subcategorii
-      const cr = await fetch('/.netlify/functions/categories'); const C = await cr.json();
-      S.services = C.services; S.subs = C.subs;
 
       // events
       document.getElementById('fil_judet').onchange = async (e)=>{
-        state.judet = e.target.value; state.oras=''; reloadOrase();
-      };
-      document.getElementById('fil_oras').onchange = (e)=>{ state.oras = e.target.value; };
-      document.getElementById('fil_service').onchange = (e)=>{ state.service = e.target.value; };
+  state.judet = e.target.value;
+  state.oras  = '';
+  state.page  = 1;                 // ← revino pe pagina 1
+  await reloadOrase();
+  // dacă e deschis pasul 2, reîncarcă subcategoriile pentru noul context
+  if (document.getElementById('step2').classList.contains('active')) renderSubs();
+};
+
+document.getElementById('fil_oras').onchange = (e)=>{
+  state.oras = e.target.value;
+  state.page = 1;                  // ← revino pe pagina 1
+  if (document.getElementById('step2').classList.contains('active')) renderSubs();
+};
+
+document.getElementById('fil_service').onchange = (e)=>{
+  state.service = e.target.value;
+  state.subcat  = '';              // ← reset subcategorie
+  state.page    = 1;
+  if (document.getElementById('step2').classList.contains('active')) renderSubs();
+};
 
       // query inițial din URL
       const p = new URLSearchParams(location.search);
@@ -171,59 +188,100 @@
       if (keep && state.oras) sel.value = state.oras;
     }
 
-    function renderSubs(){
-      const box = document.getElementById('subchips'); box.innerHTML='';
-      if (!state.service) return;
-      const svc = S.services.find(s=>s.name===state.service);
-      const subs = (S.subs||[]).filter(sc=>sc.service_id===svc?.id);
-      subs.forEach(sc=>{
-        const b = document.createElement('button');
-        b.className = 'btn'; b.textContent = sc.name;
-        if (String(state.subcat)===String(sc.id)) b.classList.add('primary');
-        b.onclick = ()=>{ state.subcat=String(sc.id); renderSubs(); };
-        box.appendChild(b);
-      });
-    }
+    async function renderSubs(){
+  const box = document.getElementById('subchips'); 
+  box.innerHTML = '';
+  if (!state.service) return;
+
+  const u = '/.netlify/functions/taxonomy?mode=subcategories'
+          + '&service=' + encodeURIComponent(state.service)
+          + (state.judet ? '&judet=' + encodeURIComponent(state.judet) : '')
+          + (state.oras  ? '&oras='  + encodeURIComponent(state.oras)  : '');
+
+  try{
+    const { subcategories = [] } = await (await fetch(u, {cache:'no-store'})).json();
+    subcategories.forEach(sc=>{
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = sc.name + (sc.count ? ` (${sc.count})` : '');
+      if (String(state.subcat) === String(sc.id)) b.classList.add('primary');
+      b.onclick = ()=>{ state.subcat = String(sc.id); renderSubs(); };
+      box.appendChild(b);
+    });
+  }catch(e){
+    console.error(e);
+    box.innerHTML = '<span style="opacity:.7">Nu am putut încărca subcategoriile.</span>';
+  }
+}
+
 
     async function reload(){
-      // fetch providers
-      const q = new URLSearchParams();
-      if (state.judet) q.set('judet', state.judet);
-      if (state.oras)  q.set('oras', state.oras);
-      if (state.service) q.set('service', state.service);
-      if (state.subcat)  q.set('subcat', state.subcat);
-      q.set('sort', document.getElementById('sort').value);
-      q.set('page', String(state.page));
-      q.set('per_page', String(state.per_page));
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<div class="card" style="grid-column:1/-1;padding:12px;text-align:center">Se încarcă…</div>';
 
-      const url = '/.netlify/functions/providers?'+q.toString();
-      const r = await fetch(url); const { items=[], total=0 } = await r.json();
+  const q = new URLSearchParams();
+  if (state.judet)   q.set('judet', state.judet);
+  if (state.oras)    q.set('oras', state.oras);
+  if (state.service) q.set('service', state.service);
+  if (state.subcat)  q.set('subcat', state.subcat);
+  q.set('sort', document.getElementById('sort').value);
+  q.set('page', String(state.page));
+  q.set('per_page', String(state.per_page));
 
-      // render cards (fără scroll)
-      const grid = document.getElementById('grid'); grid.innerHTML='';
+  // păstrează URL-ul la zi
+  const qs = q.toString();
+history.replaceState(null, '', qs ? ('?' + qs) : location.pathname);
+
+
+  try{
+    const url = '/.netlify/functions/providers?' + q.toString();
+    const r = await fetch(url, { cache:'no-store' });
+    if (!r.ok) throw new Error(await r.text());
+    const { items = [], total = 0 } = await r.json();
+
+    grid.innerHTML = '';
+    if (!items.length){
+      grid.innerHTML = '<div class="card" style="grid-column:1/-1;padding:12px;text-align:center">Nu am găsit furnizori pentru filtrele alese.</div>';
+    } else {
       items.forEach(p=>{
-        const a = document.createElement('article'); a.className='card';
+        const img = p.photo_url || p.logo || 'imagini-chatgpt/no-photo.png';
+        const a = document.createElement('article'); 
+        a.className='card';
         a.innerHTML = `
-          <div class="pic"></div>
+          <div class="pic" style="background:url('${img}') center/cover no-repeat"></div>
           <div class="body">
             <div style="display:flex;align-items:center;gap:6px">
-              <h3 style="margin:.25rem 0; font-size:16px">${p.company_name}</h3>
+              <h3 style="margin:.25rem 0; font-size:16px">${p.company_name || p.name || 'Furnizor'}</h3>
             </div>
-            <div class="meta">${p.judet}${p.oras?', '+p.oras:''} · ${p.service_name}</div>
+            <div class="meta">${(p.judet || '') + (p.oras ? ', ' + p.oras : '')} · ${(p.service_name || state.service || '')}</div>
           </div>
           <div class="reveal">Vezi pagina furnizorului →</div>
         `;
         if (p.is_online) {
           const d = document.createElement('div'); d.className='dot'; a.appendChild(d);
         }
-        a.onclick = ()=> location.href = '/p.html?slug=' + encodeURIComponent(slugify(p.company_name, p.oras||p.judet));
+        a.onclick = ()=> location.href = '/p.html?slug=' + encodeURIComponent(slugify(p.company_name || p.name, p.oras || p.judet));
         grid.appendChild(a);
       });
-
-      // page info
-      const maxPage = Math.max(1, Math.ceil(total / state.per_page));
-      document.getElementById('pageInfo').textContent = `Pagina ${state.page} / ${maxPage}`;
     }
+
+    state.total = total;
+    updatePager();
+  }catch(e){
+    console.error(e);
+    grid.innerHTML = '<div class="card" style="grid-column:1/-1;padding:12px;text-align:center;color:#b00020">Eroare la încărcare.</div>';
+    document.getElementById('pageInfo').textContent = '';
+  }
+}
+function updatePager(){
+  const maxPage = Math.max(1, Math.ceil((state.total || 0) / state.per_page));
+  document.getElementById('pageInfo').textContent = `Pagina ${state.page} / ${maxPage}`;
+  const [prevBtn, nextBtn] = document.querySelectorAll('.pager .btn'); // doar 2 butoane
+  if (prevBtn) prevBtn.disabled = state.page <= 1;
+  if (nextBtn) nextBtn.disabled = state.page >= maxPage;
+}
+
+
 
     function page(d){
       const info = document.getElementById('pageInfo').textContent;
@@ -234,15 +292,43 @@
       if (nxt !== cur){ state.page = nxt; reload(); }
     }
 
-    function slugify(name, loc){
-      return String(name).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') + '-' + String(loc||'').toLowerCase().replace(/\s+/g,'-');
-    }
+    function normalizeRO(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // scoate diacritice
+    .toLowerCase();
+}
+function slugify(name, loc){
+  const n = normalizeRO(name).replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+  const l = normalizeRO(loc||'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+  return l ? `${n}-${l}` : n;
+}
 
-    function searchSubmit(){
-      // opțional: parsezi textul și setezi state
-      reload();
+
+    async function searchSubmit(){
+  const q = (document.getElementById('heroQ').value || '').trim();
+  if(!q) return;
+
+  try{
+    const r = await fetch('/.netlify/functions/lists', { cache:'no-store' });
+    const { services = [], judete = [] } = await r.json();
+    const nQ = normalizeRO(q);
+    const svc = services.find(s => nQ.includes(normalizeRO(s)));
+    const jud = judete.find(j => nQ.includes(normalizeRO(j)));
+
+    if (svc) { state.service = svc; document.getElementById('fil_service').value = svc; }
+    if (jud) {
+      state.judet = jud; document.getElementById('fil_judet').value = jud;
+      await reloadOrase();
     }
-    boot();
+    state.page = 1;
+    reload();
+  }catch(e){
+    state.service = q; // fallback: tratăm textul ca numele serviciului
+    state.page = 1;
+    reload();
+  }
+}
+boot();
   </script>
 </body>
 </html>
