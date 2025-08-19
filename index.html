@@ -441,31 +441,42 @@ async function heroSearch(){
 </script>
 
   <script>
+<script>
 document.addEventListener('DOMContentLoaded', async () => {
+  let services = [];
+  let judete   = [];
   try {
-    const r = await fetch('/.netlify/functions/lists');
-    const { services, judete } = await r.json();
+    const r = await fetch('/.netlify/functions/lists', { cache: 'no-store' });
+    if (r.ok) {
+      const data = await r.json();
+      services = Array.isArray(data.services) ? data.services : [];
+      judete   = Array.isArray(data.judete)   ? data.judete   : [];
+    } else {
+      console.warn('lists failed:', r.status, r.statusText);
+    }
+  } catch (e) {
+    console.error('lists error:', e);
+  }
 
-    const selServ  = document.getElementById('serviciu');
-    const selJudet = document.getElementById('judet');
+  const selServ  = document.getElementById('serviciu');
+  const selJudet = document.getElementById('judet');
 
-    services.forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name; opt.textContent = name;
-      selServ.appendChild(opt);
-    });
+  services.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    selServ.appendChild(opt);
+  });
 
-    judete.forEach(j => {
-      const opt = document.createElement('option');
-      opt.value = j; opt.textContent = j;
-      selJudet.appendChild(opt);
-    });
-  } catch (e) { console.error(e); }
+  judete.forEach(j => {
+    const opt = document.createElement('option');
+    opt.value = j; opt.textContent = j;
+    selJudet.appendChild(opt);
+  });
 
-  // ✅ abia acum, după populare:
   await reloadActiveServicesByArea({ preserveSelection: false });
 });
 </script>
+
   <script>
   // când se schimbă ORAȘUL => refiltrăm serviciile
   document.getElementById('oras')?.addEventListener('change', () => {
