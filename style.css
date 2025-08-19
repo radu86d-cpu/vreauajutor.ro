@@ -1,4 +1,7 @@
 /* ======= STIL GENERAL ======= */
+/* Reset util pentru layout mai stabil */
+*, *::before, *::after { box-sizing: border-box; }
+
 body{
   margin:0;
   font-family:'Inter',sans-serif;
@@ -63,6 +66,9 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   .sectiune-slider-selector{flex-direction:column;align-items:center;}
   .slider-modern,.selector-zona{width:90%;max-width:100%;}
 }
+@media (max-width:480px){
+  .prev, .next { padding: 6px; font-size: 20px; }
+}
 
 /* ==== MODAL AUTENTIFICARE ==== */
 .modal{
@@ -70,9 +76,19 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   background-color:rgba(0,0,0,.5);
 }
 .modal-content{
-  background:#fff;margin:80px auto;padding:30px;border-radius:12px;
-  width:90%;max-width:400px;position:relative;box-shadow:0 4px 20px rgba(0,0,0,.3);
+  background:#fff;
+  margin:80px auto;
+  padding:30px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  position:relative;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
+
 .close{position:absolute;right:16px;top:10px;font-size:24px;cursor:pointer;color:#999;}
 
 .tab-buttons{display:flex;justify-content:space-around;margin-bottom:20px;}
@@ -87,6 +103,9 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   font-weight:bold;cursor:pointer;
 }
 .tab-content button:hover{background:#005f99;}
+/* Ascunde panoul inactiv (bazat pe aria-hidden) */
+.tab-content[aria-hidden="true"] { display: none !important; }
+
 
 /* ======= SECȚIUNE SERVICII ======= */
 .servicii-populare{background:#f4f8fc;padding:40px 0;text-align:center;}
@@ -173,9 +192,10 @@ nav a:focus-visible,
 
 /* doar pentru cititoare de ecran */
 .sr-only{
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
-  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+  position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
 }
+
 
 /* ===== Căutare avansată ===== */
 .advanced-toggle{
@@ -198,4 +218,8 @@ nav a:focus-visible,
 .selector-zona button.advanced-toggle{background:#fff;color:#004080;border:1px solid #ccc;}
 .selector-zona button.advanced-toggle:hover{
   background:#fff;color:#004080;filter:brightness(.98);border-color:#bbb;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slides { transition: none !important; }
+  .serviciu-box:hover { transform: none !important; }
 }
