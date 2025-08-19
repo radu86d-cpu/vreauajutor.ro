@@ -145,12 +145,16 @@
   <select id="serviciu" aria-label="Serviciu">
     <option value="" selected>Alege serviciul</option>
   </select>
-<button type="button"
-        class="advanced-toggle"
-        id="btnAdv"
-        onclick="location.href='cautare-avansata.html'">
+<button
+  type="button"
+  class="advanced-toggle"
+  id="btnAdv"
+  aria-expanded="false"
+  aria-controls="advanced-panel"
+  onclick="toggleAdvanced()">
   Căutare avansată
 </button>
+
 
 
 <div id="advanced-panel" class="advanced-panel" hidden>
@@ -172,7 +176,27 @@
   <label class="chk">
     <input type="checkbox" id="has_photos"> Numai cu fotografii
   </label>
+  <!-- === Subcategoriile (nivel 1) ale categoriei selectate === -->
+<div id="subcat-wrap" class="advanced-panel" style="margin-top:10px;" hidden>
+  <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+    <strong>Subcategorii</strong>
+    <button type="button" id="reset-subcat" class="advanced-toggle" style="width:auto;padding:4px 10px;">Reset</button>
+  </div>
+  <div id="subcats" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;"></div>
 </div>
+
+<!-- === Sub-subcategoriile copil ale subcategoriei alese === -->
+<div id="child-wrap" class="advanced-panel" style="margin-top:10px;" hidden>
+  <strong>Sub-subcategorii</strong>
+  <div id="children" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+</div>
+
+<!-- valori reținute pentru trimitere către furnizori.html -->
+<input type="hidden" id="subcat">
+<input type="hidden" id="subsub">
+
+</div>
+      
 
   <button type="button" onclick="gotoFurnizori()">Caută</button>
 </div>
@@ -316,7 +340,9 @@
     const judet    = document.getElementById('judet')?.value || '';
     const oras     = document.getElementById('oras')?.value || '';
     const serviciu = document.getElementById('serviciu')?.value || '';
-
+    const subcat = document.getElementById('subcat')?.value || '';
+    const subsub = document.getElementById('subsub')?.value || '';
+    
     // câmpuri avansate
     const priceMax = document.getElementById('price_max')?.value?.trim() || '';
     const ratingMin= document.getElementById('rating_min')?.value || '';
@@ -327,7 +353,9 @@
     if (judet)    params.set('judet', judet);
     if (oras)     params.set('oras', oras);
     if (serviciu) params.set('service', serviciu);
-
+    if (subcat) params.set('subcat', subcat);
+    if (subsub) params.set('subsub', subsub);
+    
     // atașăm DOAR ce e completat/bifat
     if (priceMax) params.set('pmax', priceMax);
     if (ratingMin)params.set('rmin', ratingMin);
@@ -385,66 +413,70 @@ async function heroSearch(){
 </script>
 
   <script>
-// Populează servicii + județe la load
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const r = await fetch('/.netlify/functions/lists');
-    if (!r.ok) throw new Error('Nu pot lua listele');
     const { services, judete } = await r.json();
 
-    const selServ = document.getElementById('serviciu');
+    const selServ  = document.getElementById('serviciu');
     const selJudet = document.getElementById('judet');
 
-    // servicii
     services.forEach(name => {
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
+      opt.value = name; opt.textContent = name;
       selServ.appendChild(opt);
     });
 
-    // județe
     judete.forEach(j => {
       const opt = document.createElement('option');
-      opt.value = j;
-      opt.textContent = j;
+      opt.value = j; opt.textContent = j;
       selJudet.appendChild(opt);
     });
-  } catch (e) {
-    console.error(e);
-  }
-});
+  } catch (e) { console.error(e); }
 
-// Când se schimbă județul, refacem orașele
-document.getElementById('judet').addEventListener('change', async (ev) => {
-  const judet = ev.target.value;
-  const selOras = document.getElementById('oras');
-
-  // reset orase
-  selOras.innerHTML = '';
-  const first = document.createElement('option');
-  first.value = '';
-  first.textContent = 'Alege orașul';
-  selOras.appendChild(first);
-
-  if (!judet) return;
-
-  try {
-    const r = await fetch('/.netlify/functions/lists?judet=' + encodeURIComponent(judet));
-    if (!r.ok) throw new Error('Nu pot lua orașele');
-    const { orase } = await r.json();
-
-    orase.forEach(o => {
-      const opt = document.createElement('option');
-      opt.value = o;
-      opt.textContent = o;
-      selOras.appendChild(opt);
-    });
-  } catch (e) {
-    console.error(e);
-  }
+  // ✅ abia acum, după populare:
+  await reloadActiveServicesByArea({ preserveSelection: false });
 });
 </script>
+  <script>
+  // când se schimbă ORAȘUL => refiltrăm serviciile
+  document.getElementById('oras')?.addEventListener('change', () => {
+    reloadActiveServicesByArea();
+  });
+
+  // când se schimbă JUDEȚUL => refacem orașele și refiltrăm serviciile
+  document.getElementById('judet').addEventListener('change', async (ev) => {
+    const judet = ev.target.value;
+    const selOras = document.getElementById('oras');
+
+    selOras.innerHTML = '';
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = 'Alege orașul';
+    selOras.appendChild(first);
+
+    if (!judet) {
+      // dacă s-a șters județul, refiltrăm serviciile pe „toată țara”
+      reloadActiveServicesByArea({ preserveSelection: false });
+      return;
+    }
+
+    try {
+      const r = await fetch('/.netlify/functions/lists?judet=' + encodeURIComponent(judet));
+      if (!r.ok) throw new Error('Nu pot lua orașele');
+      const { orase } = await r.json();
+      orase.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o; opt.textContent = o;
+        selOras.appendChild(opt);
+      });
+    } catch (e) { console.error(e); }
+
+    // reîncarcă serviciile disponibile pentru acest județ
+    reloadActiveServicesByArea();
+  });
+</script>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- INIT + Google + header greet -->
 <script id="auth-init">
@@ -516,6 +548,162 @@ document.getElementById('judet').addEventListener('change', async (ev) => {
     location.reload();
   }
 </script>
+  <script>
+  // mic helper
+  async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+  function renderChips(container, items, onClick){
+    container.innerHTML = '';
+    (items || []).forEach(it => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = it.name + (it.count ? ` (${it.count})` : '');
+      b.title = it.name;
+      b.style.cssText = 'padding:6px 10px;border:1px solid #ccc;border-radius:999px;background:#fff;cursor:pointer;';
+      b.addEventListener('click', () => onClick(it));
+      container.appendChild(b);
+    });
+  }
+
+  async function loadSubcatsForSelectedService() {
+    const service = document.getElementById('serviciu')?.value || '';
+    const judet   = document.getElementById('judet')?.value || '';
+    const oras    = document.getElementById('oras')?.value || '';
+    const wrap    = document.getElementById('subcat-wrap');
+    const cont    = document.getElementById('subcats');
+    const childW  = document.getElementById('child-wrap');
+    const hidSub  = document.getElementById('subcat');
+    const hidKid  = document.getElementById('subsub');
+
+    // reset
+    hidSub.value = ''; hidKid.value = '';
+    childW.hidden = true; document.getElementById('children').innerHTML = '';
+    if (!service){ wrap.hidden = true; cont.innerHTML = ''; return; }
+
+    const url = '/.netlify/functions/taxonomy?mode=subcategories'
+              + '&service=' + encodeURIComponent(service)
+              + (judet ? '&judet='+encodeURIComponent(judet) : '')
+              + (oras  ? '&oras=' +encodeURIComponent(oras)  : '');
+    try{
+      const { subcategories = [] } = await ajx(url);
+      if (!subcategories.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
+      wrap.hidden = false;
+      renderChips(cont, subcategories, (item) => {
+        hidSub.value = item.id;   // setăm subcategoria aleasă
+        hidKid.value = '';        // resetăm copilul
+        loadChildrenForSubcat(item.id);
+      });
+    }catch(e){
+      console.error(e);
+      wrap.hidden = true;
+    }
+  }
+
+  async function loadChildrenForSubcat(subcatId){
+    const judet  = document.getElementById('judet')?.value || '';
+    const oras   = document.getElementById('oras')?.value || '';
+    const wrap   = document.getElementById('child-wrap');
+    const cont   = document.getElementById('children');
+    const hidKid = document.getElementById('subsub');
+
+    const url = '/.netlify/functions/taxonomy?mode=children&subcat='+encodeURIComponent(subcatId)
+              + (judet ? '&judet='+encodeURIComponent(judet) : '')
+              + (oras  ? '&oras=' +encodeURIComponent(oras)  : '');
+
+    try{
+      const { children = [] } = await ajx(url);
+      if (!children.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
+      wrap.hidden = false;
+      renderChips(cont, children, (kid) => { hidKid.value = kid.id; });
+    }catch(e){
+      console.error(e);
+      wrap.hidden = true;
+    }
+  }
+
+  // când se deschide panoul avansat, dacă există categorie selectată, încarcă subcategoriile
+  const _oldToggleAdvanced = window.toggleAdvanced;
+  window.toggleAdvanced = function(){
+    _oldToggleAdvanced();
+    const panelNowOpen = !document.getElementById('advanced-panel').hasAttribute('hidden');
+    if (panelNowOpen) loadSubcatsForSelectedService();
+  };
+
+  // la schimbarea categoriei, refa subcategoriile
+  document.getElementById('serviciu')?.addEventListener('change', loadSubcatsForSelectedService);
+
+  // buton „Reset” subcategorii
+  document.getElementById('reset-subcat')?.addEventListener('click', () => {
+    document.getElementById('subcat').value = '';
+    document.getElementById('subsub').value = '';
+    document.getElementById('child-wrap').hidden = true;
+    document.getElementById('children').innerHTML = '';
+  });
+</script>
+  <script>
+  // mic helper deja definit mai sus:
+  // async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+  async function reloadActiveServicesByArea({ preserveSelection = true } = {}) {
+    const judet   = document.getElementById('judet')?.value || '';
+    const oras    = document.getElementById('oras')?.value || '';
+    const selServ = document.getElementById('serviciu');
+
+    if (!selServ) return;
+
+    const prev = preserveSelection ? selServ.value : '';
+
+    // UI: loading state
+    selServ.disabled = true;
+    selServ.innerHTML = '<option value="">Se încarcă…</option>';
+
+    try {
+      const url = '/.netlify/functions/taxonomy?mode=categories'
+                + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+                + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+      const { services = [] } = await ajx(url);
+
+      // reumple selectorul
+      selServ.innerHTML = '<option value="">Alege serviciul</option>';
+      services.forEach(s => {
+        const val = (typeof s === 'string') ? s : (s.name || '');
+        if (!val) return;
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        selServ.appendChild(opt);
+      });
+
+      // păstrează selecția dacă mai e validă; altfel resetează și ascunde sub-panourile
+      if (prev && [...selServ.options].some(o => o.value === prev)) {
+        selServ.value = prev;
+      } else {
+        selServ.value = '';
+        // reset subcat/subsub + UI
+        document.getElementById('subcat').value = '';
+        document.getElementById('subsub').value = '';
+        document.getElementById('subcat-wrap').hidden = true;
+        document.getElementById('child-wrap').hidden  = true;
+        document.getElementById('subcats').innerHTML  = '';
+        document.getElementById('children').innerHTML = '';
+      }
+
+      // dacă panoul avansat e deschis și există serviciu selectat -> reîncarcă subcategoriile
+      const panelOpen = !document.getElementById('advanced-panel').hasAttribute('hidden');
+      if (panelOpen && selServ.value) {
+        await loadSubcatsForSelectedService();
+      }
+    } catch (e) {
+      console.error('taxonomy categories error', e);
+      selServ.innerHTML = '<option value="">Alege serviciul</option>';
+    } finally {
+      selServ.disabled = false;
+    }
+  }
+  
+</script>
+
+
 
 
   <!-- Scriptul tău principal -->
