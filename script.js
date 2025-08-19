@@ -29,12 +29,21 @@
     if (autoplay) { clearInterval(autoplay); autoplay = null; }
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    if (totalSlides > 0) showSlide(0);
-    start();
-  });
+ const initSlider = () => { if (totalSlides > 0) showSlide(0); start(); };
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSlider);
+} else {
+  initSlider();
+}
 
-  prefersReducedMotion.addEventListener?.('change', e => { e.matches ? stop() : start(); });
+
+  if (typeof prefersReducedMotion.addEventListener === 'function') {
+  prefersReducedMotion.addEventListener('change', e => { e.matches ? stop() : start(); });
+} else if (typeof prefersReducedMotion.addListener === 'function') {
+  // Safari vechi
+  prefersReducedMotion.addListener(mq => { mq.matches ? stop() : start(); });
+}
+
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   container?.addEventListener('mouseenter', stop);
   container?.addEventListener('mouseleave', start);
@@ -55,6 +64,16 @@
   const btnTabRegister = document.getElementById('tab-register');
   const login  = document.getElementById('loginForm');
   const reg    = document.getElementById('registerForm');
+  
+  function setTabState(isLogin){
+  btnTabLogin?.classList.toggle('active',  isLogin);
+  btnTabRegister?.classList.toggle('active', !isLogin);
+  btnTabLogin?.setAttribute('aria-selected', String(isLogin));
+  btnTabRegister?.setAttribute('aria-selected', String(!isLogin));
+  login?.setAttribute('aria-hidden', String(!isLogin));
+  reg?.setAttribute('aria-hidden',   String(isLogin));
+}
+
 
   let lastFocused = null;
   let focusTrapHandler = null;
@@ -83,6 +102,7 @@
     document.body.style.overflow = 'hidden';
     focusTrapHandler = trapFocus;
     document.addEventListener('keydown', focusTrapHandler);
+    stop();
   }
 
   function closeModal(){
@@ -93,25 +113,25 @@
     document.removeEventListener('keydown', focusTrapHandler);
     focusTrapHandler = null;
     lastFocused?.focus?.();
+    start();
   }
 
-  window.openLogin = function() {
-    openModal();
-    if (login) login.style.display = 'block';
-    if (reg)   reg.style.display   = 'none';
-    btnTabLogin?.classList.add('active');
-    btnTabRegister?.classList.remove('active');
-    document.getElementById('login_email')?.focus();
-  };
+ window.openLogin = function() {
+  openModal();
+  if (login) login.style.display = 'block';
+  if (reg)   reg.style.display   = 'none';
+  setTabState(true);
+  document.getElementById('login_email')?.focus();
+};
 
-  window.openRegister = function() {
-    openModal();
-    if (login) login.style.display = 'none';
-    if (reg)   reg.style.display   = 'block';
-    btnTabLogin?.classList.remove('active');
-    btnTabRegister?.classList.add('active');
-    document.getElementById('register_email')?.focus();
-  };
+window.openRegister = function() {
+  openModal();
+  if (login) login.style.display = 'none';
+  if (reg)   reg.style.display   = 'block';
+  setTabState(false);
+  document.getElementById('register_email')?.focus();
+};
+
 
   window.inchideModal = closeModal;
 
