@@ -223,3 +223,5 @@ nav a:focus-visible,
   .slides { transition: none !important; }
   .serviciu-box:hover { transform: none !important; }
 }
+/* DEBUG: dacă AOS nu se inițializează, nu mai ascunde secțiunile */
+[data-aos] { opacity: 1 !important; transform: none !important; }
