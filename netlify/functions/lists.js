@@ -3,12 +3,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 // helperi
 const norm = (s) => (s || '').trim().toLowerCase();
+// normalizează simplu: prima literă mare, restul mici
 const title = (s) => {
-  // titlize simplu (fără pretenții, dar arată OK)
-  return (s || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\b\p{L}/gu, c => c.toUpperCase());
+  if (!s) return '';
+  const clean = s.trim().toLowerCase();
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
 };
 
 exports.handler = async (event) => {
