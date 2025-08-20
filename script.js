@@ -9,48 +9,54 @@
     if (slides) slides.style.transform = `translateX(-${i * 100}%)`;
   };
 
-  // expune pentru butoanele HTML
+  // expune funcția pentru butoanele HTML (prev/next)
   window.moveSlide = function(direction) {
     if (!totalSlides) return;
     slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
     showSlide(slideIndex);
   };
 
-  // respectă preferința de mișcare redusă
+  // Respectă preferința de mișcare redusă a utilizatorului
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // autoplay (pauză când tab-ul nu e activ / hover / focus în slider)
+  // Autoplay slider (pauză dacă tab-ul nu e activ sau mouse-ul e peste slider)
   let autoplay = null;
   const start = () => {
-    if (prefersReducedMotion.matches) return; // nu autoredăm dacă userul preferă mai puțină mișcare
-    if (totalSlides > 0 && !autoplay) autoplay = setInterval(() => window.moveSlide(1), 5000);
+    if (prefersReducedMotion.matches) return; // nu autoredăm dacă userul preferă fără animații
+    if (totalSlides > 0 && !autoplay) {
+      autoplay = setInterval(() => window.moveSlide(1), 5000);
+    }
   };
   const stop = () => {
     if (autoplay) { clearInterval(autoplay); autoplay = null; }
   };
 
- const initSlider = () => { if (totalSlides > 0) showSlide(0); start(); };
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSlider);
-} else {
-  initSlider();
-}
+  const initSlider = () => {
+    if (totalSlides > 0) showSlide(0);
+    start();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSlider);
+  } else {
+    initSlider();
+  }
 
-
+  // Oprește/pornește autoplay la schimbarea preferinței reduce-motion
   if (typeof prefersReducedMotion.addEventListener === 'function') {
-  prefersReducedMotion.addEventListener('change', e => { e.matches ? stop() : start(); });
-} else if (typeof prefersReducedMotion.addListener === 'function') {
-  // Safari vechi
-  prefersReducedMotion.addListener(mq => { mq.matches ? stop() : start(); });
-}
+    prefersReducedMotion.addEventListener('change', e => { e.matches ? stop() : start(); });
+  } else if (typeof prefersReducedMotion.addListener === 'function') {
+    // fallback Safari vechi
+    prefersReducedMotion.addListener(mq => { mq.matches ? stop() : start(); });
+  }
 
+  // Pune pe pauză sliderul când fereastra nu e vizibilă sau userul interacționează direct
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   container?.addEventListener('mouseenter', stop);
   container?.addEventListener('mouseleave', start);
   container?.addEventListener('focusin', stop);
   container?.addEventListener('focusout', start);
 
-  // control din tastatură — nu interceptăm când scrii în input/textarea/select
+  // Control slider din tastatură (săgeți) – ignoră inputurile/textarea/select
   document.addEventListener('keydown', (e) => {
     const tag = (e.target.tagName || '').toLowerCase();
     if (['input','textarea','select'].includes(tag) || e.target.isContentEditable) return;
@@ -59,33 +65,31 @@ if (document.readyState === 'loading') {
   });
 
   // ---------- MODAL LOGIN/REGISTER ----------
-  const modal = document.getElementById('authModal');
-  const btnTabLogin    = document.getElementById('tab-login');
+  const modal        = document.getElementById('authModal');
+  const btnTabLogin  = document.getElementById('tab-login');
   const btnTabRegister = document.getElementById('tab-register');
-  const login  = document.getElementById('loginForm');
-  const reg    = document.getElementById('registerForm');
+  const loginPanel   = document.getElementById('loginForm');
+  const registerPanel= document.getElementById('registerForm');
   
-  function setTabState(isLogin){
-  btnTabLogin?.classList.toggle('active',  isLogin);
-  btnTabRegister?.classList.toggle('active', !isLogin);
-  btnTabLogin?.setAttribute('aria-selected', String(isLogin));
-  btnTabRegister?.setAttribute('aria-selected', String(!isLogin));
-  login?.setAttribute('aria-hidden', String(!isLogin));
-  reg?.setAttribute('aria-hidden',   String(isLogin));
-}
-
+  function setTabState(isLogin) {
+    btnTabLogin?.classList.toggle('active',  isLogin);
+    btnTabRegister?.classList.toggle('active', !isLogin);
+    btnTabLogin?.setAttribute('aria-selected', String(isLogin));
+    btnTabRegister?.setAttribute('aria-selected', String(!isLogin));
+    loginPanel?.setAttribute('aria-hidden', String(!isLogin));
+    registerPanel?.setAttribute('aria-hidden', String(isLogin));
+  }
 
   let lastFocused = null;
   let focusTrapHandler = null;
 
-  function trapFocus(e){
+  function trapFocus(e) {
     if (e.key !== 'Tab' || !modal) return;
     const focusables = modal.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     const arr = Array.from(focusables).filter(el => !el.disabled && el.offsetParent !== null);
     if (!arr.length) return;
-
     const first = arr[0], last = arr[arr.length - 1];
     if (e.shiftKey && document.activeElement === first) {
       e.preventDefault(); last.focus();
@@ -94,56 +98,55 @@ if (document.readyState === 'loading') {
     }
   }
 
-  function openModal(){
+  function openModal() {
     if (!modal) return;
     lastFocused = document.activeElement;
     modal.style.display = 'block';
-    modal.setAttribute('aria-hidden','false');
+    modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     focusTrapHandler = trapFocus;
     document.addEventListener('keydown', focusTrapHandler);
-    stop();
+    stop(); // oprește sliderul cât timp e deschis modalul
   }
 
-  function closeModal(){
+  function closeModal() {
     if (!modal) return;
     modal.style.display = 'none';
-    modal.setAttribute('aria-hidden','true');
+    modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     document.removeEventListener('keydown', focusTrapHandler);
     focusTrapHandler = null;
     lastFocused?.focus?.();
-    start();
+    start(); // pornește la loc sliderul după închiderea modalului
   }
 
- window.openLogin = function() {
-  openModal();
-  if (login) login.style.display = 'block';
-  if (reg)   reg.style.display   = 'none';
-  setTabState(true);
-  document.getElementById('login_email')?.focus();
-};
+  window.openLogin = function() {
+    openModal();
+    if (loginPanel)    loginPanel.style.display = 'block';
+    if (registerPanel) registerPanel.style.display = 'none';
+    setTabState(true);
+    document.getElementById('login_email')?.focus();
+  };
 
-window.openRegister = function() {
-  openModal();
-  if (login) login.style.display = 'none';
-  if (reg)   reg.style.display   = 'block';
-  setTabState(false);
-  document.getElementById('register_email')?.focus();
-};
-
+  window.openRegister = function() {
+    openModal();
+    if (loginPanel)    loginPanel.style.display = 'none';
+    if (registerPanel) registerPanel.style.display = 'block';
+    setTabState(false);
+    document.getElementById('register_email')?.focus();
+  };
 
   window.inchideModal = closeModal;
 
-  window.schimbaTab = function(tab){
+  window.schimbaTab = function(tab) {
     if (tab === 'login') window.openLogin();
     else if (tab === 'register') window.openRegister();
   };
 
-  // compat: vechiul nume
+  // compatibilitate cu vechiul nume (dacă era folosit altundeva)
   window.afiseazaFormular = window.schimbaTab;
 
-  // Escape + click în overlay
+  // Închide modalul cu Escape sau click în afara ferestrei (pe overlay)
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
   });
