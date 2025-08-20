@@ -96,14 +96,28 @@
       const r = await fetch('/.netlify/functions/lists?mode=signup');
       const { services = [], judete = [] } = await r.json();
 
-      const selServ = document.getElementById('service_name');
-      const selJ = document.getElementById('reg_judet');
-      const selO = document.getElementById('reg_oras');
+      // după: const { services = [], judete = [] } = await r.json();
+const selServ = document.getElementById('service_name');
+const selJ    = document.getElementById('reg_judet');
+const selO    = document.getElementById('reg_oras');
 
-      fillSelect(selServ, services, 'Alege serviciul');
-      fillSelect(selJ, judete,  'Alege județul');
-      fillSelect(selO, [],      'Alege orașul');
-      selO.disabled = true;
+// UMPLERE servicii cu value = numele EXACT din DB
+selServ.innerHTML = '<option value="">Alege serviciul</option>';
+(services || []).forEach(s => {
+  const val   = (typeof s === 'string') ? s : (s.name  || '');
+  const label = (typeof s === 'string') ? s : (s.label || s.name || '');
+  if (!val) return;
+  const o = document.createElement('option');
+  o.value = val;      // ← EXACT din DB; taxonomy va găsi subcategoriile corect
+  o.textContent = label;
+  selServ.appendChild(o);
+});
+
+// restul rămâne ca la tine
+fillSelect(selJ, judete, 'Alege județul');
+fillSelect(selO, [], 'Alege orașul');
+selO.disabled = true;
+
 
       // când se schimbă județul -> aducem orașele pentru acel județ
       selJ.addEventListener('change', async (ev) => {
