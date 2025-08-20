@@ -34,24 +34,29 @@ exports.handler = async (event) => {
     const orasQ  = (qs.oras  || '').trim();
 
 // ========= MODE=SIGNUP =========
-// - fără judet  -> trimite servicii + judete (pt. încărcare inițială în formular)
-// - cu judet    -> trimite orasele din acel județ (din tabela locations)
+// - fără judet  -> trimite servicii + judete pentru formular (serviciile cu VALUE = numele EXACT din DB)
+// - cu judet    -> trimite orasele din acel judet (din tabela locations)
 if (mode === 'signup') {
   if (!judetQ) {
-    // categorii (cele 51 din services)
+    // servicii din DB (cu numele exact)
     const { data: svc, error: e1 } = await db
       .from('services')
-      .select('id,name')
+      .select('id, name')
       .order('name', { ascending: true });
     if (e1) throw e1;
 
-    // județe din locations (unice)
+    // ÎNLOC de string simplu, trimitem obiecte: { name: <exact din DB>, label: <afisaj fara diacritice> }
+    const services = (svc || []).map(s => ({
+      name: s.name,                    // EXACT cum e în DB -> acesta va fi <option value="...">
+      label: toAsciiTitle(s.name)      // ce afișăm fără diacritice
+    }));
+
+    // județe unice din locations (ca până acum)
     const { data: locs, error: e2 } = await db
       .from('locations')
       .select('judet');
     if (e2) throw e2;
 
-    const services = (svc || []).map(s => toAsciiTitle(s.name));
     const judMap = new Map();
     for (const r of (locs || [])) {
       const key = norm(r.judet);
@@ -59,9 +64,10 @@ if (mode === 'signup') {
       if (!judMap.has(key)) judMap.set(key, toAsciiTitle(r.judet));
     }
     const judete = Array.from(judMap.values()).sort((a,b)=>a.localeCompare(b));
+
     return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
   } else {
-    // avem judet -> întoarce ORAȘELE din acel județ (din locations)
+    // avem judet -> ORAȘELE din acel județ
     const judKey = norm(judetQ);
     const { data: locs, error: e3 } = await db
       .from('locations')
