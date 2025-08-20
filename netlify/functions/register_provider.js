@@ -7,9 +7,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// mic helper: "Cluj-Napoca" nu "cluj-napoca"
+// helpers
+const stripDiacritics = (s = '') => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const norm = (s = '') => stripDiacritics(String(s).trim()).toLowerCase();
 function titleCaseRO(s = '') {
-  return s
+  return String(s)
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -23,21 +25,17 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
-  // CORS preflight pentru Authorization
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Use POST' }) };
-  }
+  // CORS preflight
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
+  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Use POST' }) };
 
   try {
     const body = JSON.parse(event.body || '{}');
 
+    // ------------------ Validări minime ------------------
     const required = ['company_name', 'service_name', 'judet', 'oras'];
     for (const k of required) {
       if (!body[k] || String(body[k]).trim() === '') {
@@ -45,7 +43,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // 0) Aflăm user-ul din token (trebuie să trimiți Authorization: Bearer <token>)
+    // autentificare (token din Authorization: Bearer <jwt>)
     const auth = event.headers.authorization || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) {
@@ -57,49 +55,99 @@ exports.handler = async (event) => {
     }
     const user = userData.user;
 
-    // 1) aflăm service_id după nume
-    const { data: svc, error: e1 } = await supabase
-      .from('services')
-      .select('id')
-      .eq('name', body.service_name)
-      .single();
+    // ------------------ Găsește service_id după service_name ------------------
+    // întâi încercăm egalitate directă (exact cum e în DB)
+    let serviceId = null;
 
-    if (e1 || !svc) {
+    // 1) match exact
+    {
+      const { data: svc1, error: e1 } = await supabase
+        .from('services')
+        .select('id, name')
+        .eq('name', body.service_name)
+        .maybeSingle();
+      if (e1) throw e1;
+      if (svc1?.id) serviceId = svc1.id;
+    }
+
+    // 2) fallback: potrivire fără diacritice + case-insensitive
+    if (!serviceId) {
+      const { data: allS, error: e2 } = await supabase
+        .from('services')
+        .select('id, name');
+      if (e2) throw e2;
+      const target = norm(body.service_name);
+      const found = (allS || []).find(s => norm(s.name) === target)
+                || (allS || []).find(s => norm(s.name).includes(target) || target.includes(norm(s.name)));
+      if (found) serviceId = found.id;
+    }
+
+    if (!serviceId) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Serviciu inexistent' }) };
     }
 
-    // 2) inserăm furnizorul (normalizez județ/oras + setez user_id)
+    // ------------------ Inserare provider ------------------
     const insert = {
-      user_id: user.id, // ← IMPORTANT
-      company_name: body.company_name.trim(),
-      description: body.description?.trim() || null,
-      service_id: svc.id,
-      judet: titleCaseRO(body.judet),
-      oras: titleCaseRO(body.oras),
-      phone: body.phone?.trim() || null,
-      email: body.email?.trim() || null,
-      is_active: true
+      user_id:     user.id,
+      company_name: (body.company_name || '').trim(),
+      description:  (body.description || '').trim() || null,
+      service_id:   serviceId,
+      judet:        titleCaseRO(body.judet),
+      oras:         titleCaseRO(body.oras),
+      phone:        (body.phone || '').trim() || null,
+      email:        (body.email || '').trim() || null,
+      is_active:    true,
     };
 
-    const { data, error } = await supabase
+    const { data: provRows, error: insErr } = await supabase
       .from('providers')
       .insert(insert)
-      .select('id, company_name');
+      .select('id, company_name')
+      .limit(1);
 
-    if (error) {
-      // eroare de unicitate pe company_name
-      if (error.code === '23505') {
+    if (insErr) {
+      if (insErr.code === '23505') {
+        // unicitate pe company_name
         return { statusCode: 409, headers, body: JSON.stringify({ error: 'Compania există deja.' }) };
       }
-      throw error;
+      throw insErr;
+    }
+
+    const provider = provRows?.[0];
+    const providerId = provider?.id;
+    if (!providerId) throw new Error('Insert provider fără id.');
+
+    // ------------------ Subcategorie / Sub-subcategorie ------------------
+    // Acceptăm id-uri numerice în body.subcat / body.subsub; ignorăm restul.
+    const toLink = [];
+    if (body.subcat && /^\d+$/.test(String(body.subcat))) toLink.push(parseInt(body.subcat, 10));
+    if (body.subsub && /^\d+$/.test(String(body.subsub))) toLink.push(parseInt(body.subsub, 10));
+
+    if (toLink.length) {
+      // Verificăm că există acele subcategorii
+      const { data: subs, error: sErr } = await supabase
+        .from('subcategories')
+        .select('id')
+        .in('id', toLink);
+      if (sErr) throw sErr;
+
+      const validIds = new Set((subs || []).map(r => r.id));
+      for (const sid of toLink) {
+        if (!validIds.has(sid)) continue; // ignoră id-urile inexistente
+        const { error: linkErr } = await supabase
+          .from('provider_subcategories')
+          .insert({ provider_id: providerId, subcategory_id: sid });
+        // dacă există deja (PK dup), îl ignorăm
+        if (linkErr && linkErr.code !== '23505') throw linkErr;
+      }
     }
 
     return {
       statusCode: 201,
       headers,
-      body: JSON.stringify({ ok: true, provider: data?.[0] || null })
+      body: JSON.stringify({ ok: true, provider }),
     };
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message || String(err) }) };
   }
 };
