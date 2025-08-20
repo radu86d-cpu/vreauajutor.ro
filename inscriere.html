@@ -75,7 +75,7 @@
     </form>
   </main>
 
-  <script>
+<script>
   // mic helper pentru a umple select-urile
   function fillSelect(sel, arr, firstLabel) {
     sel.innerHTML = '';
@@ -90,52 +90,51 @@
     });
   }
 
-  // la încărcarea paginii: servicii + județe (din locations)
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      const r = await fetch('/.netlify/functions/lists?mode=signup');
+      const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
       const { services = [], judete = [] } = await r.json();
 
-      // după: const { services = [], judete = [] } = await r.json();
-const selServ = document.getElementById('service_name');
-const selJ    = document.getElementById('reg_judet');
-const selO    = document.getElementById('reg_oras');
+      const selServ = document.getElementById('service_name');
+      const selJ = document.getElementById('reg_judet');
+      const selO = document.getElementById('reg_oras');
 
-// UMPLERE servicii cu value = numele EXACT din DB
-selServ.innerHTML = '<option value="">Alege serviciul</option>';
-(services || []).forEach(s => {
-  const val   = (typeof s === 'string') ? s : (s.name  || '');
-  const label = (typeof s === 'string') ? s : (s.label || s.name || '');
-  if (!val) return;
-  const o = document.createElement('option');
-  o.value = val;      // ← EXACT din DB; taxonomy va găsi subcategoriile corect
-  o.textContent = label;
-  selServ.appendChild(o);
-});
+      fillSelect(selServ, services, 'Alege serviciul');
+      fillSelect(selJ, judete,  'Alege județul');
+      fillSelect(selO, [],      'Alege orașul');
+      selO.disabled = true;
 
-// restul rămâne ca la tine
-fillSelect(selJ, judete, 'Alege județul');
-fillSelect(selO, [], 'Alege orașul');
-selO.disabled = true;
-
-
-      // când se schimbă județul -> aducem orașele pentru acel județ
+      // leagă handler-ele DUPĂ ce am umplut listele
       selJ.addEventListener('change', async (ev) => {
         const judet = ev.target.value;
         fillSelect(selO, [], 'Alege orașul');
         selO.disabled = true;
-        if (!judet) return;
-
-        const rr = await fetch('/.netlify/functions/lists?mode=signup&judet=' + encodeURIComponent(judet));
+        if (!judet) { return; }
+        const rr = await fetch('/.netlify/functions/lists?mode=signup&judet=' + encodeURIComponent(judet), { cache:'no-store' });
         const { orase = [] } = await rr.json();
         fillSelect(selO, orase, 'Alege orașul');
         selO.disabled = false;
+        // dacă avem deja un serviciu ales, reîncarcă subcategoriile
+        if (selServ.value) loadSubcatsForSignup();
       });
+
+      selO.addEventListener('change', () => {
+        if (selServ.value) loadSubcatsForSignup();
+      });
+
+      selServ.addEventListener('change', loadSubcatsForSignup);
+
+      // 👉 opțional: auto-selectează primul serviciu ca să vezi imediat subcategoriile
+      if (!selServ.value && services.length) {
+        selServ.value = services[0];
+        loadSubcatsForSignup();
+      }
     } catch (e) {
       console.error('Nu pot încărca listele:', e);
     }
   });
 </script>
+
 <!-- Supabase SDK (dacă nu e deja în pagină) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
