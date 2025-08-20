@@ -1,35 +1,48 @@
-// netlify/functions/categories.js
+// netlify/functions/categories.js (CommonJS)
 const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-exports.handler = async () => {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const toAsciiTitle = (s) =>
+  (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // fără diacritice
+    .trim().toLowerCase()
+    .replace(/^./, c => c.toUpperCase());             // prima literă mare
+
+exports.handler = async (event) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'public, max-age=300, s-maxage=300',
+  };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
+  if (event.httpMethod !== 'GET')     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
-    const { data: services, error: e1 } = await supabase
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'SUPABASE env missing' }) };
+    }
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // toate categoriile (serviciile) ordonate alfabetic
+    const { data, error } = await db
       .from('services')
       .select('id, name')
       .order('name', { ascending: true });
-    if (e1) throw e1;
 
-    const { data: subs, error: e2 } = await supabase
-      .from('subcategories')
-      .select('id, service_id, name, slug, position')
-      .order('position', { ascending: true });
-    if (e2) throw e2;
+    if (error) throw error;
 
-    const { data: filters, error: e3 } = await supabase
-      .from('subcategory_filters')
-      .select('id, subcategory_id, key, label, type, options, position')
-      .order('position', { ascending: true });
-    if (e3) throw e3;
+    // trimitem și un „display” fără diacritice, ca în restul site-ului
+    const items = (data || []).map(s => ({
+      id: s.id,
+      name: s.name,                 // denumirea exactă din DB
+      display: toAsciiTitle(s.name) // pentru afișat în <select>
+    }));
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ services, subs, filters })
-    };
-  } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ items }) };
+  } catch (e) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message || String(e) }) };
   }
 };
