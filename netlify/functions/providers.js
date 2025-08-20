@@ -2,6 +2,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
+// helpers
+const stripDiacritics = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const norm = (s) => stripDiacritics((s || '').trim()).toLowerCase();
+
 exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -15,24 +19,43 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers };
   }
   if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Use GET' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
-    const p = event.queryStringParameters || {};
-    const judet   = (p.judet || '').trim();
-    const oras    = (p.oras  || '').trim();
-    const service = (p.service || '').trim();     // numele categoriei
-    const sort    = (p.sort || 'new').trim();     // new|old|active
-    const page    = Math.max(1, parseInt(p.page || '1', 10));
-    const perPage = Math.min(30, Math.max(1, parseInt(p.per_page || '15', 10)));
+    const qs       = event.queryStringParameters || {};
+    const judetQ   = (qs.judet || '').trim();
+    const orasQ    = (qs.oras  || '').trim();
+    const serviceQ = (qs.service || '').trim();     // poate fi fără diacritice
+    const subParam = (qs.subcat || '').trim();      // id/slug
+    const kidParam = (qs.subsub || '').trim();      // id/slug
 
-    // subcategorie / sub-subcategorie (poate fi id sau slug)
-    const subParam = (p.subsub ?? p.subcat ?? '').trim();
+    // paginare + sort
+    const page    = Math.max(parseInt(qs.page || '1', 10), 1);
+    const perPage = Math.min(Math.max(parseInt(qs.per_page || '12', 10), 1), 50);
+    const sort    = (qs.sort || 'new'); // 'new' | 'old' | 'name'
+
+    // 1) Dacă s-a trimis service=name (posibil fără diacritice),
+    // îl mapăm la denumirea exactă din tabela services.
+    let serviceName = '';
+    if (serviceQ) {
+      const { data: allServices, error: svcErr } = await supabase
+        .from('services')
+        .select('id, name');
+      if (svcErr) throw svcErr;
+
+      const nWanted = norm(serviceQ);
+      const match = (allServices || []).find(s => norm(s.name) === nWanted);
+      // dacă nu găsim egalitate exactă fără diacritice, încearcăm "includes"
+      const match2 = match || (allServices || []).find(s => norm(s.name).includes(nWanted) || nWanted.includes(norm(s.name)));
+      serviceName = (match2 && match2.name) || '';
+    }
+
+    // 2) Subcategorie / sub-subcategorie (opțional)
     let subId = null;
     if (subParam) {
       if (/^\d+$/.test(subParam)) {
-        subId = Number(subParam);
+        subId = parseInt(subParam, 10);
       } else {
         const { data: subRow, error: subErr } = await supabase
           .from('subcategories')
@@ -43,26 +66,55 @@ exports.handler = async (event) => {
         subId = subRow?.id || null;
       }
     }
+    let kidId = null;
+    if (kidParam) {
+      if (/^\d+$/.test(kidParam)) {
+        kidId = parseInt(kidParam, 10);
+      } else {
+        const { data: kidRow, error: kidErr } = await supabase
+          .from('subcategories')
+          .select('id')
+          .eq('slug', kidParam)
+          .maybeSingle();
+        if (kidErr) throw kidErr;
+        kidId = kidRow?.id || null;
+      }
+    }
 
-    // View pentru căutare – trebuie să includă: id, judet, oras, service_name, created_at,
-    // opțional is_online, și un array subcat_ids (int[])
+    // 3) Construim query pe view-ul de căutare
+    // View-ul trebuie să aibă: id, company_name, description, service_name,
+    // judet, oras, created_at, is_online, subcat_ids (array)
     let query = supabase.from('v_search_providers').select('*', { count: 'exact' });
 
-    if (judet)   query = query.eq('judet', judet);
-    if (oras)    query = query.eq('oras', oras);
-    if (service) query = query.eq('service_name', service);
-    if (subId)   query = query.contains('subcat_ids', [subId]);
+    // județ/oras – dacă DB poate avea diacritice, folosim egal exact pe forma cu diacritice,
+    // DAR cum în index trimitem fără, încercăm ambele variante:
+    if (judetQ) {
+      // mai întâi egal exact
+      query = query.eq('judet', judetQ);
+    }
+    if (orasQ) {
+      query = query.eq('oras', orasQ);
+    }
+
+    // serviciu (categorie)
+    if (serviceName) {
+      query = query.eq('service_name', serviceName);
+    } else if (serviceQ) {
+      // fallback: încearcă potrivire case-insensitive pe view (poate să nu prindă diacritice, dar încercăm)
+      query = query.ilike('service_name', `%${serviceQ}%`);
+    }
+
+    // subcategorie/sub-subcategorie prin array-ul subcat_ids
+    if (kidId) {
+      query = query.contains('subcat_ids', [kidId]);
+    } else if (subId) {
+      query = query.contains('subcat_ids', [subId]);
+    }
 
     // sortare
-    if (sort === 'old') {
-      query = query.order('created_at', { ascending: true });
-    } else if (sort === 'active') {
-      // asigură-te că v_search_providers are is_online (sau schimbă cu last_seen_at)
-      query = query.order('is_online', { ascending: false })
-                   .order('created_at', { ascending: false });
-    } else {
-      query = query.order('created_at', { ascending: false }); // 'new'
-    }
+    if (sort === 'old')      query = query.order('created_at', { ascending: true });
+    else if (sort === 'name')query = query.order('company_name', { ascending: true });
+    else                     query = query.order('created_at', { ascending: false });
 
     // paginare
     const from = (page - 1) * perPage;
