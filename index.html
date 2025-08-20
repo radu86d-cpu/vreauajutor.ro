@@ -381,7 +381,8 @@ async function heroSearch(){
 
   try{
     const r = await fetch('/.netlify/functions/lists', { cache:'no-store' });
-    const { services = [], judete = [] } = await r.json();
+    const { judete = [] } = await r.json();  // fără services aici
+    const services = []; // nu filtrăm după listă globală
 
     const nQ = normalizeRO(q);
     const svc = services.find(s => nQ.includes(normalizeRO(s)));
@@ -398,82 +399,86 @@ async function heroSearch(){
   }
 }
 </script>
+<script>
+  // ---- SELECTOR DINAMIC DOAR CU OPȚIUNI CARE AU FURNIZORI ACTUALI ----
+  const elJudet    = document.getElementById('judet');     // <select id="judet">
+  const elOras     = document.getElementById('oras');      // <select id="oras">
+  const elCategorie= document.getElementById('serviciu');  // <select id="serviciu"> = CATEGORIE
 
-  <script>
-document.addEventListener('DOMContentLoaded', async () => {
-  let services = [];
-  let judete   = [];
-  try {
-    const r = await fetch('/.netlify/functions/lists', { cache: 'no-store' });
-    if (r.ok) {
-      const data = await r.json();
-      services = Array.isArray(data.services) ? data.services : [];
-      judete   = Array.isArray(data.judete)   ? data.judete   : [];
-    } else {
-      console.warn('lists failed:', r.status, r.statusText);
-    }
-  } catch (e) {
-    console.error('lists error:', e);
+  function setOptions(selectEl, items, placeholder) {
+    if (!selectEl) return;
+    const opts = [`<option value="">${placeholder}</option>`]
+      .concat((items || []).map(v => {
+        const val = (v.value ?? v).toString();
+        const lab = (v.label ?? v).toString();
+        return `<option value="${val.replaceAll('"','&quot;')}">${lab}</option>`;
+      }));
+    selectEl.innerHTML = opts.join('');
   }
 
-  const selServ  = document.getElementById('serviciu');
-  const selJudet = document.getElementById('judet');
-
-  services.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name; opt.textContent = name;
-    selServ.appendChild(opt);
-  });
-
-  judete.forEach(j => {
-    const opt = document.createElement('option');
-    opt.value = j; opt.textContent = j;
-    selJudet.appendChild(opt);
-  });
-
-  await reloadActiveServicesByArea({ preserveSelection: false });
-});
-</script>
-
-  <script>
-  // când se schimbă ORAȘUL => refiltrăm serviciile
-  document.getElementById('oras')?.addEventListener('change', () => {
-    reloadActiveServicesByArea();
-  });
-
-  // când se schimbă JUDEȚUL => refacem orașele și refiltrăm serviciile
-  document.getElementById('judet')?.addEventListener('change', async (ev) => {
-    // ...
-});
-    const judet = ev.target.value;
-    const selOras = document.getElementById('oras');
-
-    selOras.innerHTML = '';
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = 'Alege orașul';
-    selOras.appendChild(first);
-
-    if (!judet) {
-      // dacă s-a șters județul, refiltrăm serviciile pe „toată țara”
-      reloadActiveServicesByArea({ preserveSelection: false });
-      return;
-    }
-
+  async function loadJudete() {
     try {
-      const r = await fetch('/.netlify/functions/lists?judet=' + encodeURIComponent(judet));
-      if (!r.ok) throw new Error('Nu pot lua orașele');
-      const { orase } = await r.json();
-      orase.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o; opt.textContent = o;
-        selOras.appendChild(opt);
-      });
-    } catch (e) { console.error(e); }
+      const r = await fetch('/.netlify/functions/lists');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const { judete } = await r.json();
+      setOptions(elJudet, (judete || []).map(j => ({ value: j, label: j })), 'Alege județul');
+      // reset dependente
+      setOptions(elOras, [], 'Alege orașul');
+      setOptions(elCategorie, [], 'Alege serviciul');
+    } catch (e) {
+      console.error('loadJudete failed', e);
+      setOptions(elJudet, [], 'Eroare la încărcarea județelor');
+    }
+  }
 
-    // reîncarcă serviciile disponibile pentru acest județ
-    reloadActiveServicesByArea();
+  async function loadOrase(judet) {
+    try {
+      if (!judet) {
+        setOptions(elOras, [], 'Alege orașul');
+        setOptions(elCategorie, [], 'Alege serviciul');
+        return;
+      }
+      const r = await fetch(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const { orase } = await r.json();
+      setOptions(elOras, (orase || []).map(o => ({ value: o, label: o })), 'Alege orașul');
+      setOptions(elCategorie, [], 'Alege serviciul');
+    } catch (e) {
+      console.error('loadOrase failed', e);
+      setOptions(elOras, [], 'Eroare la încărcarea orașelor');
+    }
+  }
+
+  async function loadCategorii(judet, oras) {
+    try {
+      if (!judet || !oras) {
+        setOptions(elCategorie, [], 'Alege serviciul');
+        return;
+      }
+      const r = await fetch(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}&oras=${encodeURIComponent(oras)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      // backend întoarce { servicii:[{id,name}], names:[...] }
+      const { names = [] } = await r.json();
+      setOptions(elCategorie, (names || []).map(n => ({ value: n, label: n })), 'Alege serviciul');
+    } catch (e) {
+      console.error('loadCategorii failed', e);
+      setOptions(elCategorie, [], 'Eroare la încărcarea serviciilor');
+    }
+  }
+
+  // Legături între selectoare (cascade)
+  elJudet?.addEventListener('change', (ev) => {
+    const j = ev.target.value || '';
+    loadOrase(j);
   });
+  elOras?.addEventListener('change', (ev) => {
+    const j = elJudet?.value || '';
+    const o = ev.target.value || '';
+    loadCategorii(j, o);
+  });
+
+  // La pornire: încarcă județele (doar cele cu furnizori activi)
+  document.addEventListener('DOMContentLoaded', loadJudete);
 </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
