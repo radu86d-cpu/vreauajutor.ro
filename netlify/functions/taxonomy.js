@@ -1,192 +1,145 @@
+// /netlify/functions/taxonomy.js
 const { createClient } = require('@supabase/supabase-js');
 
-const supa = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
-// helper: ia id categorie după nume (fallback pe slug/nume)
-async function getServiceId(service) {
-  if (!service) return null;
-  // dacă e număr, îl folosim ca id
-  if (/^\d+$/.test(service)) return Number(service);
-
-  // altfel căutăm după nume (case-insens.)
-  const { data } = await supa
-    .from('services')
-    .select('id')
-    .ilike('name', service)
-    .maybeSingle();
-  return data?.id || null;
-}
+// helpers
+const stripDiacritics = (s='') => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const norm = (s='') => stripDiacritics(String(s).trim()).toLowerCase();
 
 exports.handler = async (event) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'public, max-age=60, s-maxage=60',
+  };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
+  if (event.httpMethod !== 'GET')     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+
   try {
-    const p = event.queryStringParameters || {};
-    const mode   = (p.mode || 'categories').trim(); // categories | subcategories | children | filters
-    const judet  = (p.judet || '').trim();
-    const oras   = (p.oras  || '').trim();
-    const signup = p.signup === '1'; // la înscriere vrem TOT (nu doar active)
-    const serviceParam = (p.service || '').trim();
-    const subcatId     = p.subcat ? Number(p.subcat) : null;
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'SUPABASE env missing' }) };
+    }
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ========== 1) LISTĂ CATEGORII ==========
+    const qs   = event.queryStringParameters || {};
+    const mode = (qs.mode || '').trim();
+
+    // filtre de arie
+    const judetQ = (qs.judet || '').trim();
+    const orasQ  = (qs.oras  || '').trim();
+    const J = norm(judetQ);
+    const O = norm(orasQ);
+
+    // helper: află id-ul serviciului din nume (acceptă și fără diacritice)
+    async function getServiceIdByName(serviceName) {
+      if (!serviceName) return null;
+      // 1) match exact
+      let { data: svc1, error: e1 } = await db
+        .from('services')
+        .select('id, name')
+        .eq('name', serviceName)
+        .maybeSingle();
+      if (e1) throw e1;
+      if (svc1?.id) return svc1.id;
+
+      // 2) fallback: fără diacritice
+      const { data: all, error: e2 } = await db.from('services').select('id,name');
+      if (e2) throw e2;
+      const target = norm(serviceName);
+      const found = (all || []).find(s => norm(s.name) === target)
+                || (all || []).find(s => norm(s.name).includes(target) || target.includes(norm(s.name)));
+      return found?.id || null;
+    }
+
+    // ========== MODE: categories ==========
+    // întoarce categoriile (services) disponibile, filtrat opțional pe judet/oras
     if (mode === 'categories') {
-      if (signup) {
-        // toată lista (pt. formularul de înscriere)
-        const { data, error } = await supa
-          .from('services')
-          .select('id, name')
-          .order('name', { ascending: true });
+      // dacă nu filtrăm după arie: trimite toate serviciile (după nume)
+      if (!J && !O) {
+        const { data: svc, error } = await db.from('services').select('name').order('name', { ascending: true });
         if (error) throw error;
-        return ok({ services: data });
+        const services = (svc || []).map(r => r.name);
+        return { statusCode: 200, headers, body: JSON.stringify({ services }) };
       }
 
-      // doar cele cu furnizori; opțional: filtrare pe zonă
-      let q = supa.from('v_active_services_by_area')
-        .select('service_id, service_name, judet, oras, providers_count');
-      if (judet) q = q.eq('judet', judet);
-      if (oras)  q = q.eq('oras', oras);
-
-      const { data, error } = await q;
+      // altfel, luăm din providers activi + FK spre services
+      const { data: provs, error } = await db
+        .from('providers')
+        .select('services(name), judet, oras, is_active')
+        .eq('is_active', true);
       if (error) throw error;
 
-      // agregăm pe service_id (să nu dublăm pe orașe)
       const map = new Map();
-      for (const r of data) {
-        if (!map.has(r.service_id)) {
-          map.set(r.service_id, { id: r.service_id, name: r.service_name, count: 0 });
-        }
-        map.get(r.service_id).count += Number(r.providers_count || 0);
+      for (const r of (provs || [])) {
+        if (J && norm(r.judet) !== J) continue;
+        if (O && norm(r.oras)  !== O) continue;
+        const name = r.services?.name;
+        if (!name) continue;
+        if (!map.has(name)) map.set(name, true);
       }
-      const services = Array.from(map.values())
-        .filter(s => s.count > 0)
-        .sort((a,b)=> a.name.localeCompare(b.name, 'ro'));
-      return ok({ services });
+      return { statusCode: 200, headers, body: JSON.stringify({ services: Array.from(map.keys()).sort((a,b)=>a.localeCompare(b)) }) };
     }
 
-    // ========== 2) SUBCATEGORII DE NIVEL 1 PENTRU O CATEGORIE ==========
+    // ========== MODE: subcategories ==========
+    // params: service=<nume exact/varianta>, optional judet/oras
     if (mode === 'subcategories') {
-      const service_id = await getServiceId(serviceParam);
-      if (!service_id) return bad('Parametrul "service" este necesar.');
-
-      if (signup) {
-        // TOT nivelul 1 + filtre de categorie
-        const [scRes, fcRes] = await Promise.all([
-          supa.from('subcategories').select('id, name, slug, position').eq('service_id', service_id).is('parent_id', null).order('position', { ascending: true }),
-          supa.from('filters').select('id, key, label, type, options, unit, step, min, max, multi, position').eq('scope', 'category').eq('service_id', service_id).order('position', { ascending: true })
-        ]);
-        if (scRes.error) throw scRes.error;
-        if (fcRes.error) throw fcRes.error;
-        return ok({ subcategories: scRes.data, category_filters: fcRes.data });
+      const serviceName = (qs.service || '').trim();
+      const serviceId = await getServiceIdByName(serviceName);
+      if (!serviceId) {
+        return { statusCode: 200, headers, body: JSON.stringify({ subcategories: [] }) };
       }
 
-      // doar subcategoriile care AU furnizori în acea zonă (dacă e setată)
-      let q = supa.from('v_active_subcategories_by_area')
-        .select('subcategory_id, subcategory_name, parent_id, providers_count')
-        .eq('service_id', service_id)
-        .is('parent_id', null);
-      if (judet) q = q.eq('judet', judet);
-      if (oras)  q = q.eq('oras', oras);
-
-      const { data: actives, error } = await q;
+      // folosim view-ul v_active_subcategories_by_area (are deja providers_count per subcat + arie)
+      let { data: rows, error } = await db
+        .from('v_active_subcategories_by_area')
+        .select('subcategory_id, subcategory_name, service_id, parent_id, judet, oras, providers_count')
+        .eq('service_id', serviceId);
       if (error) throw error;
 
-      // filtre de categorie
-      const { data: catFilters, error: fErr } = await supa
-        .from('filters')
-        .select('id, key, label, type, options, unit, step, min, max, multi, position')
-        .eq('scope', 'category')
-        .eq('service_id', service_id)
-        .order('position', { ascending: true });
-      if (fErr) throw fErr;
+      // filtrăm în JS pe arie + doar top-level (parent_id null)
+      rows = (rows || []).filter(r => (!J || norm(r.judet) === J) && (!O || norm(r.oras) === O) && (r.parent_id === null));
 
-      // returnăm doar cele active
-      return ok({
-        subcategories: actives
-          .map(x => ({ id: x.subcategory_id, name: x.subcategory_name, count: x.providers_count }))
-          .sort((a,b)=> a.name.localeCompare(b.name,'ro')),
-        category_filters: catFilters
-      });
+      // agregăm count pe subcategory_id (view-ul e per arie)
+      const agg = new Map();
+      for (const r of rows) {
+        const id = r.subcategory_id;
+        if (!agg.has(id)) agg.set(id, { id, name: r.subcategory_name, count: 0 });
+        agg.get(id).count += Number(r.providers_count || 0);
+      }
+      const subcategories = Array.from(agg.values()).sort((a,b)=>a.name.localeCompare(b.name));
+      return { statusCode: 200, headers, body: JSON.stringify({ subcategories }) };
     }
 
-    // ========== 3) COPIII unei SUBCATEGORII (sub-subcategorii) ==========
+    // ========== MODE: children ==========
+    // params: subcat=<id>, optional judet/oras
     if (mode === 'children') {
-      if (!subcatId) return bad('Parametrul "subcat" este necesar.');
+      const subId = /^\d+$/.test(String(qs.subcat || '')) ? parseInt(qs.subcat, 10) : null;
+      if (!subId) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
 
-      if (signup) {
-        // toți copiii + filtre pe subcategorie
-        const [kidsRes, fRes] = await Promise.all([
-          supa.from('subcategories').select('id, name, slug, position').eq('parent_id', subcatId).order('position', { ascending: true }),
-          supa.from('filters').select('id, key, label, type, options, unit, step, min, max, multi, position').eq('scope','subcategory').eq('subcategory_id', subcatId).order('position', { ascending: true })
-        ]);
-        if (kidsRes.error) throw kidsRes.error;
-        if (fRes.error) throw fRes.error;
-        return ok({ children: kidsRes.data, subcategory_filters: fRes.data });
-      }
-
-      // doar copiii activi (au furnizori)
-      let q = supa.from('v_active_subcategories_by_area')
-        .select('subcategory_id, subcategory_name, providers_count')
-        .eq('parent_id', subcatId);
-      if (judet) q = q.eq('judet', judet);
-      if (oras)  q = q.eq('oras', oras);
-
-      const { data: actives, error } = await q;
+      // copii acelei subcategorii (parent_id = subId), tot din view, + filtrare arie
+      let { data: rows, error } = await db
+        .from('v_active_subcategories_by_area')
+        .select('subcategory_id, subcategory_name, parent_id, judet, oras, providers_count')
+        .eq('parent_id', subId);
       if (error) throw error;
 
-      // filtre pe subcategoria părinte
-      const { data: subFilters, error: fErr } = await supa
-        .from('filters')
-        .select('id, key, label, type, options, unit, step, min, max, multi, position')
-        .eq('scope','subcategory')
-        .eq('subcategory_id', subcatId)
-        .order('position', { ascending: true });
-      if (fErr) throw fErr;
+      rows = (rows || []).filter(r => (!J || norm(r.judet) === J) && (!O || norm(r.oras) === O));
 
-      return ok({
-        children: actives
-          .map(x => ({ id: x.subcategory_id, name: x.subcategory_name, count: x.providers_count }))
-          .sort((a,b)=> a.name.localeCompare(b.name,'ro')),
-        subcategory_filters: subFilters
-      });
+      const agg = new Map();
+      for (const r of rows) {
+        const id = r.subcategory_id;
+        if (!agg.has(id)) agg.set(id, { id, name: r.subcategory_name, count: 0 });
+        agg.get(id).count += Number(r.providers_count || 0);
+      }
+      const children = Array.from(agg.values()).sort((a,b)=>a.name.localeCompare(b.name));
+      return { statusCode: 200, headers, body: JSON.stringify({ children }) };
     }
 
-    // ========== 4) DOAR FILTRE (pt. pagina Rezultate) ==========
-    if (mode === 'filters') {
-      // combină filtre de categorie + (opțional) de subcategorie
-      const service_id = await getServiceId(serviceParam);
-      const results = { category_filters: [], subcategory_filters: [] };
-
-      if (service_id) {
-        const { data, error } = await supa
-          .from('filters')
-          .select('id, key, label, type, options, unit, step, min, max, multi, position')
-          .eq('scope', 'category')
-          .eq('service_id', service_id)
-          .order('position', { ascending: true });
-        if (error) throw error;
-        results.category_filters = data;
-      }
-
-      if (subcatId) {
-        const { data, error } = await supa
-          .from('filters')
-          .select('id, key, label, type, options, unit, step, min, max, multi, position')
-          .eq('scope', 'subcategory')
-          .eq('subcategory_id', subcatId)
-          .order('position', { ascending: true });
-        if (error) throw error;
-        results.subcategory_filters = data;
-      }
-      return ok(results);
-    }
-
-    return bad('Mode necunoscut.');
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid mode' }) };
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message || String(e) }) };
   }
 };
-
-function ok(body){ return { statusCode: 200, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }; }
-function bad(msg){ return { statusCode: 400, headers:{'Content-Type':'application/json'}, body: JSON.stringify({ error: msg }) }; }
