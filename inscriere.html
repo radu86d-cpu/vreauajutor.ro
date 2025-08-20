@@ -77,18 +77,25 @@
 
 <script>
   // mic helper pentru a umple select-urile
-  function fillSelect(sel, arr, firstLabel) {
-    sel.innerHTML = '';
-    const first = document.createElement('option');
-    first.value = '';
-    first.textContent = firstLabel;
-    sel.appendChild(first);
-    (arr || []).forEach(v => {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = v;
-      sel.appendChild(o);
-    });
-  }
+ function fillSelect(sel, arr, firstLabel) {
+  sel.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = firstLabel;
+  sel.appendChild(first);
+
+  (arr || []).forEach(v => {
+    // acceptă fie string (“Curatenie”), fie obiect ({ id, name } / { value, label } etc.)
+    const name  = (typeof v === 'string') ? v : (v.name || v.label || v.text || '');
+    const value = (typeof v === 'string') ? v : (v.value || v.name || v.id  || '');
+
+    if (!name) return;
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = name;
+    sel.appendChild(o);
+  });
+}
 
   document.addEventListener('DOMContentLoaded', async () => {
     try {
