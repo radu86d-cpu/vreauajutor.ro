@@ -33,34 +33,52 @@ exports.handler = async (event) => {
     const judetQ = (qs.judet || '').trim();
     const orasQ  = (qs.oras  || '').trim();
 
-    // ========= MODE=SIGNUP =========
-    // pentru inscriere.html – vrem TOATE categoriile + JUDETE din `locations`
-    if (mode === 'signup') {
-      // categorii (cele 51 din `services`)
-      const { data: svc, error: e1 } = await db
-        .from('services')
-        .select('id,name')
-        .order('name', { ascending: true });
-      if (e1) throw e1;
+// ========= MODE=SIGNUP =========
+// - fără judet  -> trimite servicii + judete (pt. încărcare inițială în formular)
+// - cu judet    -> trimite orasele din acel județ (din tabela locations)
+if (mode === 'signup') {
+  if (!judetQ) {
+    // categorii (cele 51 din services)
+    const { data: svc, error: e1 } = await db
+      .from('services')
+      .select('id,name')
+      .order('name', { ascending: true });
+    if (e1) throw e1;
 
-      // judete din `locations` (unice)
-      const { data: locs, error: e2 } = await db
-        .from('locations')
-        .select('judet');
-      if (e2) throw e2;
+    // județe din locations (unice)
+    const { data: locs, error: e2 } = await db
+      .from('locations')
+      .select('judet');
+    if (e2) throw e2;
 
-      const services = (svc || []).map(s => toAsciiTitle(s.name));   // pentru UI fără diacritice
-      // dedupe judete (fără diacritice)
-      const judMap = new Map();
-      for (const r of (locs || [])) {
-        const key = norm(r.judet);
-        if (!key) continue;
-        if (!judMap.has(key)) judMap.set(key, toAsciiTitle(r.judet));
-      }
-      const judete = Array.from(judMap.values()).sort((a,b)=>a.localeCompare(b));
-
-      return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
+    const services = (svc || []).map(s => toAsciiTitle(s.name));
+    const judMap = new Map();
+    for (const r of (locs || [])) {
+      const key = norm(r.judet);
+      if (!key) continue;
+      if (!judMap.has(key)) judMap.set(key, toAsciiTitle(r.judet));
     }
+    const judete = Array.from(judMap.values()).sort((a,b)=>a.localeCompare(b));
+    return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
+  } else {
+    // avem judet -> întoarce ORAȘELE din acel județ (din locations)
+    const judKey = norm(judetQ);
+    const { data: locs, error: e3 } = await db
+      .from('locations')
+      .select('oras, judet');
+    if (e3) throw e3;
+
+    const map = new Map();
+    for (const r of (locs || [])) {
+      if (norm(r.judet) !== judKey) continue;
+      const k = norm(r.oras);
+      if (!k) continue;
+      if (!map.has(k)) map.set(k, toAsciiTitle(r.oras));
+    }
+    const orase = Array.from(map.values()).sort((a,b)=>a.localeCompare(b));
+    return { statusCode: 200, headers, body: JSON.stringify({ orase }) };
+  }
+}
 
     // ========= HOMEPAGE / SELECTOARE =========
 
