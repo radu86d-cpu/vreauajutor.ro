@@ -117,27 +117,42 @@ exports.handler = async (event) => {
     const providerId = provider?.id;
     if (!providerId) throw new Error('Insert provider fără id.');
 
-    // ------------------ Subcategorie / Sub-subcategorie ------------------
-    // Acceptăm id-uri numerice în body.subcat / body.subsub; ignorăm restul.
-    const toLink = [];
-    if (body.subcat && /^\d+$/.test(String(body.subcat))) toLink.push(parseInt(body.subcat, 10));
-    if (body.subsub && /^\d+$/.test(String(body.subsub))) toLink.push(parseInt(body.subsub, 10));
+        // ------------------ Subcategorie / Sub-subcategorie ------------------
+    // Acceptăm:
+    //  - body.subcat  : id numeric (părinte)
+    //  - body.subsub  : id numeric (primul copil, compat)
+    //  - body.subsubs : listă de id-uri (copiii bifați)
+    const toLink = new Set();
 
-    if (toLink.length) {
-      // Verificăm că există acele subcategorii
+    const addIfNum = (v) => {
+      const s = String(v ?? '');
+      if (/^\d+$/.test(s)) toLink.add(parseInt(s, 10));
+    };
+
+    addIfNum(body.subcat);
+    addIfNum(body.subsub);
+
+    if (Array.isArray(body.subsubs)) {
+      body.subsubs.forEach(addIfNum);
+    } else if (typeof body.subsubs === 'string' && body.subsubs.trim()) {
+      // suport și pentru "1,2,3"
+      body.subsubs.split(',').forEach(addIfNum);
+    }
+
+    if (toLink.size) {
+      const ids = Array.from(toLink);
       const { data: subs, error: sErr } = await supabase
         .from('subcategories')
         .select('id')
-        .in('id', toLink);
+        .in('id', ids);
       if (sErr) throw sErr;
 
       const validIds = new Set((subs || []).map(r => r.id));
-      for (const sid of toLink) {
-        if (!validIds.has(sid)) continue; // ignoră id-urile inexistente
+      for (const sid of ids) {
+        if (!validIds.has(sid)) continue;
         const { error: linkErr } = await supabase
           .from('provider_subcategories')
           .insert({ provider_id: providerId, subcategory_id: sid });
-        // dacă există deja (PK dup), îl ignorăm
         if (linkErr && linkErr.code !== '23505') throw linkErr;
       }
     }
