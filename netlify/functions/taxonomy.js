@@ -69,139 +69,207 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ services }) };
     }
 
-    // ===================== MODE: subcategories ======================
+        // ===================== MODE: subcategories ======================
     // q: service (numele categoriei), opțional judet/oras; întoarce subcategoriile de nivel 1 + count
     if (mode === 'subcategories') {
       const svcNameQ = (qs.service || '').trim();
       if (!svcNameQ) return { statusCode: 400, headers, body: JSON.stringify({ subcategories: [] }) };
 
-      // găsește service_id prin potrivire fără diacritice
+      // 1) găsește service_id prin potrivire fără diacritice
       const { data: allS, error: eS } = await db.from('services').select('id,name');
       if (eS) throw eS;
       const target = norm(svcNameQ);
       const svc = (allS || []).find(s => norm(s.name) === target)
              || (allS || []).find(s => norm(s.name).includes(target) || target.includes(norm(s.name)));
-      if (!svc?.id) return { statusCode: 200, headers, body: JSON.stringify({ subcategories: [] }) };
 
-      // subcategoriile de nivel 1 pentru acest service
-      const { data: subs, error: eSub } = await db
-        .from('subcategories')
-        .select('id, name, parent_id, service_id')
-        .eq('service_id', svc.id);
-      if (eSub) throw eSub;
+      let subcategories = [];
 
-      const top = (subs || []).filter(s => !s.parent_id);
+      if (svc?.id) {
+        // 2) încearcă din tabela normalizată `subcategories`
+        const { data: subs, error: eSub } = await db
+          .from('subcategories')
+          .select('id, name, parent_id, service_id')
+          .eq('service_id', svc.id);
+        if (eSub) throw eSub;
 
-      // copii pentru fiecare top
-      const childrenByParent = {};
-      (subs || []).forEach(s => {
-        if (s.parent_id) {
-          (childrenByParent[s.parent_id] ||= []).push(s.id);
+        const top = (subs || []).filter(s => !s.parent_id);
+
+        // copii pentru fiecare top
+        const childrenByParent = {};
+        (subs || []).forEach(s => {
+          if (s.parent_id) {
+            (childrenByParent[s.parent_id] ||= []).push(s.id);
+          }
+        });
+
+        // providers activi din zonă și din service
+        const { data: prov, error: eP } = await db
+          .from('providers')
+          .select('id, is_active, judet, oras, service_id');
+        if (eP) throw eP;
+
+        const act = (prov || []).filter(p => p.is_active && p.service_id === svc.id && areaOK(p));
+        const pids = act.map(p => p.id);
+
+        // legăturile provider_subcategories
+        let links = [];
+        if (pids.length) {
+          const { data: linkRows, error: eL } = await db
+            .from('provider_subcategories')
+            .select('provider_id, subcategory_id')
+            .in('provider_id', pids);
+          if (eL) throw eL;
+          links = linkRows || [];
         }
-      });
 
-      // providers activi din zonă și din service
-      const { data: prov, error: eP } = await db
-        .from('providers')
-        .select('id, is_active, judet, oras, service_id');
-      if (eP) throw eP;
+        // map provider -> set(subcatIds)
+        const setMap = new Map();
+        for (const row of links) {
+          if (!setMap.has(row.provider_id)) setMap.set(row.provider_id, new Set());
+          setMap.get(row.provider_id).add(row.subcategory_id);
+        }
 
-      const act = (prov || []).filter(p => p.is_active && p.service_id === svc.id && areaOK(p));
-      const pids = act.map(p => p.id);
+        subcategories = top.map(t => {
+          const kids = new Set(childrenByParent[t.id] || []);
+          let count = 0;
+          for (const p of act) {
+            const s = setMap.get(p.id);
+            if (!s) continue;
+            if (s.has(t.id)) { count++; continue; }
+            for (const kidId of kids) { if (s.has(kidId)) { count++; break; } }
+          }
+          return { id: t.id, name: title(t.name), count };
+        }).filter(x => x.name);
 
-      // legăturile provider_subcategories
-      let links = [];
-      if (pids.length) {
-        const { data: linkRows, error: eL } = await db
-          .from('provider_subcategories')
-          .select('provider_id, subcategory_id')
-          .in('provider_id', pids);
-        if (eL) throw eL;
-        links = linkRows || [];
+        subcategories.sort((a,b)=> a.name.localeCompare(b.name));
       }
 
-      // map provider -> set(subcatIds)
-      const setMap = new Map();
-      for (const row of links) {
-        if (!setMap.has(row.provider_id)) setMap.set(row.provider_id, new Set());
-        setMap.get(row.provider_id).add(row.subcategory_id);
-      }
-
-      const subcategories = top.map(t => {
-        const kids = new Set(childrenByParent[t.id] || []);
-        let count = 0;
-        for (const p of act) {
-          const s = setMap.get(p.id);
-          if (!s) continue;
-          // link direct pe top sau pe unul din copii
-          if (s.has(t.id)) { count++; continue; }
-          for (const kidId of kids) { if (s.has(kidId)) { count++; break; } }
+      // 3) FALLBACK pe taxonomy_flat dacă nu am găsit nimic în `subcategories`
+      if (!subcategories.length) {
+        let serviceId = svc?.id;
+        // dacă nu am văzut id-ul mai sus, mai încerc o dată pe toate serviciile (matching fără diacritice)
+        if (!serviceId) {
+          const normName = (s) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const wanted = normName(svcNameQ);
+          const hit = (allS || []).find(x => normName(x.name) === wanted);
+          serviceId = hit?.id;
         }
-        return { id: t.id, name: title(t.name), count };
-      }).filter(x => x.name);
 
-      // sortare alfabetică
-      subcategories.sort((a,b)=> a.name.localeCompare(b.name));
+        if (serviceId) {
+          const { data: flat, error: flatErr } = await db
+            .from('taxonomy_flat')
+            .select('subcat_name')
+            .eq('service_id', serviceId);
+          if (flatErr) throw flatErr;
+
+          const uniq = new Set();
+          (flat || []).forEach(r => {
+            const name = (r.subcat_name || '').trim();
+            if (name) uniq.add(name);
+          });
+          subcategories = [...uniq].sort((a,b)=>a.localeCompare(b, 'ro')).map(name => ({
+            id: null, name, count: 0
+          }));
+        } else {
+          const { data: flat2 } = await db
+            .from('taxonomy_flat')
+            .select('service_name, subcat_name');
+          const normName = (s) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const wanted = normName(svcNameQ);
+          const uniq = new Set();
+          (flat2 || []).forEach(r => {
+            if (normName(r.service_name) === wanted && r.subcat_name) uniq.add(r.subcat_name.trim());
+          });
+          subcategories = [...uniq].sort((a,b)=>a.localeCompare(b, 'ro')).map(name => ({
+            id: null, name, count: 0
+          }));
+        }
+      }
 
       return { statusCode: 200, headers, body: JSON.stringify({ subcategories }) };
     }
 
-    // ===================== MODE: children ======================
-    // q: subcat (id părinte), opțional jud/oras; întoarce copiii + count
+       // ===================== MODE: children ======================
+    // q: subcat (poate fi ID numeric SAU nume din fallback), opțional jud/oras; întoarce copiii + count
     if (mode === 'children') {
-      const parentId = parseInt(qs.subcat || '', 10);
-      if (!parentId) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
+      const raw = (qs.subcat || '').trim();
 
-      // află părintele ca să știm service_id
-      const { data: parent, error: ePar } = await db
-        .from('subcategories')
-        .select('id, service_id')
-        .eq('id', parentId)
-        .maybeSingle();
-      if (ePar) throw ePar;
-      if (!parent?.service_id) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
+      // 1) dacă e numeric → fluxul normalizat
+      if (/^\d+$/.test(raw)) {
+        const parentId = parseInt(raw, 10);
+        const { data: parent, error: ePar } = await db
+          .from('subcategories')
+          .select('id, service_id')
+          .eq('id', parentId)
+          .maybeSingle();
+        if (ePar) throw ePar;
+        if (!parent?.service_id) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
 
-      const { data: kids, error: eKids } = await db
-        .from('subcategories')
-        .select('id, name, parent_id')
-        .eq('parent_id', parentId);
-      if (eKids) throw eKids;
+        const { data: kids, error: eKids } = await db
+          .from('subcategories')
+          .select('id, name, parent_id')
+          .eq('parent_id', parentId);
+        if (eKids) throw eKids;
 
-      const { data: prov, error: eP } = await db
-        .from('providers')
-        .select('id, is_active, judet, oras, service_id');
-      if (eP) throw eP;
-      const act = (prov || []).filter(p => p.is_active && p.service_id === parent.service_id && areaOK(p));
-      const pids = act.map(p => p.id);
+        const { data: prov, error: eP } = await db
+          .from('providers')
+          .select('id, is_active, judet, oras, service_id');
+        if (eP) throw eP;
+        const act = (prov || []).filter(p => p.is_active && p.service_id === parent.service_id && areaOK(p));
+        const pids = act.map(p => p.id);
 
-      let links = [];
-      if (pids.length) {
-        const { data: linkRows, error: eL } = await db
-          .from('provider_subcategories')
-          .select('provider_id, subcategory_id')
-          .in('provider_id', pids);
-        if (eL) throw eL;
-        links = linkRows || [];
-      }
-
-      const setMap = new Map();
-      for (const row of links) {
-        if (!setMap.has(row.provider_id)) setMap.set(row.provider_id, new Set());
-        setMap.get(row.provider_id).add(row.subcategory_id);
-      }
-
-      const children = (kids || []).map(k => {
-        let count = 0;
-        for (const p of act) {
-          const s = setMap.get(p.id);
-          if (s && s.has(k.id)) count++;
+        let links = [];
+        if (pids.length) {
+          const { data: linkRows, error: eL } = await db
+            .from('provider_subcategories')
+            .select('provider_id, subcategory_id')
+            .in('provider_id', pids);
+          if (eL) throw eL;
+          links = linkRows || [];
         }
-        return { id: k.id, name: title(k.name), count };
-      }).filter(x => x.name)
-        .sort((a,b)=>a.name.localeCompare(b.name));
+
+        const setMap = new Map();
+        for (const row of links) {
+          if (!setMap.has(row.provider_id)) setMap.set(row.provider_id, new Set());
+          setMap.get(row.provider_id).add(row.subcategory_id);
+        }
+
+        const children = (kids || []).map(k => {
+          let count = 0;
+          for (const p of act) {
+            const s = setMap.get(p.id);
+            if (s && s.has(k.id)) count++;
+          }
+          return { id: k.id, name: title(k.name), count };
+        }).filter(x => x.name)
+          .sort((a,b)=>a.name.localeCompare(b.name));
+
+        return { statusCode: 200, headers, body: JSON.stringify({ children }) };
+      }
+
+      // 2) FALLBACK: dacă `subcat` e numele subcategoriei → citim din `taxonomy_flat`
+      const subcatName = raw;
+      if (!subcatName) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
+
+      const { data: flat, error: fErr } = await db
+        .from('taxonomy_flat')
+        .select('child_name, subcat_name')
+        .eq('subcat_name', subcatName);
+      if (fErr) throw fErr;
+
+      const uniq = new Set();
+      (flat || []).forEach(r => {
+        const n = (r.child_name || '').trim();
+        if (n) uniq.add(n);
+      });
+
+      const children = [...uniq]
+        .sort((a,b)=>a.localeCompare(b, 'ro'))
+        .map(name => ({ id: null, name, count: 0 }));
 
       return { statusCode: 200, headers, body: JSON.stringify({ children }) };
     }
+
 
     return { statusCode: 400, headers, body: JSON.stringify({ error:'Unknown mode' }) };
   } catch (e) {
