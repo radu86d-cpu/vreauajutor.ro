@@ -244,14 +244,18 @@ const payload = {
   }
   function renderChips(container, items, onClick){
     container.innerHTML = '';
-    (items || []).forEach(it => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = it.name + (it.count ? ` (${it.count})` : '');
-      b.title = it.name;
-      b.style.cssText = 'padding:6px 10px;border:1px solid #ccc;border-radius:999px;background:#fff;cursor:pointer;';
-      b.addEventListener('click', () => onClick(it, b));
-      container.appendChild(b);
+    items.forEach((it)=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = it.name || '';
+      // eliminăm eventualul stil de skeleton moștenit
+      btn.classList.remove('skeleton');
+      // ne asigurăm că textul e vizibil
+      btn.style.color = '#1f2937';
+      btn.style.background = '#fff';
+      btn.style.border = '1px solid #e5e7eb';
+      btn.addEventListener('click', () => onClick(it, btn));
+      container.appendChild(btn);
     });
   }
 
