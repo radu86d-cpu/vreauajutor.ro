@@ -225,3 +225,34 @@ nav a:focus-visible,
 }
 /* DEBUG: dacă AOS nu se inițializează, nu mai ascunde secțiunile */
 [data-aos] { opacity: 1 !important; transform: none !important; }
+
+*** a/style.css
+--- b/style.css
+@@
++/* === FIX: vizibilitate text pentru chip-urile de taxonomie === */
++#subcats button,
++#subcats .chip {
++  color: #1f2937; /* slate-800 */
++  background: #fff;
++  border: 1px solid #e5e7eb; /* gray-200 */
++}
++
++#subcats button.active,
++#subcats .chip.active {
++  background: #eef5ff;
++  border-color: #93c5fd; /* blue-300 */
++  color: #111827; /* gray-900 */
++}
++
++#subcats button[disabled],
++#children label[aria-disabled="true"] {
++  opacity: .6;
++}
++
++/* Dacă ai avut skeleton pe chip-uri, nu mai face textul transparent după ce s-au încărcat */
++#subcats .skeleton,
++#children .skeleton {
++  color: inherit !important;
++  -webkit-text-fill-color: inherit !important;
++}
+
