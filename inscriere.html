@@ -187,8 +187,9 @@
       return;
     }
 
-    const selectedChildIds = [...document.querySelectorAll('#children input[type="checkbox"]:checked')]
-  .map(ch => parseInt(ch.value, 10))
+    // ia TOATE bifele din toate subcategoriile, din starea globală
+const selectedChildIds = Array.from(__sel.bySub.values())
+  .flatMap(set => Array.from(set))
   .filter(n => Number.isInteger(n));
 
 const payload = {
@@ -450,16 +451,18 @@ async function loadChildrenForSignup(forSubId, parentBtn){
     const form = document.getElementById('f');
     if (!form) return;
     form.addEventListener('submit', (ev) => {
-      const subId = document.getElementById('subcat')?.value || '';
-      if (subId) {
-        const ids = getCheckedChildIds();
-        if (!ids.length) {
-          ev.preventDefault();
-          document.getElementById('min1-hint').style.display = 'inline';
-          document.getElementById('children').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, true);
+  const subVal = document.getElementById('subcat')?.value || '';
+  if (subVal) {
+    // există cel puțin un copil bifat în oricare dintre subcategoriile selectate?
+    const hasAnyChild = Array.from(__sel.bySub.values()).some(set => set.size > 0);
+    if (!hasAnyChild) {
+      ev.preventDefault();
+      document.getElementById('min1-hint').style.display = 'inline';
+      document.getElementById('children').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}, true);
+
   })();
 
 
