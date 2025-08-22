@@ -41,9 +41,13 @@
 
 <!-- Sub-subcategorii (copii) -->
 <div id="child-wrap" style="margin-top:12px;" hidden>
-  <label>Sub-subcategorie</label>
-  <div id="children" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <label style="margin:0;">Sub‑subcategorii (bifează minim 1)</label>
+    <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
+  </div>
+  <div id="children" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:8px;"></div>
 </div>
+
 
 <!-- valori ce vor fi trimise la backend -->
 <input type="hidden" id="subcat" name="subcat">
@@ -181,7 +185,11 @@
       return;
     }
 
-    const payload = {
+    const selectedChildIds = [...document.querySelectorAll('#children input[type="checkbox"]:checked')]
+  .map(ch => parseInt(ch.value, 10))
+  .filter(n => Number.isInteger(n));
+
+const payload = {
   company_name: document.getElementById('company_name').value.trim(),
   service_name: document.getElementById('service_name').value,
   judet:        document.getElementById('reg_judet').value,
@@ -190,10 +198,12 @@
   email:        document.getElementById('email').value,
   description:  document.getElementById('description').value,
 
-  // ✅ NOU:
   subcat:       document.getElementById('subcat').value || null,
-  subsub:       document.getElementById('subsub').value || null
+  // compat: păstrăm primul în subsub, dar trimitem și lista completă
+  subsub:       document.getElementById('subsub').value || null,
+  subsubs:      selectedChildIds
 };
+
 
 
     try {
@@ -289,16 +299,25 @@
     }
   }
 
+   // colector simplu pentru id-urile bifate
+  function getCheckedChildIds(){
+    return [...document.querySelectorAll('#children input[type="checkbox"]:checked')]
+      .map(ch => parseInt(ch.value, 10))
+      .filter(n => Number.isInteger(n));
+  }
+
   async function loadChildrenForSignup(){
     const subId  = document.getElementById('subcat')?.value || '';
     const judet  = document.getElementById('reg_judet')?.value || '';
     const oras   = document.getElementById('reg_oras')?.value || '';
     const wrap   = document.getElementById('child-wrap');
     const cont   = document.getElementById('children');
-    const hidKid = document.getElementById('subsub');
+    const hidKid = document.getElementById('subsub'); // rămâne pentru compatibilitate (va ține „primul” bifat)
 
+    // reset
     hidKid.value = '';
     cont.innerHTML = '';
+    document.getElementById('min1-hint').style.display = 'none';
 
     if (!subId){ wrap.hidden = true; return; }
 
@@ -310,18 +329,52 @@
       const { children = [] } = await ajx(url);
       if (!children.length){ wrap.hidden = true; return; }
       wrap.hidden = false;
-      renderChips(cont, children, (kid, btn) => {
-        const already = (hidKid.value === String(kid.id));
-        hidKid.value = already ? '' : String(kid.id);
 
-        [...cont.querySelectorAll('button')].forEach(b => b.style.background='#fff');
-        if (!already) btn.style.background = '#eef5ff';
+      // randăm ca checkbox-uri
+      const frag = document.createDocumentFragment();
+      children.forEach(kid => {
+        const id = 'kid_' + kid.id;
+        const lab = document.createElement('label');
+        lab.setAttribute('for', id);
+        lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = id;
+        cb.value = String(kid.id);
+        cb.addEventListener('change', () => {
+          const ids = getCheckedChildIds();
+          document.getElementById('subsub').value = ids[0] ? String(ids[0]) : ''; // menținem primul în hidden pt compat
+        });
+
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+        frag.appendChild(lab);
       });
+      cont.appendChild(frag);
     }catch(e){
       console.error(e);
       wrap.hidden = true;
     }
   }
+
+  // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
+  (function attachMinOneValidation(){
+    const form = document.getElementById('f');
+    if (!form) return;
+    form.addEventListener('submit', (ev) => {
+      const subId = document.getElementById('subcat')?.value || '';
+      if (subId) {
+        const ids = getCheckedChildIds();
+        if (!ids.length) {
+          ev.preventDefault();
+          document.getElementById('min1-hint').style.display = 'inline';
+          document.getElementById('children').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, true);
+  })();
+
 
   // reset subcategorie
   document.getElementById('subcat-reset')?.addEventListener('click', () => {
