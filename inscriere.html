@@ -50,8 +50,10 @@
 
 
 <!-- valori ce vor fi trimise la backend -->
-<input type="hidden" id="subcat" name="subcat">
-<input type="hidden" id="subsub" name="subsub">
+<input type="hidden" id="subcat">
+<input type="hidden" id="subcat_name">
+<input type="hidden" id="subsub">
+
 
 
       <label for="reg_judet">Județ *</label>
@@ -244,6 +246,9 @@ const payload = {
   }
   function renderChips(container, items, onClick){
     container.innerHTML = '';
+    const hidId   = document.getElementById('subcat');
+    const hidName = document.getElementById('subcat_name');
+
     items.forEach((it)=>{
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -254,10 +259,37 @@ const payload = {
       btn.style.color = '#1f2937';
       btn.style.background = '#fff';
       btn.style.border = '1px solid #e5e7eb';
-      btn.addEventListener('click', () => onClick(it, btn));
+
+      btn.addEventListener('click', () => {
+        // toggle select
+        const already =
+          (hidId.value === String(it.id || '')) &&
+          (hidName.value === (it.name || ''));
+
+        if (already) {
+          hidId.value = '';
+          hidName.value = '';
+        } else {
+          if (it.id) {
+            hidId.value = String(it.id);
+            hidName.value = it.name || '';
+          } else {
+            hidId.value = '';
+            hidName.value = it.name || '';
+          }
+        }
+
+        // vizual: un singur activ
+        container.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        if (!already) btn.classList.add('active');
+
+        onClick(it, btn);
+      });
+
       container.appendChild(btn);
     });
   }
+
 
   async function loadSubcatsForSignup(){
     const service = document.getElementById('service_name')?.value || '';
@@ -285,18 +317,12 @@ const payload = {
       const { subcategories = [] } = await ajx(url);
       if (!subcategories.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
 
-      wrap.hidden = false;
-      renderChips(cont, subcategories, (item, btn) => {
-        const already = (hidSub.value === String(item.id));
-        hidSub.value = already ? '' : String(item.id);
-
-        // vizual: selectează un singur chip
-        [...cont.querySelectorAll('button')].forEach(b => b.style.background='#fff');
-        if (!already) btn.style.background = '#eef5ff';
-
-        // (re)încarcă sub-subcategorii
+           wrap.hidden = false;
+      // renderChips setează acum #subcat sau #subcat_name; aici doar încărcăm copiii
+      renderChips(cont, subcategories, () => {
         loadChildrenForSignup();
       });
+
     }catch(e){
       console.error(e);
       wrap.hidden = true;
@@ -310,22 +336,25 @@ const payload = {
       .filter(n => Number.isInteger(n));
   }
 
-  async function loadChildrenForSignup(){
-    const subId  = document.getElementById('subcat')?.value || '';
-    const judet  = document.getElementById('reg_judet')?.value || '';
-    const oras   = document.getElementById('reg_oras')?.value || '';
-    const wrap   = document.getElementById('child-wrap');
-    const cont   = document.getElementById('children');
-    const hidKid = document.getElementById('subsub'); // rămâne pentru compatibilitate (va ține „primul” bifat)
+   async function loadChildrenForSignup(){
+    const subId    = document.getElementById('subcat')?.value || '';
+    const subName  = document.getElementById('subcat_name')?.value || '';
+    const judet    = document.getElementById('reg_judet')?.value || '';
+    const oras     = document.getElementById('reg_oras')?.value || '';
+    const wrap     = document.getElementById('child-wrap');
+    const cont     = document.getElementById('children');
+    const hidKid   = document.getElementById('subsub'); // compat: primul bifat
 
     // reset
     hidKid.value = '';
     cont.innerHTML = '';
     document.getElementById('min1-hint').style.display = 'none';
 
-    if (!subId){ wrap.hidden = true; return; }
+    // acceptăm fie id numeric, fie nume (fallback)
+    const subParam = subId || subName;
+    if (!subParam){ wrap.hidden = true; return; }
 
-    const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subId)
+    const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam)
               + (judet ? '&judet=' + encodeURIComponent(judet) : '')
               + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
 
@@ -334,10 +363,14 @@ const payload = {
       if (!children.length){ wrap.hidden = true; return; }
       wrap.hidden = false;
 
-      // randăm ca checkbox-uri
+      // randăm ca checkbox-uri (id stabil chiar dacă nu avem id numeric în răspuns)
       const frag = document.createDocumentFragment();
       children.forEach(kid => {
-        const id = 'kid_' + kid.id;
+        const safeKey = (kid.id != null)
+          ? String(kid.id)
+          : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+        const id = 'kid_' + safeKey;
+
         const lab = document.createElement('label');
         lab.setAttribute('for', id);
         lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
@@ -345,10 +378,11 @@ const payload = {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.id = id;
-        cb.value = String(kid.id);
+        // valoarea rămâne id numeric dacă există; dacă nu, punem chiar numele (nu se va trimite în subsubs, dar păstrăm UX)
+        cb.value = (kid.id != null) ? String(kid.id) : (kid.name || '');
         cb.addEventListener('change', () => {
           const ids = getCheckedChildIds();
-          document.getElementById('subsub').value = ids[0] ? String(ids[0]) : ''; // menținem primul în hidden pt compat
+          document.getElementById('subsub').value = ids[0] ? String(ids[0]) : ''; // compat: „primul” bifat
         });
 
         lab.appendChild(cb);
@@ -361,6 +395,7 @@ const payload = {
       wrap.hidden = true;
     }
   }
+
 
   // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
   (function attachMinOneValidation(){
