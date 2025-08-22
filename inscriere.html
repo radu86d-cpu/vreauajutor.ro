@@ -319,15 +319,44 @@ const payload = {
 
            wrap.hidden = false;
       // renderChips setează acum #subcat sau #subcat_name; aici doar încărcăm copiii
-      renderChips(cont, subcategories, () => {
-        loadChildrenForSignup();
-      });
+      renderChips(cont, subcategories, (item, btn) => {
+  // toggle multi-select: păstrăm o listă de id-uri separate prin virgulă
+  const current = hidSub.value ? hidSub.value.split(',') : [];
+  const idx = current.indexOf(String(item.id));
+  if (idx >= 0) {
+    current.splice(idx, 1); // scoate
+    btn.classList.remove('active');
+    btn.style.background = '#fff';
+  } else {
+    current.push(String(item.id)); // adaugă
+    btn.classList.add('active');
+    btn.style.background = '#eef5ff';
+  }
+  hidSub.value = current.join(',');
+
+  // încarcă copiii DOAR pentru subcategoria selectată/deselectată
+  loadChildrenForSignup(item.id, btn);
+});
+
 
     }catch(e){
       console.error(e);
       wrap.hidden = true;
     }
   }
+// --- STARE: ce copii sunt bifati pe fiecare subcategorie (subcat_id -> Set(child_ids))
+const __sel = { bySub: new Map() };
+
+function __chipSetSelected(btn, isSelected){
+  if (!btn) return;
+  if (isSelected){
+    btn.style.background = '#0f62fe';
+    btn.style.color = '#fff';
+  } else {
+    btn.style.background = '#fff';
+    btn.style.color = '#1f2937';
+  }
+}
 
    // colector simplu pentru id-urile bifate
   function getCheckedChildIds(){
@@ -336,65 +365,84 @@ const payload = {
       .filter(n => Number.isInteger(n));
   }
 
-   async function loadChildrenForSignup(){
-    const subId    = document.getElementById('subcat')?.value || '';
-    const subName  = document.getElementById('subcat_name')?.value || '';
-    const judet    = document.getElementById('reg_judet')?.value || '';
-    const oras     = document.getElementById('reg_oras')?.value || '';
-    const wrap     = document.getElementById('child-wrap');
-    const cont     = document.getElementById('children');
-    const hidKid   = document.getElementById('subsub'); // compat: primul bifat
+  // Încarcă/afișează copiii pentru o subcategorie anume.
+// forSubId = id-ul subcategoriei tocmai (de)selectate
+// parentBtn = butonul-chip al acelei subcategorii (ca să-i putem schimba culoarea)
+async function loadChildrenForSignup(forSubId, parentBtn){
+  const subHidden = document.getElementById('subcat');
+  const allIds = (subHidden.value ? subHidden.value.split(',').filter(Boolean) : []);
 
-    // reset
-    hidKid.value = '';
+  const judet  = document.getElementById('reg_judet')?.value || '';
+  const oras   = document.getElementById('reg_oras')?.value || '';
+  const wrap   = document.getElementById('child-wrap');
+  const cont   = document.getElementById('children');
+
+  // dacă nu există nicio subcategorie selectată → ascundem panoul copiilor
+  if (!allIds.length){
     cont.innerHTML = '';
-    document.getElementById('min1-hint').style.display = 'none';
-
-    // acceptăm fie id numeric, fie nume (fallback)
-    const subParam = subId || subName;
-    if (!subParam){ wrap.hidden = true; return; }
-
-    const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam)
-              + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-              + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
-
-    try{
-      const { children = [] } = await ajx(url);
-      if (!children.length){ wrap.hidden = true; return; }
-      wrap.hidden = false;
-
-      // randăm ca checkbox-uri (id stabil chiar dacă nu avem id numeric în răspuns)
-      const frag = document.createDocumentFragment();
-      children.forEach(kid => {
-        const safeKey = (kid.id != null)
-          ? String(kid.id)
-          : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
-        const id = 'kid_' + safeKey;
-
-        const lab = document.createElement('label');
-        lab.setAttribute('for', id);
-        lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.id = id;
-        // valoarea rămâne id numeric dacă există; dacă nu, punem chiar numele (nu se va trimite în subsubs, dar păstrăm UX)
-        cb.value = (kid.id != null) ? String(kid.id) : (kid.name || '');
-        cb.addEventListener('change', () => {
-          const ids = getCheckedChildIds();
-          document.getElementById('subsub').value = ids[0] ? String(ids[0]) : ''; // compat: „primul” bifat
-        });
-
-        lab.appendChild(cb);
-        lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
-        frag.appendChild(lab);
-      });
-      cont.appendChild(frag);
-    }catch(e){
-      console.error(e);
-      wrap.hidden = true;
-    }
+    wrap.hidden = true;
+    return;
   }
+
+  // Ce subcategorie afișăm acum în panou?
+  // 1) dacă a venit explicit (click pe chip), o folosim
+  // 2) altfel, afișăm prima din listă
+  const subId = forSubId || parseInt(allIds[0], 10);
+  if (!subId){ cont.innerHTML=''; wrap.hidden=true; return; }
+
+  // pregătim URL-ul
+  const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subId)
+            + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+            + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+  // preluăm setul selectat până acum pentru subId
+  const selectedSet = __sel.bySub.get(subId) || new Set();
+
+  try{
+    const { children = [] } = await ajx(url);
+    if (!children.length){ cont.innerHTML=''; wrap.hidden=true; return; }
+    wrap.hidden = false;
+    cont.innerHTML = '';
+
+    const frag = document.createDocumentFragment();
+    children.forEach(kid => {
+      const id = 'kid_' + subId + '_' + kid.id;
+
+      const lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = id;
+      cb.value = String(kid.id);
+      cb.checked = selectedSet.has(kid.id);
+
+      cb.addEventListener('change', () => {
+        let set = __sel.bySub.get(subId);
+        if (!set) { set = new Set(); __sel.bySub.set(subId, set); }
+        if (cb.checked) set.add(kid.id); else set.delete(kid.id);
+        if (set.size === 0) __sel.bySub.delete(subId);
+
+        // dacă avem butonul-chip al acestei subcategorii → schimbăm culoarea în funcție de selecție
+        __chipSetSelected(parentBtn, set.size > 0);
+      });
+
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+      frag.appendChild(lab);
+    });
+    cont.appendChild(frag);
+
+    // la re-randare, colorează corect chipul acestei subcategorii (dacă a venit parentBtn)
+    __chipSetSelected(parentBtn, selectedSet.size > 0);
+  }catch(e){
+    console.error(e);
+    cont.innerHTML = '';
+    wrap.hidden = true;
+  }
+}
+
 
 
   // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
