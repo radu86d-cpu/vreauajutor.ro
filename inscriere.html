@@ -5,60 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Înscriere furnizor</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9}
-    .wrap{max-width:920px;margin:2rem auto;background:#fff;padding:20px;border-radius:12px;border:1px solid #e6e6e6}
+    /* --- layout de bază --- */
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;color:#111827;margin:0}
+    .wrap{max-width:960px;margin:24px auto;background:#fff;padding:20px;border-radius:14px;border:1px solid #e6e6e6}
+    h1{margin:0 0 16px 0}
     label{display:block;margin:.5rem 0 .25rem}
-    input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff}
     button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#0f62fe;color:#fff;cursor:pointer}
     button[disabled]{opacity:.6;cursor:not-allowed}
     .msg{margin-top:12px}
 
-    /* ===== Taxonomie în 2 coloane ===== */
-    #taxo-grid{
-      display:grid;
-      grid-template-columns:minmax(260px, 1fr) minmax(380px, 1.6fr);
-      gap:16px;
-      align-items:start;
+    /* --- panouri moderne pentru subcategorii (accordion) --- */
+    #taxo-wrap{margin-top:12px}
+    .acc-list{display:flex;flex-direction:column;gap:10px}
+    .acc-item{border:1px solid #e5e7eb;border-radius:12px;background:#fff;overflow:hidden}
+    .acc-header{
+      width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:12px 14px;background:#fff;border:0;cursor:pointer;text-align:left
     }
-    #subcat-wrap{position:sticky; top:12px; background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px;}
-    #child-wrap   {background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px;}
-
-    /* ===== Accordion subcategorii ===== */
-    .acc-list { display:flex; flex-direction:column; gap:8px; }
-    .acc-item { border:1px solid #e6e6e6; border-radius:12px; background:#fff; overflow:hidden; }
-
-    .acc-header {
-      width:100%; display:flex; align-items:center; justify-content:space-between;
-      gap:12px; padding:12px 14px; cursor:pointer; border:0; background:#fff; font-weight:600;
-      color:#1f2937;
+    .acc-left{display:flex;align-items:center;gap:8px}
+    .acc-badge{
+      display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;
+      padding:0 6px;border-radius:999px;background:#eef2ff;color:#1f2937;font-size:12px;border:1px solid #e5e7eb
     }
-    .acc-header:hover { background:#f9fafb; }
-    .acc-header:focus-visible { outline:2px solid #1a73e8; outline-offset:2px; border-radius:12px; }
-    .acc-header.blue{ background:#0f62fe; color:#fff; }
-
-    .acc-left { display:flex; align-items:center; gap:10px; }
-    .acc-badge {
-      min-width:20px; height:20px; border-radius:999px; font-size:12px; line-height:20px;
-      text-align:center; padding:0 6px; background:#eef2ff; color:#3730a3; font-weight:700;
+    .acc-chevron{width:20px;height:20px;transition:transform .2s ease}
+    .acc-header.open .acc-chevron{transform:rotate(180deg)}
+    .acc-body{padding:10px 12px;border-top:1px solid #eee}
+    .acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .child-item{
+      display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff
     }
-    .acc-header.blue .acc-badge{ background:#ffffff22; color:#fff; }
 
-    .acc-chevron {
-      width:18px; height:18px; transition:transform .18s ease;
-      flex:0 0 auto; opacity:.75;
-    }
-    .acc-header.open .acc-chevron { transform:rotate(180deg); }
+    /* stare subcategorie selectată (≥1 copil bifat) */
+    .blue{background:#0f62fe !important;color:#fff !important}
+    .blue .acc-badge{background:#fff;color:#0f62fe;border-color:#cfe0ff}
 
-    .acc-body { padding:10px 12px 14px; border-top:1px solid #f0f0f0; }
-    .acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
-    .child-item{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff}
+    /* rândul de titlu pentru copii */
+    .child-title{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px;font-weight:600}
 
-    /* Accesibilitate focus */
-    .child-item input:focus-visible{ outline:2px solid #1a73e8; outline-offset:2px; }
-
-    @media (max-width:840px){
-      #taxo-grid{ grid-template-columns:1fr; }
-      #subcat-wrap{ position:static; }
+    @media (max-width:680px){
+      .wrap{margin:0;border-radius:0;border:0}
     }
   </style>
 </head>
@@ -75,31 +62,17 @@
         <option value="">Alege serviciul</option>
       </select>
 
-      <!-- Taxonomie în 2 coloane -->
-      <section id="taxo-grid">
-        <!-- Subcategorii (accordion) -->
-        <div id="subcat-wrap" hidden>
-          <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <span>Subcategorie</span>
-            <button type="button" id="subcat-reset"
-                    style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;color:#1f2937;">
-              Reset
-            </button>
-          </label>
-          <div id="subcats" class="acc-list" aria-label="Subcategorii"></div>
+      <!-- Taxonomie -->
+      <section id="taxo-wrap" hidden>
+        <div class="child-title">
+          <span>Sub-subcategorii (bifează minim 1)</span>
+          <small id="min1-hint" style="color:#b00020;display:none">Selectează cel puțin una</small>
         </div>
-
-        <!-- Copii -->
-        <div id="child-wrap" hidden aria-live="polite">
-          <div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">
-            <label style="margin:0;">Sub-subcategorii (bifează minim 1)</label>
-            <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
-          </div>
-          <div id="children"></div>
-        </div>
+        <div id="subcats" class="acc-list" aria-label="Subcategorii"></div>
+        <div id="children" aria-live="polite"></div>
       </section>
 
-      <!-- hidden pentru backend -->
+      <!-- valori pentru backend -->
       <input type="hidden" id="subcat">
       <input type="hidden" id="subcat_name">
       <input type="hidden" id="subsub">
@@ -128,127 +101,41 @@
     </form>
   </main>
 
-<script>
-  // ————— Helpers pentru select-uri
-  function fillSelect(sel, arr, firstLabel) {
-    sel.innerHTML = '';
-    const first = document.createElement('option');
-    first.value = ''; first.textContent = firstLabel; sel.appendChild(first);
-    (arr||[]).forEach(v=>{
-      const name  = typeof v==='string' ? v : (v.name||v.label||v.text||'');
-      const value = typeof v==='string' ? v : (v.value||v.name||v.id||'');
-      if (!name) return;
-      const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
-      const { services=[], judete=[] } = await r.json();
-      const selServ = document.getElementById('service_name');
-      const selJ = document.getElementById('reg_judet');
-      const selO = document.getElementById('reg_oras');
-
-      fillSelect(selServ, services, 'Alege serviciul');
-      fillSelect(selJ, judete,  'Alege județul');
-      fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
-
-      selJ.addEventListener('change', async (ev)=>{
-        const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
-        if (!judet) return;
-        const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
-        const { orase=[] } = await rr.json();
-        fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
-        if (selServ.value) loadSubcatsForSignup();
+  <script>
+    /* --- helpers simple --- */
+    function fillSelect(sel, arr, firstLabel) {
+      sel.innerHTML = '';
+      const first = document.createElement('option');
+      first.value = ''; first.textContent = firstLabel; sel.appendChild(first);
+      (arr||[]).forEach(v=>{
+        const name  = typeof v==='string' ? v : (v.name||v.label||v.text||'');
+        const value = typeof v==='string' ? v : (v.value||v.name||v.id||'');
+        if (!name) return;
+        const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
       });
-      selO.addEventListener('change', ()=>{ if (selServ.value) loadSubcatsForSignup(); });
-      selServ.addEventListener('change', loadSubcatsForSignup);
-
-      if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
-    } catch(e){ console.error(e); }
-  });
-</script>
-
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-(async () => {
-  const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  document.getElementById('f').addEventListener('submit', async (ev)=>{
-    ev.preventDefault();
-    const form=ev.target, btn=form.querySelector('button[type="submit"]');
-    const originalLabel=btn.textContent;
-    btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Se trimite...';
-    const msg=document.getElementById('msg'); msg.style.color=''; msg.textContent='Trimit...';
-
-    const { data:{session} } = await supa.auth.getSession();
-    if (!session?.access_token){
-      msg.style.color='crimson'; msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
-      btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel; return;
     }
+    async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+  </script>
 
-    const selectedChildIds = Array.from(__sel.bySub.values())
-      .flatMap(s => Array.from(s))
-      .map(v => Number(v))
-      .filter(n => Number.isFinite(n));
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    const payload = {
-      company_name: document.getElementById('company_name').value.trim(),
-      service_name: document.getElementById('service_name').value,
-      judet:        document.getElementById('reg_judet').value,
-      oras:         document.getElementById('reg_oras').value,
-      phone:        document.getElementById('phone').value,
-      email:        document.getElementById('email').value,
-      description:  document.getElementById('description').value,
-      subcat:       document.getElementById('subcat').value || null,
-      subcat_name:  document.getElementById('subcat_name').value || null,
-      subsub:       document.getElementById('subsub').value || null,
-      subsubs:      selectedChildIds
-    };
-
-    try{
-      const r = await fetch('/.netlify/functions/register_provider', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-        body:JSON.stringify(payload)
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
-      msg.style.color='green'; msg.textContent='Înscriere reușită! Mulțumim.';
-      form.reset(); document.getElementById('reg_oras').disabled=true;
-    }catch(e){
-      msg.style.color='crimson'; msg.textContent='Eroare: '+e.message;
-    }finally{
-      btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel;
-    }
-  });
-})();
-</script>
-
-<script>
-  // ---------- STATE
+  <script>
+  // ======= STATE =======
   const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
-  const __subMeta = new Map();          // subId -> {btn, name}
+  const __subMeta = new Map();          // subId -> { btn, name, badge }
   const __cacheChildren = new Map();    // subId -> children[]
 
-  // ---------- HELPERS
-  async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
   function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
+  function ensureTaxoVisible(){ document.getElementById('taxo-wrap').hidden = false; }
   function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
-  function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
 
   function syncHiddenFromState(){
     const ids=[], names=[];
     for (const [key,set] of __sel.bySub.entries()){
       if (!set.size) continue;
       const meta = __subMeta.get(key) || {};
-      if (Number.isInteger(key)) ids.push(String(key));
-      else names.push(meta.name || String(key));
+      if (Number.isInteger(key)) ids.push(String(key)); else names.push(meta.name || String(key));
     }
     document.getElementById('subcat').value = ids.join(',');
     document.getElementById('subcat_name').value = names.join(',');
@@ -256,10 +143,38 @@
     document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
   }
 
-  // ---------- Accordion UI
+  /* ------- UI: header vizual + badge ------- */
+  function updateHeaderVisual(subId){
+    const meta   = __subMeta.get(subId) || {};
+    const header = meta.btn;
+    const badge  = meta.badge;
+    const count  = (__sel.bySub.get(subId)?.size || 0);
+
+    if (header){
+      setChipColor(header, count > 0);
+      header.dataset.count = String(count);
+      header.title = count ? `${count} selectate` : 'Niciuna selectată';
+    }
+    if (badge){
+      badge.textContent = String(count);
+      badge.style.opacity = count ? '1' : '.6';
+    }
+  }
+
+  function resyncGroupCheckboxes(subId){
+    const group = document.getElementById(childGroupId(subId));
+    if (group){
+      const set = __sel.bySub.get(subId) || new Set();
+      group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = set.has(String(cb.value));
+      });
+    }
+    updateHeaderVisual(subId);
+  }
+
+  /* ------- RENDER: accordion cu subcategorii ------- */
   function renderAccordion(container, items){
     container.innerHTML = '';
-    container.className = 'acc-list';
     __subMeta.clear();
 
     items.forEach(it=>{
@@ -277,19 +192,22 @@
       header.setAttribute('aria-controls', childGroupId(id));
       header.setAttribute('aria-expanded', 'false');
 
-      const count = (__sel.bySub.get(id)?.size || 0);
       const left  = document.createElement('div'); left.className='acc-left';
       const title = document.createElement('span'); title.textContent = name;
-      const badge = document.createElement('span'); badge.className='acc-badge';
-      badge.textContent = count ? String(count) : '0';
-      if (!count) badge.style.opacity = '.6';
+
+      const badge = document.createElement('span');
+      badge.className='acc-badge';
+      badge.textContent = '0';
+      badge.style.opacity = '.6';
+
       left.appendChild(title); left.appendChild(badge);
 
       const chev = document.createElementNS('http://www.w3.org/2000/svg','svg');
       chev.setAttribute('viewBox','0 0 24 24'); chev.classList.add('acc-chevron');
       const path = document.createElementNS('http://www.w3.org/2000/svg','path');
       path.setAttribute('d','M6 9l6 6 6-6'); path.setAttribute('fill','none');
-      path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','2'); path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
+      path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','2');
+      path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
       chev.appendChild(path);
 
       header.appendChild(left);
@@ -304,12 +222,8 @@
       item.appendChild(body);
       container.appendChild(item);
 
-      __subMeta.set(id, { btn: header, name });
-
-      // status inițial vizual
-      setChipColor(header, count>0);
-      header.dataset.count = String(count);
-      header.title = count ? `${count} selectate` : 'Niciuna selectată';
+      __subMeta.set(id, { btn: header, name, badge });
+      updateHeaderVisual(id);
 
       header.addEventListener('click', async ()=>{
         const isOpen = !body.hidden;
@@ -319,37 +233,19 @@
 
         if (!isOpen){
           await toggleChildGroup(id);
-          ensureChildWrapVisible();
+          ensureTaxoVisible();
           body.scrollIntoView({ behavior:'smooth', block:'nearest' });
         }
       });
     });
   }
 
-  // Resincronizează bifele în corpul deschis
-  function resyncGroupCheckboxes(subId){
-    const group = document.getElementById(childGroupId(subId));
-    if (!group) return;
-    const set = __sel.bySub.get(subId) || new Set();
-    group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-      cb.checked = set.has(String(cb.value));
-    });
-    const header = (__subMeta.get(subId)||{}).btn;
-    setChipColor(header, set.size>0);
-    if (header){
-      header.dataset.count = String(set.size||0);
-      header.title = set.size ? `${set.size} selectate` : 'Niciuna selectată';
-    }
-  }
-
-  // Creează/umple corpul unui accordion cu copiii
+  /* ------- creează/umple corpul unui accordion cu copiii ------- */
   async function toggleChildGroup(subId){
     const bodyId = childGroupId(subId);
     const body   = document.getElementById(bodyId);
-    const header = (__subMeta.get(subId)||{}).btn;
     if (!body) return;
 
-    // deja randat -> doar sync
     if (body.dataset.filled === '1'){
       resyncGroupCheckboxes(subId);
       return;
@@ -379,13 +275,7 @@
         if (cb.checked) set.add(safeId); else set.delete(safeId);
         if (set.size === 0) __sel.bySub.delete(subId);
 
-        const count = (__sel.bySub.get(subId)?.size || 0);
-        if (header){
-          setChipColor(header, count>0);
-          header.dataset.count = String(count);
-          header.title = count ? `${count} selectate` : 'Niciuna selectată';
-        }
-
+        updateHeaderVisual(subId);
         syncHiddenFromState();
 
         if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
@@ -400,7 +290,6 @@
 
     body.appendChild(grid);
     body.dataset.filled = '1';
-
     resyncGroupCheckboxes(subId);
   }
 
@@ -421,23 +310,50 @@
     return children;
   }
 
+  /* ------- încărcare liste + subcategorii ------- */
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{
+      const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
+      const { services=[], judete=[] } = await r.json();
+
+      const selServ = document.getElementById('service_name');
+      const selJ = document.getElementById('reg_judet');
+      const selO = document.getElementById('reg_oras');
+
+      fillSelect(selServ, services, 'Alege serviciul');
+      fillSelect(selJ, judete,  'Alege județul');
+      fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
+
+      selJ.addEventListener('change', async (ev)=>{
+        const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
+        if (!judet) return;
+        const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
+        const { orase=[] } = await rr.json();
+        fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
+        if (selServ.value) loadSubcatsForSignup();
+      });
+      selO.addEventListener('change', ()=>{ if (selServ.value) loadSubcatsForSignup(); });
+      selServ.addEventListener('change', loadSubcatsForSignup);
+
+      if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
+    }catch(e){ console.error('Nu pot încărca listele:', e); }
+  });
+
   async function loadSubcatsForSignup(){
     const service = document.getElementById('service_name')?.value || '';
     const judet   = document.getElementById('reg_judet')?.value || '';
     const oras    = document.getElementById('reg_oras')?.value || '';
-    const wrap    = document.getElementById('subcat-wrap');
+    const wrap    = document.getElementById('taxo-wrap');
     const cont    = document.getElementById('subcats');
-    const childW  = document.getElementById('child-wrap');
-    const childC  = document.getElementById('children');
 
-    // reset total
+    // resetare stare
     document.getElementById('subcat').value='';
     document.getElementById('subcat_name').value='';
     document.getElementById('subsub').value='';
     __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-    childW.hidden=true; childC.innerHTML='';
+    cont.innerHTML=''; wrap.hidden=true;
 
-    if (!service){ wrap.hidden=true; cont.innerHTML=''; return; }
+    if (!service) return;
 
     const url = '/.netlify/functions/taxonomy?mode=subcategories'
               + '&service=' + encodeURIComponent(service)
@@ -446,13 +362,13 @@
 
     try{
       const { subcategories=[] } = await ajx(url);
-      if (!subcategories.length){ wrap.hidden=true; cont.innerHTML=''; return; }
+      if (!subcategories.length) return;
       wrap.hidden=false;
       renderAccordion(cont, subcategories);
-    }catch(e){ console.error(e); wrap.hidden=true; }
+    }catch(e){ console.error(e); }
   }
 
-  // validare minim 1 copil selectat dacă există vreo subcategorie aleasă
+  // validare minim 1 dacă există subcategorii selectate
   (function(){
     const form=document.getElementById('f');
     if (!form) return;
@@ -462,36 +378,68 @@
       if (hasAnySub && !hasAnyKid){
         ev.preventDefault();
         document.getElementById('min1-hint').style.display='inline';
-        document.getElementById('child-wrap').scrollIntoView({behavior:'smooth', block:'center'});
+        document.getElementById('taxo-wrap').scrollIntoView({behavior:'smooth', block:'center'});
       }
     }, true);
   })();
+  </script>
 
-  // reset subcat
-  document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
-    document.getElementById('subcat').value='';
-    document.getElementById('subcat_name').value='';
-    document.getElementById('subsub').value='';
-    __sel.bySub.clear();
-    for (const {btn} of __subMeta.values()) setChipColor(btn,false);
-    document.getElementById('children').innerHTML='';
-    document.getElementById('child-wrap').hidden=true;
+  <script>
+  // ======= Submit cu Supabase (token) =======
+  (async () => {
+    const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // resetează badge-urile
-    document.querySelectorAll('.acc-header').forEach(h=>{
-      h.dataset.count='0'; h.title='Niciuna selectată';
+    document.getElementById('f').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const form=ev.target, btn=form.querySelector('button[type="submit"]');
+      const originalLabel=btn.textContent;
+      btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Se trimite...';
+      const msg=document.getElementById('msg'); msg.style.color=''; msg.textContent='Trimit...';
+
+      const { data:{session} } = await supa.auth.getSession();
+      if (!session?.access_token){
+        msg.style.color='crimson'; msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
+        btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel; return;
+      }
+
+      const selectedChildIds = Array.from(__sel.bySub.values())
+        .flatMap(s => Array.from(s))
+        .map(v => Number(v))
+        .filter(n => Number.isFinite(n));
+
+      const payload = {
+        company_name: document.getElementById('company_name').value.trim(),
+        service_name: document.getElementById('service_name').value,
+        judet:        document.getElementById('reg_judet').value,
+        oras:         document.getElementById('reg_oras').value,
+        phone:        document.getElementById('phone').value,
+        email:        document.getElementById('email').value,
+        description:  document.getElementById('description').value,
+        subcat:       document.getElementById('subcat').value || null,
+        subcat_name:  document.getElementById('subcat_name').value || null,
+        subsub:       document.getElementById('subsub').value || null,
+        subsubs:      selectedChildIds
+      };
+
+      try{
+        const r = await fetch('/.netlify/functions/register_provider', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
+        msg.style.color='green'; msg.textContent='Înscriere reușită! Mulțumim.';
+        form.reset(); document.getElementById('reg_oras').disabled=true;
+      }catch(e){
+        msg.style.color='crimson'; msg.textContent='Eroare: '+e.message;
+      }finally{
+        btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel;
+      }
     });
-  });
-
-  // reîncarcă la schimbări
-  document.getElementById('service_name')?.addEventListener('change', loadSubcatsForSignup);
-  document.getElementById('reg_judet')   ?.addEventListener('change', loadSubcatsForSignup);
-  document.getElementById('reg_oras')    ?.addEventListener('change', loadSubcatsForSignup);
-
-  document.addEventListener('DOMContentLoaded', ()=>{
-    if (document.getElementById('service_name')?.value) loadSubcatsForSignup();
-  });
-</script>
-
+  })();
+  </script>
 </body>
 </html>
