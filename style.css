@@ -256,18 +256,51 @@ nav a:focus-visible,
 +  -webkit-text-fill-color: inherit !important;
 +}
 
+/* === Taxonomie modernă (subcategorii + copii) === */
 #taxo-grid{
   display:grid;
   grid-template-columns:minmax(260px, 1fr) minmax(340px, 1.6fr);
   gap:16px;
   align-items:start;
 }
-#subcat-wrap{ position:sticky; top:12px; background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px; }
-#child-wrap{ background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px; }
+#subcat-wrap{
+  position:sticky;
+  top:12px;
+  background:#fff;
+  border-radius:12px;
+  border:1px solid #e6e6e6;
+  padding:12px;
+}
+#child-wrap{
+  background:#fff;
+  border-radius:12px;
+  border:1px solid #e6e6e6;
+  padding:12px;
+}
 
-.chip{border:1px solid #e5e7eb;padding:8px 12px;border-radius:999px;background:#fff;color:#1f2937}
+/* Chip-uri */
+.chip{border:1px solid #e5e7eb;padding:8px 12px;border-radius:999px;background:#fff;color:#1f2937; cursor:pointer;}
 .chip.blue{background:#0f62fe;color:#fff}
+
+/* Pentru cazul când folosești .active în loc de .blue (fallback) */
+#subcats button.active,
+#subcats .chip.active{ background:#eef5ff; border-color:#93c5fd; color:#111827; }
+
+/* “Sub-subcategorii” grupate pe panouri */
 .child-group{margin:12px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-.child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eee}
+.child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eee;font-weight:600}
 .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:10px}
 .child-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff}
+
+/* Accesibilitate / focus */
+#subcats button:focus-visible,
+.child-title button:focus-visible,
+.child-item input:focus-visible{
+  outline:2px solid #1a73e8; outline-offset:2px;
+}
+
+/* Dacă ai avut skeleton: asigură text vizibil pe chip-uri */
+#subcats .skeleton, #children .skeleton{
+  color:inherit !important; -webkit-text-fill-color:inherit !important;
+}
+
