@@ -247,6 +247,11 @@ const payload = {
   }
   // --- STARE GLOBALĂ: copii bifați per subcategorie (subcat_id -> Set(child_ids))
 const __sel = { bySub: new Map() };
+  // === sincr. hidden input cu subcategoriile care CHIAR au ≥1 copil bifat
+function updateHiddenSubcatsFromState(){
+  const ids = Array.from(__sel.bySub.keys()); // [subcat_id, ...]
+  document.getElementById('subcat').value = ids.join(',');
+}
 
 // helper pentru colorarea chip-urilor (subcategoriilor)
 function __chipSetSelected(btn, isSelected){
@@ -260,31 +265,36 @@ function __chipSetSelected(btn, isSelected){
   }
 }
 
-  function renderChips(container, items, onClick){
+ function renderChips(container, items, onClick){
   container.innerHTML = '';
 
   items.forEach((it)=>{
+    const id = it.id ?? it.subcat_id;     // suportă ambele forme
+    const name = it.name ?? it.subcat_name ?? '';
+
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = it.name || '';
+    btn.textContent = name;
     btn.style.color = '#1f2937';
     btn.style.background = '#fff';
     btn.style.border = '1px solid #e5e7eb';
     btn.style.padding = '6px 10px';
     btn.style.borderRadius = '999px';
 
-    // culoare inițială: dacă subcategoria are deja copii bifati, arată albastru
-    const preSel = __sel.bySub.get(it.id);
+    // albastru dacă are deja copii bifați
+    const preSel = __sel.bySub.get(id);
     __chipSetSelected(btn, preSel && preSel.size > 0);
 
-    // click-ul numai delegă logica către onClick; NU mai face single-select
     btn.addEventListener('click', () => {
-      onClick(it, btn);
+      // doar arătăm copiii pentru chipul apăsat (NU modificăm #subcat aici)
+      document.getElementById('child-wrap').hidden = false;
+      onClick({ id }, btn);
     });
 
     container.appendChild(btn);
   });
 }
+
 
 
  async function loadSubcatsForSignup(){
@@ -320,35 +330,10 @@ function __chipSetSelected(btn, isSelected){
 
     // randăm chip-urile de subcategorii; facem multi-select
     renderChips(cont, subcategories, (item, btn) => {
-      const current = hidSub.value ? hidSub.value.split(',').filter(Boolean) : [];
-      const idStr = String(item.id);
-      const i = current.indexOf(idStr);
+  // item.id vine deja setat de renderChips
+  loadChildrenForSignup(item.id, btn);
+});
 
-      if (i >= 0) {
-        // --- DESELECT ---
-        current.splice(i, 1);
-        __chipSetSelected(btn, false);
-        __sel.bySub.delete(item.id); // ștergem bifele pentru această subcategorie
-
-        if (current.length === 0) {
-          document.getElementById('children').innerHTML = '';
-          document.getElementById('child-wrap').hidden = true;
-        } else {
-          // afișăm copiii primei subcategorii rămase
-          loadChildrenForSignup(parseInt(current[0], 10), null);
-        }
-      } else {
-        // --- SELECT ---
-        current.push(idStr);
-        // inițial chip-ul rămâne alb; devine albastru după ce bifezi cel puțin un copil
-        __chipSetSelected(btn, false);
-        document.getElementById('child-wrap').hidden = false;
-        // afișăm copiii DOAR pentru chip-ul apăsat
-        loadChildrenForSignup(item.id, btn);
-      }
-
-      hidSub.value = current.join(',');
-    });
   }catch(e){
     console.error(e);
     wrap.hidden = true;
@@ -359,30 +344,29 @@ function __chipSetSelected(btn, isSelected){
 // forSubId = id-ul subcategoriei tocmai apăsate (sau null)
 // parentBtn = butonul-chip al acelei subcategorii (ca să-i putem schimba culoarea)
 async function loadChildrenForSignup(forSubId, parentBtn){
-  const subHidden = document.getElementById('subcat');
-  const allIds = subHidden.value ? subHidden.value.split(',').filter(Boolean) : [];
-
   const wrap = document.getElementById('child-wrap');
   const cont = document.getElementById('children');
 
-  const judet = document.getElementById('reg_judet')?.value || '';
-  const oras  = document.getElementById('reg_oras')?.value || '';
+  const subHidden = document.getElementById('subcat');
+  const allIds = subHidden.value ? subHidden.value.split(',').filter(Boolean) : [];
 
-  // înainte: dacă nu aveam allIds, ieșea direct
   if (!allIds.length && !forSubId) {
     cont.innerHTML = '';
     wrap.hidden = true;
     return;
   }
 
-  const subId = forSubId || parseInt(allIds[0], 10);
+  // acceptă fie id explicit, fie primul din lista ascunsă
+  const subId = (forSubId ?? parseInt(allIds[0], 10));
   if (!subId){ cont.innerHTML=''; wrap.hidden=true; return; }
+
+  const judet = document.getElementById('reg_judet')?.value || '';
+  const oras  = document.getElementById('reg_oras')?.value || '';
 
   const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subId)
             + (judet ? '&judet=' + encodeURIComponent(judet) : '')
             + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
 
-  // setul curent de copii bifați pt această subcategorie
   const selectedSet = __sel.bySub.get(subId) || new Set();
 
   try{
@@ -408,11 +392,16 @@ async function loadChildrenForSignup(forSubId, parentBtn){
       cb.addEventListener('change', () => {
         let set = __sel.bySub.get(subId);
         if (!set) { set = new Set(); __sel.bySub.set(subId, set); }
+
         if (cb.checked) set.add(kid.id); else set.delete(kid.id);
         if (set.size === 0) __sel.bySub.delete(subId);
 
-        // colorează chip-ul acestei subcategorii dacă există măcar un copil bifat
-        __chipSetSelected(parentBtn, set.size > 0);
+        __chipSetSelected(parentBtn, __sel.bySub.has(subId));
+        updateHiddenSubcatsFromState();
+
+        if (Array.from(__sel.bySub.values()).some(s => s.size > 0)) {
+          document.getElementById('min1-hint').style.display = 'none';
+        }
       });
 
       lab.appendChild(cb);
@@ -421,7 +410,6 @@ async function loadChildrenForSignup(forSubId, parentBtn){
     });
     cont.appendChild(frag);
 
-    // la re-randare, setează corect culoarea chip-ului (dacă avem referință)
     __chipSetSelected(parentBtn, selectedSet.size > 0);
   }catch(e){
     console.error(e);
