@@ -360,20 +360,21 @@ function __chipSetSelected(btn, isSelected){
 // parentBtn = butonul-chip al acelei subcategorii (ca să-i putem schimba culoarea)
 async function loadChildrenForSignup(forSubId, parentBtn){
   const subHidden = document.getElementById('subcat');
-  const allIds = (subHidden.value ? subHidden.value.split(',').filter(Boolean) : []);
+  const allIds = subHidden.value ? subHidden.value.split(',').filter(Boolean) : [];
 
-  const judet  = document.getElementById('reg_judet')?.value || '';
-  const oras   = document.getElementById('reg_oras')?.value || '';
-  const wrap   = document.getElementById('child-wrap');
-  const cont   = document.getElementById('children');
+  const wrap = document.getElementById('child-wrap');
+  const cont = document.getElementById('children');
 
-  if (!allIds.length){
+  const judet = document.getElementById('reg_judet')?.value || '';
+  const oras  = document.getElementById('reg_oras')?.value || '';
+
+  // înainte: dacă nu aveam allIds, ieșea direct
+  if (!allIds.length && !forSubId) {
     cont.innerHTML = '';
     wrap.hidden = true;
     return;
   }
 
-  // dacă nu vine explicit, arătăm copiii primei subcategorii selectate
   const subId = forSubId || parseInt(allIds[0], 10);
   if (!subId){ cont.innerHTML=''; wrap.hidden=true; return; }
 
