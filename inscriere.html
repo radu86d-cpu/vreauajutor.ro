@@ -5,36 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Înscriere furnizor</title>
   <style>
-    /* Layout de bază */
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;margin:0}
-    .wrap{max-width:960px;margin:2rem auto;background:#fff;padding:20px;border-radius:12px;border:1px solid #e6e6e6}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9}
+    .wrap{max-width:920px;margin:2rem auto;background:#fff;padding:20px;border-radius:12px;border:1px solid #e6e6e6}
     label{display:block;margin:.5rem 0 .25rem}
     input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}
     button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#0f62fe;color:#fff;cursor:pointer}
     button[disabled]{opacity:.6;cursor:not-allowed}
     .msg{margin-top:12px}
 
-    /* Taxonomie modernă: 2 coloane */
-    #taxo-grid{display:grid;grid-template-columns:minmax(260px, 1fr) minmax(360px, 1.6fr);gap:16px;align-items:start}
-    #subcat-wrap{position:sticky;top:12px;background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px}
-    #child-wrap{background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px}
+    /* ===== Taxonomie în 2 coloane ===== */
+    #taxo-grid{
+      display:grid;
+      grid-template-columns:minmax(260px, 1fr) minmax(380px, 1.6fr);
+      gap:16px;
+      align-items:start;
+    }
+    #subcat-wrap{position:sticky; top:12px; background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px;}
+    #child-wrap   {background:#fff; border-radius:12px; border:1px solid #e6e6e6; padding:12px;}
 
-    /* Chip-uri subcategorii */
-    #subcats{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-    .chip{border:1px solid #e5e7eb;padding:8px 12px;border-radius:999px;background:#fff;color:#1f2937;cursor:pointer}
-    .chip.blue{background:#0f62fe;color:#fff;border-color:#0f62fe}
-    .chip:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
+    /* ===== Accordion subcategorii ===== */
+    .acc-list { display:flex; flex-direction:column; gap:8px; }
+    .acc-item { border:1px solid #e6e6e6; border-radius:12px; background:#fff; overflow:hidden; }
 
-    /* Grupuri copii (checkbox-uri) */
-    .child-group{margin:12px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-    .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eee;font-weight:600}
-    .child-title button{background:#fff;color:#111;border:1px solid #ddd;padding:4px 8px;border-radius:999px;font-size:12px;line-height:1.2;min-width:auto}
-    .child-title button:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
-    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:10px}
-    .child-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff}
+    .acc-header {
+      width:100%; display:flex; align-items:center; justify-content:space-between;
+      gap:12px; padding:12px 14px; cursor:pointer; border:0; background:#fff; font-weight:600;
+      color:#1f2937;
+    }
+    .acc-header:hover { background:#f9fafb; }
+    .acc-header:focus-visible { outline:2px solid #1a73e8; outline-offset:2px; border-radius:12px; }
+    .acc-header.blue{ background:#0f62fe; color:#fff; }
 
-    /* Accesibilitate */
-    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .acc-left { display:flex; align-items:center; gap:10px; }
+    .acc-badge {
+      min-width:20px; height:20px; border-radius:999px; font-size:12px; line-height:20px;
+      text-align:center; padding:0 6px; background:#eef2ff; color:#3730a3; font-weight:700;
+    }
+    .acc-header.blue .acc-badge{ background:#ffffff22; color:#fff; }
+
+    .acc-chevron {
+      width:18px; height:18px; transition:transform .18s ease;
+      flex:0 0 auto; opacity:.75;
+    }
+    .acc-header.open .acc-chevron { transform:rotate(180deg); }
+
+    .acc-body { padding:10px 12px 14px; border-top:1px solid #f0f0f0; }
+    .acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+    .child-item{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fff}
+
+    /* Accesibilitate focus */
+    .child-item input:focus-visible{ outline:2px solid #1a73e8; outline-offset:2px; }
+
+    @media (max-width:840px){
+      #taxo-grid{ grid-template-columns:1fr; }
+      #subcat-wrap{ position:static; }
+    }
   </style>
 </head>
 <body>
@@ -50,23 +75,23 @@
         <option value="">Alege serviciul</option>
       </select>
 
-      <!-- Taxonomie (2 coloane) -->
+      <!-- Taxonomie în 2 coloane -->
       <section id="taxo-grid">
-        <!-- Subcategorii -->
+        <!-- Subcategorii (accordion) -->
         <div id="subcat-wrap" hidden>
           <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
             <span>Subcategorie</span>
             <button type="button" id="subcat-reset"
-              style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;">
+                    style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;color:#1f2937;">
               Reset
             </button>
           </label>
-          <div id="subcats" role="tablist" aria-label="Subcategorii"></div>
+          <div id="subcats" class="acc-list" aria-label="Subcategorii"></div>
         </div>
 
-        <!-- Copii (sub-subcategorii) -->
+        <!-- Copii -->
         <div id="child-wrap" hidden aria-live="polite">
-          <div class="child-title">
+          <div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">
             <label style="margin:0;">Sub-subcategorii (bifează minim 1)</label>
             <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
           </div>
@@ -74,7 +99,7 @@
         </div>
       </section>
 
-      <!-- Hidden pentru backend -->
+      <!-- hidden pentru backend -->
       <input type="hidden" id="subcat">
       <input type="hidden" id="subcat_name">
       <input type="hidden" id="subsub">
@@ -104,7 +129,7 @@
   </main>
 
 <script>
-  /* --- Helpers select --- */
+  // ————— Helpers pentru select-uri
   function fillSelect(sel, arr, firstLabel) {
     sel.innerHTML = '';
     const first = document.createElement('option');
@@ -145,6 +170,7 @@
   });
 </script>
 
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -205,12 +231,12 @@
 </script>
 
 <script>
-  /* --- STATE --- */
+  // ---------- STATE
   const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
   const __subMeta = new Map();          // subId -> {btn, name}
   const __cacheChildren = new Map();    // subId -> children[]
 
-  /* --- HELPERS --- */
+  // ---------- HELPERS
   async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
   function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
   function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
@@ -230,28 +256,77 @@
     document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
   }
 
-  function renderChips(container, items){
-    container.innerHTML=''; __subMeta.clear();
-    items.forEach(it=>{
-      const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-      const name = it.name ?? it.subcat_name ?? '';
-      const btn = document.createElement('button');
-      btn.type='button';
-      btn.textContent=name;
-      btn.className='chip';
-      btn.setAttribute('role','tab');
-      btn.setAttribute('aria-selected', ((__sel.bySub.get(id)?.size||0)>0) ? 'true' : 'false');
-      btn.setAttribute('aria-controls', childGroupId(id));
-      btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); btn.click(); } });
+  // ---------- Accordion UI
+  function renderAccordion(container, items){
+    container.innerHTML = '';
+    container.className = 'acc-list';
+    __subMeta.clear();
 
-      __subMeta.set(id,{btn,name});
-      setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
-      btn.addEventListener('click', ()=>toggleChildGroup(id));
-      container.appendChild(btn);
+    items.forEach(it=>{
+      const id   = (it.id!=null) ? Number(it.id)
+                 : (it.subcat_id!=null ? Number(it.subcat_id)
+                 : String(it.name||it.subcat_name||''));
+      const name = it.name ?? it.subcat_name ?? '';
+
+      const item   = document.createElement('div');  item.className = 'acc-item';
+
+      // header
+      const header = document.createElement('button');
+      header.type='button';
+      header.className='acc-header';
+      header.setAttribute('aria-controls', childGroupId(id));
+      header.setAttribute('aria-expanded', 'false');
+
+      const count = (__sel.bySub.get(id)?.size || 0);
+      const left  = document.createElement('div'); left.className='acc-left';
+      const title = document.createElement('span'); title.textContent = name;
+      const badge = document.createElement('span'); badge.className='acc-badge';
+      badge.textContent = count ? String(count) : '0';
+      if (!count) badge.style.opacity = '.6';
+      left.appendChild(title); left.appendChild(badge);
+
+      const chev = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      chev.setAttribute('viewBox','0 0 24 24'); chev.classList.add('acc-chevron');
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d','M6 9l6 6 6-6'); path.setAttribute('fill','none');
+      path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','2'); path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
+      chev.appendChild(path);
+
+      header.appendChild(left);
+      header.appendChild(chev);
+
+      const body  = document.createElement('div');
+      body.className='acc-body';
+      body.id = childGroupId(id);
+      body.hidden = true;
+
+      item.appendChild(header);
+      item.appendChild(body);
+      container.appendChild(item);
+
+      __subMeta.set(id, { btn: header, name });
+
+      // status inițial vizual
+      setChipColor(header, count>0);
+      header.dataset.count = String(count);
+      header.title = count ? `${count} selectate` : 'Niciuna selectată';
+
+      header.addEventListener('click', async ()=>{
+        const isOpen = !body.hidden;
+        body.hidden = isOpen;
+        header.classList.toggle('open', !isOpen);
+        header.setAttribute('aria-expanded', String(!isOpen));
+
+        if (!isOpen){
+          await toggleChildGroup(id);
+          ensureChildWrapVisible();
+          body.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        }
+      });
     });
-    document.getElementById('subcat-wrap').hidden = false;
   }
 
+  // Resincronizează bifele în corpul deschis
   function resyncGroupCheckboxes(subId){
     const group = document.getElementById(childGroupId(subId));
     if (!group) return;
@@ -259,57 +334,34 @@
     group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
       cb.checked = set.has(String(cb.value));
     });
-    setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
+    const header = (__subMeta.get(subId)||{}).btn;
+    setChipColor(header, set.size>0);
+    if (header){
+      header.dataset.count = String(set.size||0);
+      header.title = set.size ? `${set.size} selectate` : 'Niciuna selectată';
+    }
   }
 
-  /* --- UI: toggle/creează panoul copiilor --- */
+  // Creează/umple corpul unui accordion cu copiii
   async function toggleChildGroup(subId){
-    ensureChildWrapVisible();
+    const bodyId = childGroupId(subId);
+    const body   = document.getElementById(bodyId);
+    const header = (__subMeta.get(subId)||{}).btn;
+    if (!body) return;
 
-    const container = document.getElementById('children');
-    const groupId = childGroupId(subId);
-    let group = document.getElementById(groupId);
-    const chip  = (__subMeta.get(subId)||{}).btn;
-
-    if (group){
-      group.hidden = !group.hidden;
-      group.setAttribute('aria-hidden', group.hidden ? 'true' : 'false');
-      if (!group.hidden){ resyncGroupCheckboxes(subId); }
-      const hasAny = (__sel.bySub.get(subId)?.size || 0) > 0;
-      if (chip) chip.setAttribute('aria-selected', hasAny ? 'true' : 'false');
+    // deja randat -> doar sync
+    if (body.dataset.filled === '1'){
+      resyncGroupCheckboxes(subId);
       return;
     }
 
     const kids = await loadChildren(subId);
-    const meta = __subMeta.get(subId) || {};
-
-    group = document.createElement('section');
-    group.className = 'child-group';
-    group.id = groupId;
-    group.setAttribute('role', 'region');
-    group.setAttribute('aria-hidden', 'false');
-
-    const title = document.createElement('div');
-    title.className = 'child-title';
-    const tspan = document.createElement('span');
-    tspan.textContent = meta.name || ('Subcategorie ' + subId);
-    const tbtn = document.createElement('button');
-    tbtn.type = 'button';
-    tbtn.textContent = 'Ascunde';
-    tbtn.addEventListener('click', ()=>{ group.hidden = true; group.setAttribute('aria-hidden','true'); });
-    title.appendChild(tspan); title.appendChild(tbtn);
-    group.appendChild(title);
-
-    const grid = document.createElement('div');
-    grid.className = 'child-grid';
+    const grid = document.createElement('div'); grid.className='acc-grid';
     const selectedSet = __sel.bySub.get(subId) || new Set();
 
     kids.forEach(kid=>{
-      /* FIX: ID unic chiar dacă kid.id lipsește */
-      const safeKey = (kid.id != null)
-        ? String(kid.id)
-        : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
-      const inputId = `kid_${subId}_${safeKey}`;
+      const safeId  = String(kid.id);
+      const inputId = `kid_${subId}_${safeId}`;
 
       const lab = document.createElement('label');
       lab.className = 'child-item';
@@ -318,21 +370,21 @@
       const cb  = document.createElement('input');
       cb.type   = 'checkbox';
       cb.id     = inputId;
-      cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
-
-      cb.checked = selectedSet.has(String(cb.value));
+      cb.value  = safeId;
+      cb.checked = selectedSet.has(safeId);
 
       cb.addEventListener('change', ()=>{
         let set = __sel.bySub.get(subId);
         if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
-
-        const val = String(cb.value);
-        if (cb.checked) set.add(val); else set.delete(val);
+        if (cb.checked) set.add(safeId); else set.delete(safeId);
         if (set.size === 0) __sel.bySub.delete(subId);
 
-        const hasAny = (__sel.bySub.get(subId)?.size || 0) > 0;
-        setChipColor(chip, hasAny);
-        if (chip) chip.setAttribute('aria-selected', hasAny ? 'true' : 'false');
+        const count = (__sel.bySub.get(subId)?.size || 0);
+        if (header){
+          setChipColor(header, count>0);
+          header.dataset.count = String(count);
+          header.title = count ? `${count} selectate` : 'Niciuna selectată';
+        }
 
         syncHiddenFromState();
 
@@ -346,12 +398,10 @@
       grid.appendChild(lab);
     });
 
-    group.appendChild(grid);
-    container.appendChild(group);
+    body.appendChild(grid);
+    body.dataset.filled = '1';
 
-    if (chip){
-      chip.setAttribute('aria-selected', (selectedSet.size > 0) ? 'true' : 'false');
-    }
+    resyncGroupCheckboxes(subId);
   }
 
   async function loadChildren(subId){
@@ -380,7 +430,7 @@
     const childW  = document.getElementById('child-wrap');
     const childC  = document.getElementById('children');
 
-    // reset
+    // reset total
     document.getElementById('subcat').value='';
     document.getElementById('subcat_name').value='';
     document.getElementById('subsub').value='';
@@ -397,11 +447,12 @@
     try{
       const { subcategories=[] } = await ajx(url);
       if (!subcategories.length){ wrap.hidden=true; cont.innerHTML=''; return; }
-      renderChips(cont, subcategories);
+      wrap.hidden=false;
+      renderAccordion(cont, subcategories);
     }catch(e){ console.error(e); wrap.hidden=true; }
   }
 
-  /* Validare minim 1 copil dacă există cel puțin o subcategorie deschisă */
+  // validare minim 1 copil selectat dacă există vreo subcategorie aleasă
   (function(){
     const form=document.getElementById('f');
     if (!form) return;
@@ -416,7 +467,7 @@
     }, true);
   })();
 
-  /* Reset */
+  // reset subcat
   document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
     document.getElementById('subcat').value='';
     document.getElementById('subcat_name').value='';
@@ -425,9 +476,14 @@
     for (const {btn} of __subMeta.values()) setChipColor(btn,false);
     document.getElementById('children').innerHTML='';
     document.getElementById('child-wrap').hidden=true;
+
+    // resetează badge-urile
+    document.querySelectorAll('.acc-header').forEach(h=>{
+      h.dataset.count='0'; h.title='Niciuna selectată';
+    });
   });
 
-  /* Reîncarcă la schimbări */
+  // reîncarcă la schimbări
   document.getElementById('service_name')?.addEventListener('change', loadSubcatsForSignup);
   document.getElementById('reg_judet')   ?.addEventListener('change', loadSubcatsForSignup);
   document.getElementById('reg_oras')    ?.addEventListener('change', loadSubcatsForSignup);
