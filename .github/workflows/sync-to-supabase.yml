@@ -1,0 +1,91 @@
+name: Sync repo ZIP to Supabase
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute meta
+        id: meta
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          REPO="${GITHUB_REPOSITORY##*/}"
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+
+      - name: Create ZIP (exclude heavy/dev files)
+        run: |
+          echo ".git/*" > .zipignore
+          echo ".github/*" >> .zipignore
+          echo "node_modules/*" >> .zipignore
+          echo "dist/*" >> .zipignore
+          echo "build/*" >> .zipignore
+          zip -r repo.zip . -x@.zipignore
+
+      - name: Create manifest.json
+        run: |
+          cat > manifest.json <<EOF
+          {
+            "repo": "${{ steps.meta.outputs.repo }}",
+            "commit": "${{ steps.meta.outputs.sha }}",
+            "pushed_at": "${{ steps.meta.outputs.date }}",
+            "branch": "${GITHUB_REF_NAME}"
+          }
+          EOF
+
+      - name: Upload ZIP (commit-stamped path)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SUPABASE_BUCKET: ${{ secrets.SUPABASE_BUCKET }}
+        run: |
+          set -e
+          COMMIT_PATH="archives/${{ steps.meta.outputs.sha }}.zip"
+          curl -sS -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${COMMIT_PATH}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE}" \
+            -H "x-upsert: true" \
+            -F "file=@repo.zip"
+
+      - name: Upload manifest.json (commit-stamped)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SUPABASE_BUCKET: ${{ secrets.SUPABASE_BUCKET }}
+        run: |
+          COMMIT_MANIFEST="archives/${{ steps.meta.outputs.sha }}.manifest.json"
+          curl -sS -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/${COMMIT_MANIFEST}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE}" \
+            -H "x-upsert: true" \
+            -F "file=@manifest.json"
+
+      - name: Update stable pointers (latest.zip & latest.manifest.json)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+          SUPABASE_BUCKET: ${{ secrets.SUPABASE_BUCKET }}
+        run: |
+          curl -sS -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/latest.zip" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE}" \
+            -H "x-upsert: true" \
+            -F "file=@repo.zip"
+
+          curl -sS -X POST \
+            "${SUPABASE_URL}/storage/v1/object/${SUPABASE_BUCKET}/latest.manifest.json" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE}" \
+            -H "x-upsert: true" \
+            -F "file=@manifest.json"
+
