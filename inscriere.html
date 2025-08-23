@@ -239,23 +239,23 @@ const payload = {
 })();
 </script>
 <script>
-  // helper mic
+  // -------- utilitar mic de fetch JSON, fără cache
   async function ajx(url){
     const r = await fetch(url, { cache:'no-store' });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
 
-  // --- STARE GLOBALĂ: copii bifați per subcategorie (subcat_id -> Set(child_ids))
+  // -------- STARE GLOBALĂ: subcat_id -> Set(child_ids bifate)
   const __sel = { bySub: new Map() };
 
-  // === sincronizează hidden input cu subcategoriile care CHIAR au ≥1 copil bifat
+  // -------- sincronizează hidden #subcat cu subcategoriile care au ≥1 copil bifat
   function updateHiddenSubcatsFromState(){
     const ids = Array.from(__sel.bySub.keys()); // [subcat_id, ...]
     document.getElementById('subcat').value = ids.join(',');
   }
 
-  // helper pentru colorarea chip-urilor (subcategoriilor)
+  // -------- helper pentru culoarea chip-urilor
   function __chipSetSelected(btn, isSelected){
     if (!btn) return;
     if (isSelected){
@@ -267,31 +267,26 @@ const payload = {
     }
   }
 
-  // Randează butoanele de subcategorii
+  // -------- randează butoanele de subcategorii
   function renderChips(container, items){
     container.innerHTML = '';
 
     items.forEach((it)=>{
-      // acceptă atât {id, name} cât și {subcat_id, subcat_name}
-      const idStr = (it.id ?? it.subcat_id);
-      const id    = parseInt(idStr, 10);
+      // acceptă {id,name} sau {subcat_id,subcat_name}
+      const id    = parseInt((it.id ?? it.subcat_id), 10);
       const name  = (it.name ?? it.subcat_name ?? '').trim();
       if (!Number.isFinite(id) || !name) return;
 
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = name;
-      btn.style.color = '#1f2937';
-      btn.style.background = '#fff';
-      btn.style.border = '1px solid #e5e7eb';
-      btn.style.padding = '6px 10px';
-      btn.style.borderRadius = '999px';
+      btn.style.cssText = 'color:#1f2937;background:#fff;border:1px solid #e5e7eb;padding:6px 10px;border-radius:999px;';
 
-      // dacă subcategoria are deja copii bifați o colorăm albastru
+      // dacă subcategoria are deja copii bifati, o colorăm albastru
       const preSel = __sel.bySub.get(id);
       __chipSetSelected(btn, preSel && preSel.size > 0);
 
-      // clickul încarcă DIRECT copiii acestei subcategorii
+      // click -> încarcă/afișează copiii acestei subcategorii
       btn.addEventListener('click', () => {
         document.getElementById('child-wrap').hidden = false;
         loadChildrenForSignup(id, btn);
@@ -301,7 +296,7 @@ const payload = {
     });
   }
 
-  // Încarcă lista de subcategorii pentru serviciu/județ/oraș
+  // -------- încarcă lista de subcategorii pentru serviciu/județ/oraș
   async function loadSubcatsForSignup(){
     const service = document.getElementById('service_name')?.value || '';
     const judet   = document.getElementById('reg_judet')?.value || '';
@@ -310,12 +305,10 @@ const payload = {
     const cont    = document.getElementById('subcats');
     const childW  = document.getElementById('child-wrap');
     const childC  = document.getElementById('children');
-    const hidSub  = document.getElementById('subcat');
-    const hidKid  = document.getElementById('subsub');
 
-    // reset
-    hidSub.value = '';
-    hidKid.value = '';
+    // reset stare + UI copii
+    document.getElementById('subcat').value = '';
+    document.getElementById('subsub').value = '';
     __sel.bySub.clear();
     childW.hidden = true;
     childC.innerHTML = '';
@@ -332,17 +325,15 @@ const payload = {
       if (!subcategories.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
 
       wrap.hidden = false;
-      // randează chip-urile; fiecare chip își are propriul click handler
-      renderChips(cont, subcategories);
+      renderChips(cont, subcategories); // fiecare chip are propriul handler
     } catch(e) {
-      console.error(e);
+      console.error('Eroare subcategorii:', e);
       wrap.hidden = true;
     }
   }
 
-  // Încarcă/afișează copiii pentru o subcategorie
+  // -------- încarcă/afișează copiii pentru o subcategorie
   async function loadChildrenForSignup(forSubId, parentBtn){
-    // dacă nu avem id explicit, nu facem nimic
     const subId = parseInt(forSubId, 10);
     if (!Number.isFinite(subId)) return;
 
@@ -361,6 +352,7 @@ const payload = {
     try{
       const { children = [] } = await ajx(url);
       if (!children.length){ cont.innerHTML=''; wrap.hidden=true; return; }
+
       wrap.hidden = false;
       cont.innerHTML = '';
 
@@ -382,12 +374,16 @@ const payload = {
           let set = __sel.bySub.get(subId);
           if (!set) { set = new Set(); __sel.bySub.set(subId, set); }
 
-          if (cb.checked) set.add(kid.id); else set.delete(kid.id);
+          if (cb.checked) set.add(kid.id);
+          else            set.delete(kid.id);
+
           if (set.size === 0) __sel.bySub.delete(subId);
 
+          // colorează chipul dacă are ≥1 copil bifat și ține hidden-ul la zi
           __chipSetSelected(parentBtn, __sel.bySub.has(subId));
           updateHiddenSubcatsFromState();
 
+          // ascunde hint-ul “minim 1” dacă avem măcar un copil bifat undeva
           if (Array.from(__sel.bySub.values()).some(s => s.size > 0)) {
             document.getElementById('min1-hint').style.display = 'none';
           }
@@ -397,17 +393,17 @@ const payload = {
         lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
         frag.appendChild(lab);
       });
-      cont.appendChild(frag);
 
+      cont.appendChild(frag);
       __chipSetSelected(parentBtn, selectedSet.size > 0);
     }catch(e){
-      console.error(e);
+      console.error('Eroare copii:', e);
       cont.innerHTML = '';
       wrap.hidden = true;
     }
   }
 
-  // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
+  // -------- validare “dacă ai ales subcategorii, bifează minim 1 copil”
   (function attachMinOneValidation(){
     const form = document.getElementById('f');
     if (!form) return;
@@ -424,7 +420,7 @@ const payload = {
     }, true);
   })();
 
-  // reset subcategorie
+  // -------- reset subcategorii
   document.getElementById('subcat-reset')?.addEventListener('click', () => {
     document.getElementById('subcat').value  = '';
     document.getElementById('subsub').value  = '';
