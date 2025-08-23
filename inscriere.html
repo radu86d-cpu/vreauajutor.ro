@@ -321,23 +321,33 @@ const payload = {
            wrap.hidden = false;
       // renderChips setează acum #subcat sau #subcat_name; aici doar încărcăm copiii
       renderChips(cont, subcategories, (item, btn) => {
-  // toggle multi-select: păstrăm o listă de id-uri separate prin virgulă
-  const current = hidSub.value ? hidSub.value.split(',') : [];
-  const idx = current.indexOf(String(item.id));
-  if (idx >= 0) {
-    current.splice(idx, 1); // scoate
-    btn.classList.remove('active');
-    btn.style.background = '#fff';
-  } else {
-    current.push(String(item.id)); // adaugă
-    btn.classList.add('active');
-    btn.style.background = '#eef5ff';
-  }
-  hidSub.value = current.join(',');
+  // ținem în hidden #subcat o listă CSV cu id‑urile selectate
+  const hidSub = document.getElementById('subcat');
+  const current = hidSub.value ? hidSub.value.split(',').filter(Boolean) : [];
+  const idStr = String(item.id);
 
-  // încarcă copiii DOAR pentru subcategoria selectată/deselectată
-  loadChildrenForSignup(item.id, btn);
+  const i = current.indexOf(idStr);
+  if (i >= 0) {
+    // deselect → scoate id‑ul
+    current.splice(i, 1);
+    __chipSetSelected(btn, false);
+    // dacă nu mai rămâne nicio subcategorie, închide panoul copiilor
+    if (current.length === 0) {
+      document.getElementById('children').innerHTML = '';
+      document.getElementById('child-wrap').hidden = true;
+    }
+  } else {
+    // select → adaugă id‑ul și deschide panoul copiilor pentru acest chip
+    current.push(idStr);
+    __chipSetSelected(btn, false); // inițial gri/alb, îl vom colora albastru după ce bifezi copii
+    document.getElementById('child-wrap').hidden = false;
+    // încarcă/afișează copiii DOAR pentru subcategoria tocmai apăsată
+    loadChildrenForSignup(item.id, btn);
+  }
+
+  hidSub.value = current.join(',');
 });
+
 
 
     }catch(e){
