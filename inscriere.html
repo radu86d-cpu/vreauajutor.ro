@@ -245,221 +245,201 @@ const payload = {
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }
+
   // --- STARE GLOBALĂ: copii bifați per subcategorie (subcat_id -> Set(child_ids))
-const __sel = { bySub: new Map() };
-  // === sincr. hidden input cu subcategoriile care CHIAR au ≥1 copil bifat
-function updateHiddenSubcatsFromState(){
-  const ids = Array.from(__sel.bySub.keys()); // [subcat_id, ...]
-  document.getElementById('subcat').value = ids.join(',');
-}
+  const __sel = { bySub: new Map() };
 
-// helper pentru colorarea chip-urilor (subcategoriilor)
-function __chipSetSelected(btn, isSelected){
-  if (!btn) return;
-  if (isSelected){
-    btn.style.background = '#0f62fe';
-    btn.style.color = '#fff';
-  } else {
-    btn.style.background = '#fff';
-    btn.style.color = '#1f2937';
-  }
-}
-
- function renderChips(container, items, onClick){
-  container.innerHTML = '';
-
-  items.forEach((it)=>{
-    const id = it.id ?? it.subcat_id;     // suportă ambele forme
-    const name = it.name ?? it.subcat_name ?? '';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = name;
-    btn.style.color = '#1f2937';
-    btn.style.background = '#fff';
-    btn.style.border = '1px solid #e5e7eb';
-    btn.style.padding = '6px 10px';
-    btn.style.borderRadius = '999px';
-
-    // albastru dacă are deja copii bifați
-    const preSel = __sel.bySub.get(id);
-    __chipSetSelected(btn, preSel && preSel.size > 0);
-
-    btn.addEventListener('click', () => {
-      // doar arătăm copiii pentru chipul apăsat (NU modificăm #subcat aici)
-      document.getElementById('child-wrap').hidden = false;
-      onClick({ id }, btn);
-    });
-
-    container.appendChild(btn);
-  });
-}
-
-
-
- async function loadSubcatsForSignup(){
-  const service = document.getElementById('service_name')?.value || '';
-  const judet   = document.getElementById('reg_judet')?.value || '';
-  const oras    = document.getElementById('reg_oras')?.value || '';
-  const wrap    = document.getElementById('subcat-wrap');
-  const cont    = document.getElementById('subcats');
-  const childW  = document.getElementById('child-wrap');
-  const childC  = document.getElementById('children');
-  const hidSub  = document.getElementById('subcat');
-  const hidKid  = document.getElementById('subsub');
-
-  // reset
-  hidSub.value = '';
-  hidKid.value = '';
-  __sel.bySub.clear();
-  childW.hidden = true;
-  childC.innerHTML = '';
-
-  if (!service){ wrap.hidden = true; cont.innerHTML = ''; return; }
-
-  const url = '/.netlify/functions/taxonomy?mode=subcategories'
-            + '&service=' + encodeURIComponent(service)
-            + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-            + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
-
-  try{
-    const { subcategories = [] } = await ajx(url);
-    if (!subcategories.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
-
-    wrap.hidden = false;
-
-    // randăm chip-urile de subcategorii; facem multi-select
-    renderChips(cont, subcategories, (item, btn) => {
-  // item.id vine deja setat de renderChips
-  loadChildrenForSignup(item.id, btn);
-});
-
-  }catch(e){
-    console.error(e);
-    wrap.hidden = true;
-  }
-}
-
-// Afișează copiii pentru o subcategorie anume.
-// forSubId = id-ul subcategoriei tocmai apăsate (sau null)
-// parentBtn = butonul-chip al acelei subcategorii (ca să-i putem schimba culoarea)
-async function loadChildrenForSignup(forSubId, parentBtn){
-  const wrap = document.getElementById('child-wrap');
-  const cont = document.getElementById('children');
-
-  const subHidden = document.getElementById('subcat');
-  const allIds = subHidden.value ? subHidden.value.split(',').filter(Boolean) : [];
-
-  if (!allIds.length && !forSubId) {
-    cont.innerHTML = '';
-    wrap.hidden = true;
-    return;
+  // === sincronizează hidden input cu subcategoriile care CHIAR au ≥1 copil bifat
+  function updateHiddenSubcatsFromState(){
+    const ids = Array.from(__sel.bySub.keys()); // [subcat_id, ...]
+    document.getElementById('subcat').value = ids.join(',');
   }
 
-  // acceptă fie id explicit, fie primul din lista ascunsă
-  const subId = (forSubId ?? parseInt(allIds[0], 10));
-  if (!subId){ cont.innerHTML=''; wrap.hidden=true; return; }
+  // helper pentru colorarea chip-urilor (subcategoriilor)
+  function __chipSetSelected(btn, isSelected){
+    if (!btn) return;
+    if (isSelected){
+      btn.style.background = '#0f62fe';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = '#fff';
+      btn.style.color = '#1f2937';
+    }
+  }
 
-  const judet = document.getElementById('reg_judet')?.value || '';
-  const oras  = document.getElementById('reg_oras')?.value || '';
+  // Randează butoanele de subcategorii
+  function renderChips(container, items){
+    container.innerHTML = '';
 
-  const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subId)
-            + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-            + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+    items.forEach((it)=>{
+      // acceptă atât {id, name} cât și {subcat_id, subcat_name}
+      const idStr = (it.id ?? it.subcat_id);
+      const id    = parseInt(idStr, 10);
+      const name  = (it.name ?? it.subcat_name ?? '').trim();
+      if (!Number.isFinite(id) || !name) return;
 
-  const selectedSet = __sel.bySub.get(subId) || new Set();
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = name;
+      btn.style.color = '#1f2937';
+      btn.style.background = '#fff';
+      btn.style.border = '1px solid #e5e7eb';
+      btn.style.padding = '6px 10px';
+      btn.style.borderRadius = '999px';
 
-  try{
-    const { children = [] } = await ajx(url);
-    if (!children.length){ cont.innerHTML=''; wrap.hidden=true; return; }
-    wrap.hidden = false;
-    cont.innerHTML = '';
+      // dacă subcategoria are deja copii bifați o colorăm albastru
+      const preSel = __sel.bySub.get(id);
+      __chipSetSelected(btn, preSel && preSel.size > 0);
 
-    const frag = document.createDocumentFragment();
-    children.forEach(kid => {
-      const id = 'kid_' + subId + '_' + kid.id;
-
-      const lab = document.createElement('label');
-      lab.setAttribute('for', id);
-      lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
-
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.id = id;
-      cb.value = String(kid.id);
-      cb.checked = selectedSet.has(kid.id);
-
-      cb.addEventListener('change', () => {
-        let set = __sel.bySub.get(subId);
-        if (!set) { set = new Set(); __sel.bySub.set(subId, set); }
-
-        if (cb.checked) set.add(kid.id); else set.delete(kid.id);
-        if (set.size === 0) __sel.bySub.delete(subId);
-
-        __chipSetSelected(parentBtn, __sel.bySub.has(subId));
-        updateHiddenSubcatsFromState();
-
-        if (Array.from(__sel.bySub.values()).some(s => s.size > 0)) {
-          document.getElementById('min1-hint').style.display = 'none';
-        }
+      // clickul încarcă DIRECT copiii acestei subcategorii
+      btn.addEventListener('click', () => {
+        document.getElementById('child-wrap').hidden = false;
+        loadChildrenForSignup(id, btn);
       });
 
-      lab.appendChild(cb);
-      lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
-      frag.appendChild(lab);
+      container.appendChild(btn);
     });
-    cont.appendChild(frag);
-
-    __chipSetSelected(parentBtn, selectedSet.size > 0);
-  }catch(e){
-    console.error(e);
-    cont.innerHTML = '';
-    wrap.hidden = true;
   }
-}
 
+  // Încarcă lista de subcategorii pentru serviciu/județ/oraș
+  async function loadSubcatsForSignup(){
+    const service = document.getElementById('service_name')?.value || '';
+    const judet   = document.getElementById('reg_judet')?.value || '';
+    const oras    = document.getElementById('reg_oras')?.value || '';
+    const wrap    = document.getElementById('subcat-wrap');
+    const cont    = document.getElementById('subcats');
+    const childW  = document.getElementById('child-wrap');
+    const childC  = document.getElementById('children');
+    const hidSub  = document.getElementById('subcat');
+    const hidKid  = document.getElementById('subsub');
 
+    // reset
+    hidSub.value = '';
+    hidKid.value = '';
+    __sel.bySub.clear();
+    childW.hidden = true;
+    childC.innerHTML = '';
 
+    if (!service){ wrap.hidden = true; cont.innerHTML = ''; return; }
 
- // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
-(function attachMinOneValidation(){
-  const form = document.getElementById('f');
-  if (!form) return;
-  form.addEventListener('submit', (ev) => {
-    const selectedSubcats = (document.getElementById('subcat')?.value || '').split(',').filter(Boolean);
-    if (selectedSubcats.length) {
-      const hasAnyChild = Array.from(__sel.bySub.values()).some(set => set.size > 0);
-      if (!hasAnyChild) {
-        ev.preventDefault();
-        document.getElementById('min1-hint').style.display = 'inline';
-        document.getElementById('children').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+    const url = '/.netlify/functions/taxonomy?mode=subcategories'
+              + '&service=' + encodeURIComponent(service)
+              + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+              + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+    try {
+      const { subcategories = [] } = await ajx(url);
+      if (!subcategories.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
+
+      wrap.hidden = false;
+      // randează chip-urile; fiecare chip își are propriul click handler
+      renderChips(cont, subcategories);
+    } catch(e) {
+      console.error(e);
+      wrap.hidden = true;
     }
-  }, true);
-})();
+  }
 
+  // Încarcă/afișează copiii pentru o subcategorie
+  async function loadChildrenForSignup(forSubId, parentBtn){
+    // dacă nu avem id explicit, nu facem nimic
+    const subId = parseInt(forSubId, 10);
+    if (!Number.isFinite(subId)) return;
 
+    const wrap = document.getElementById('child-wrap');
+    const cont = document.getElementById('children');
+
+    const judet = document.getElementById('reg_judet')?.value || '';
+    const oras  = document.getElementById('reg_oras')?.value || '';
+
+    const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subId)
+              + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+              + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+    const selectedSet = __sel.bySub.get(subId) || new Set();
+
+    try{
+      const { children = [] } = await ajx(url);
+      if (!children.length){ cont.innerHTML=''; wrap.hidden=true; return; }
+      wrap.hidden = false;
+      cont.innerHTML = '';
+
+      const frag = document.createDocumentFragment();
+      children.forEach(kid => {
+        const id = 'kid_' + subId + '_' + kid.id;
+
+        const lab = document.createElement('label');
+        lab.setAttribute('for', id);
+        lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = id;
+        cb.value = String(kid.id);
+        cb.checked = selectedSet.has(kid.id);
+
+        cb.addEventListener('change', () => {
+          let set = __sel.bySub.get(subId);
+          if (!set) { set = new Set(); __sel.bySub.set(subId, set); }
+
+          if (cb.checked) set.add(kid.id); else set.delete(kid.id);
+          if (set.size === 0) __sel.bySub.delete(subId);
+
+          __chipSetSelected(parentBtn, __sel.bySub.has(subId));
+          updateHiddenSubcatsFromState();
+
+          if (Array.from(__sel.bySub.values()).some(s => s.size > 0)) {
+            document.getElementById('min1-hint').style.display = 'none';
+          }
+        });
+
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+        frag.appendChild(lab);
+      });
+      cont.appendChild(frag);
+
+      __chipSetSelected(parentBtn, selectedSet.size > 0);
+    }catch(e){
+      console.error(e);
+      cont.innerHTML = '';
+      wrap.hidden = true;
+    }
+  }
+
+  // --- VALIDARE „minim 1” la submit: dacă există subcategorie aleasă, trebuie bifat cel puțin un copil
+  (function attachMinOneValidation(){
+    const form = document.getElementById('f');
+    if (!form) return;
+    form.addEventListener('submit', (ev) => {
+      const selectedSubcats = (document.getElementById('subcat')?.value || '').split(',').filter(Boolean);
+      if (selectedSubcats.length) {
+        const hasAnyChild = Array.from(__sel.bySub.values()).some(set => set.size > 0);
+        if (!hasAnyChild) {
+          ev.preventDefault();
+          document.getElementById('min1-hint').style.display = 'inline';
+          document.getElementById('children').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, true);
+  })();
 
   // reset subcategorie
   document.getElementById('subcat-reset')?.addEventListener('click', () => {
-  document.getElementById('subcat').value  = '';
-  document.getElementById('subsub').value  = '';
-  __sel.bySub.clear();
-  document.getElementById('children').innerHTML = '';
-  document.getElementById('child-wrap').hidden  = true;
-  loadSubcatsForSignup();
-});
+    document.getElementById('subcat').value  = '';
+    document.getElementById('subsub').value  = '';
+    __sel.bySub.clear();
+    document.getElementById('children').innerHTML = '';
+    document.getElementById('child-wrap').hidden  = true;
+    loadSubcatsForSignup();
+  });
 
-  // reîncarcă subcategoriile când se schimbă serviciul / județul / orașul
-  document.getElementById('service_name')?.addEventListener('change', loadSubcatsForSignup);
-  document.getElementById('reg_judet')   ?.addEventListener('change', loadSubcatsForSignup);
-  document.getElementById('reg_oras')    ?.addEventListener('change', loadSubcatsForSignup);
-
-  // dacă intri cu un serviciu deja selectat
+  // (opțional) dacă intri cu un serviciu deja selectat, încarcă subcategoriile
   document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('service_name')?.value) loadSubcatsForSignup();
   });
 </script>
+
 
 </body>
 </html>
