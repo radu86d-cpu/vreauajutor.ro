@@ -145,7 +145,10 @@
       btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel; return;
     }
 
-    const selectedChildIds = Array.from(__sel.bySub.values()).flatMap(set=>Array.from(set)).filter(Number.isInteger);
+    const selectedChildIds = Array.from(__sel.bySub.values())
+  .flatMap(s => Array.from(s))
+  .map(v => Number(v))
+  .filter(n => Number.isFinite(n));
 
     const payload = {
       company_name: document.getElementById('company_name').value.trim(),
@@ -182,7 +185,7 @@
 
 <script>
   // ---------- STATE
-  const __sel = { bySub: new Map() };   // subId -> Set(childIds)
+  const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
   const __subMeta = new Map();          // subId -> {btn, name}
   const __cacheChildren = new Map();    // subId -> children[]
 
@@ -228,7 +231,7 @@
     const set = __sel.bySub.get(subId) || new Set();
     group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
       const val = parseInt(cb.value,10);
-      cb.checked = set.has(val);
+      cb.checked = set.has(String(cb.value));
     });
     setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
   }
@@ -274,17 +277,26 @@
       cb.checked = selectedSet.has(parseInt(safeId,10));
 
       cb.addEventListener('change', ()=>{
-        let set = __sel.bySub.get(subId);
-        if (!set){ set = new Set(); __sel.bySub.set(subId,set); }
-        const n = parseInt(cb.value,10);
-        if (cb.checked) set.add(n); else set.delete(n);
-        if (set.size===0) __sel.bySub.delete(subId);
-        setChipColor((__subMeta.get(subId)||{}).btn, ( __sel.bySub.get(subId)?.size || 0 ) > 0);
-        syncHiddenFromState();
-        if (Array.from(__sel.bySub.values()).some(s=>s.size>0)){
-          document.getElementById('min1-hint').style.display='none';
-        }
-      });
+  let set = __sel.bySub.get(subId);
+  if (!set){ set = new Set(); __sel.bySub.set(subId,set); }
+
+  const val = String(cb.value);                  // <- folosim string stabil
+  if (cb.checked) set.add(val); else set.delete(val);
+  if (set.size===0) __sel.bySub.delete(subId);
+
+  // pastila rămâne albastră cât timp set.size > 0
+  const chip = (__subMeta.get(subId)||{}).btn;
+  setChipColor(chip, (__sel.bySub.get(subId)?.size || 0) > 0);
+
+  // sync hidden
+  syncHiddenFromState();
+
+  // ascunde hint-ul dacă există măcar un copil bifat oriunde
+  if (Array.from(__sel.bySub.values()).some(s=>s.size>0)){
+    document.getElementById('min1-hint').style.display='none';
+  }
+});
+
 
       lab.appendChild(cb);
       lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
