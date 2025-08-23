@@ -33,26 +33,31 @@
         <option value="">Alege serviciul</option>
       </select>
 
-      <!-- Subcategorii (nivel 1) -->
-      <div id="subcat-wrap" style="margin-top:12px;" hidden>
-        <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <span>Subcategorie</span>
-          <button type="button" id="subcat-reset"
-                  style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;">
-            Reset
-          </button>
-        </label>
-        <div id="subcats" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
-      </div>
+    <!-- Taxonomie: grilă 2 coloane -->
+<section id="taxo-grid">
+  <!-- Subcategorii (nivel 1) -->
+  <div id="subcat-wrap" hidden>
+    <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span>Subcategorie</span>
+      <button type="button" id="subcat-reset"
+              style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;">
+        Reset
+      </button>
+    </label>
+    <div id="subcats" role="tablist" aria-label="Subcategorii"
+         style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;"></div>
+  </div>
 
-      <!-- Sub-subcategorii (copii) -->
-      <div id="child-wrap" style="margin-top:12px;" hidden>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <label style="margin:0;">Sub-subcategorii (bifează minim 1)</label>
-          <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
-        </div>
-        <div id="children"></div>
-      </div>
+  <!-- Sub-subcategorii (copii) -->
+  <div id="child-wrap" hidden aria-live="polite">
+    <div class="child-title" style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Sub-subcategorii (bifează minim 1)</label>
+      <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
+    </div>
+    <div id="children"></div>
+  </div>
+</section>
+
 
       <!-- hidden pentru backend -->
       <input type="hidden" id="subcat">
@@ -207,19 +212,27 @@
     document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
   }
 
-  function renderChips(container, items){
-    container.innerHTML=''; __subMeta.clear();
-    items.forEach(it=>{
-      const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-      const name = it.name ?? it.subcat_name ?? '';
-      const btn = document.createElement('button');
-      btn.type='button'; btn.textContent=name; btn.className='chip';
-      __subMeta.set(id,{btn,name});
-      setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
-      btn.addEventListener('click', ()=>toggleChildGroup(id));
-      container.appendChild(btn);
-    });
-  }
+ function renderChips(container, items){
+  container.innerHTML=''; __subMeta.clear();
+  items.forEach(it=>{
+    const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
+    const name = it.name ?? it.subcat_name ?? '';
+    const btn = document.createElement('button');
+    btn.type='button';
+    btn.textContent=name;
+    btn.className='chip';
+    btn.setAttribute('role','tab');
+    btn.setAttribute('aria-selected', ((__sel.bySub.get(id)?.size||0)>0) ? 'true' : 'false');
+    btn.setAttribute('aria-controls', childGroupId(id));
+    btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); btn.click(); } });
+
+    __subMeta.set(id,{btn,name});
+    setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
+    btn.addEventListener('click', ()=>toggleChildGroup(id));
+    container.appendChild(btn);
+  });
+}
+
 
   function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
   function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
@@ -236,76 +249,119 @@
     setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
   }
 
-  async function toggleChildGroup(subId){
-    ensureChildWrapVisible();
-    const container = document.getElementById('children');
-    const groupId = childGroupId(subId);
-    let group = document.getElementById(groupId);
+ // Înlocuiește complet funcția toggleChildGroup cu asta:
+async function toggleChildGroup(subId){
+  ensureChildWrapVisible();
 
-    if (group){
-      group.hidden = !group.hidden;
-      // IMPORTANT: la redeschidere, sincronizează din state (nu „toți bifați”)
-      if (!group.hidden) resyncGroupCheckboxes(subId);
-      return;
+  const container = document.getElementById('children');
+  const groupId = childGroupId(subId);
+  let group = document.getElementById(groupId);
+  const chip  = (__subMeta.get(subId)||{}).btn;
+
+  // dacă există deja secțiunea => doar o pliem / despleiem și resincronizăm bifele
+  if (group){
+    group.hidden = !group.hidden;
+    group.setAttribute('aria-hidden', group.hidden ? 'true' : 'false');
+    if (!group.hidden && typeof resyncGroupCheckboxes === 'function'){
+      resyncGroupCheckboxes(subId);
     }
-
-    const kids = await loadChildren(subId);
-    const meta = __subMeta.get(subId) || {};
-
-    group = document.createElement('section');
-    group.className='child-group';
-    group.id = groupId;
-
-    const title = document.createElement('div');
-    title.className='child-title';
-    const tspan=document.createElement('span'); tspan.textContent=meta.name||('Subcat '+subId);
-    const tbtn = document.createElement('button'); tbtn.type='button'; tbtn.textContent='Ascunde';
-    tbtn.style.cssText='font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer';
-    tbtn.addEventListener('click', ()=>{ group.hidden=true; });
-    title.appendChild(tspan); title.appendChild(tbtn);
-    group.appendChild(title);
-
-    const grid=document.createElement('div'); grid.className='child-grid';
-    const selectedSet = __sel.bySub.get(subId) || new Set();
-
-    kids.forEach(kid=>{
-      const safeId = String(kid.id);
-      const inputId = `kid_${subId}_${safeId}`;
-
-      const lab=document.createElement('label'); lab.className='child-item'; lab.setAttribute('for', inputId);
-      const cb=document.createElement('input'); cb.type='checkbox'; cb.id=inputId; cb.value=safeId;
-      cb.checked = selectedSet.has(parseInt(safeId,10));
-
-      cb.addEventListener('change', ()=>{
-  let set = __sel.bySub.get(subId);
-  if (!set){ set = new Set(); __sel.bySub.set(subId,set); }
-
-  const val = String(cb.value);                  // <- folosim string stabil
-  if (cb.checked) set.add(val); else set.delete(val);
-  if (set.size===0) __sel.bySub.delete(subId);
-
-  // pastila rămâne albastră cât timp set.size > 0
-  const chip = (__subMeta.get(subId)||{}).btn;
-  setChipColor(chip, (__sel.bySub.get(subId)?.size || 0) > 0);
-
-  // sync hidden
-  syncHiddenFromState();
-
-  // ascunde hint-ul dacă există măcar un copil bifat oriunde
-  if (Array.from(__sel.bySub.values()).some(s=>s.size>0)){
-    document.getElementById('min1-hint').style.display='none';
+    // aria-selected rămâne determinată de faptul că există copii bifați
+    const hasAny = (__sel.bySub.get(subId)?.size || 0) > 0;
+    if (chip) chip.setAttribute('aria-selected', hasAny ? 'true' : 'false');
+    return;
   }
-});
 
+  // creăm pentru prima dată secțiunea + checkbox-urile, sincronizate din state
+  const kids = await loadChildren(subId);
+  const meta = __subMeta.get(subId) || {};
 
-      lab.appendChild(cb);
-      lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
-      grid.appendChild(lab);
+  group = document.createElement('section');
+  group.className = 'child-group';
+  group.id = groupId;
+  group.setAttribute('role', 'region');
+  group.setAttribute('aria-hidden', 'false');
+
+  // header de grup (titlu + buton "Ascunde")
+  const title = document.createElement('div');
+  title.className = 'child-title';
+
+  const tspan = document.createElement('span');
+  tspan.textContent = meta.name || ('Subcategorie ' + subId);
+
+  const tbtn = document.createElement('button');
+  tbtn.type = 'button';
+  tbtn.textContent = 'Ascunde';
+  tbtn.style.cssText = 'font-size:12px;padding:4px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer';
+  tbtn.addEventListener('click', ()=>{
+    group.hidden = true;
+    group.setAttribute('aria-hidden','true');
+  });
+
+  title.appendChild(tspan);
+  title.appendChild(tbtn);
+  group.appendChild(title);
+
+  // grila de copii (checkbox-uri)
+  const grid = document.createElement('div');
+  grid.className = 'child-grid';
+
+  const selectedSet = __sel.bySub.get(subId) || new Set(); // păstrăm string-uri
+
+  kids.forEach(kid=>{
+    const safeId  = String(kid.id);
+    const inputId = `kid_${subId}_${safeId}`;
+
+    const lab = document.createElement('label');
+    lab.className = 'child-item';
+    lab.setAttribute('for', inputId);
+
+    const cb  = document.createElement('input');
+    cb.type   = 'checkbox';
+    cb.id     = inputId;
+    cb.value  = safeId;
+
+    // sincron inițial din state (NU „toți bifați”)
+    cb.checked = selectedSet.has(String(cb.value));
+
+    cb.addEventListener('change', ()=>{
+      let set = __sel.bySub.get(subId);
+      if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
+
+      const val = String(cb.value);          // ținem totul ca string
+      if (cb.checked) set.add(val); else set.delete(val);
+      if (set.size === 0) __sel.bySub.delete(subId);
+
+      // pastila rămâne albastră cât timp există ≥1 copil bifat
+      setChipColor(chip, (__sel.bySub.get(subId)?.size || 0) > 0);
+
+      // aria-selected pentru chip reflectă același lucru
+      if (chip){
+        chip.setAttribute('aria-selected', (__sel.bySub.get(subId)?.size || 0) > 0 ? 'true' : 'false');
+      }
+
+      // sincronizează input-urile ascunse
+      syncHiddenFromState();
+
+      // ascunde hint-ul dacă există măcar un copil bifat oriunde
+      if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+        document.getElementById('min1-hint').style.display = 'none';
+      }
     });
 
-    group.appendChild(grid);
-    container.appendChild(group);
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+    grid.appendChild(lab);
+  });
+
+  group.appendChild(grid);
+  container.appendChild(group);
+
+  // setează aria-selected inițial pentru chip în funcție de setul curent
+  if (chip){
+    chip.setAttribute('aria-selected', (selectedSet.size > 0) ? 'true' : 'false');
   }
+}
+
 
   async function loadChildren(subId){
     if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
