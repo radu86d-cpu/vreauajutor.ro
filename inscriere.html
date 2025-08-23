@@ -243,7 +243,6 @@
     if (!group) return;
     const set = __sel.bySub.get(subId) || new Set();
     group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-      const val = parseInt(cb.value,10);
       cb.checked = set.has(String(cb.value));
     });
     setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
