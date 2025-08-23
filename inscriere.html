@@ -321,27 +321,31 @@ const payload = {
            wrap.hidden = false;
       // renderChips setează acum #subcat sau #subcat_name; aici doar încărcăm copiii
       renderChips(cont, subcategories, (item, btn) => {
-  // ținem în hidden #subcat o listă CSV cu id‑urile selectate
   const hidSub = document.getElementById('subcat');
   const current = hidSub.value ? hidSub.value.split(',').filter(Boolean) : [];
   const idStr = String(item.id);
-
   const i = current.indexOf(idStr);
+
   if (i >= 0) {
-    // deselect → scoate id‑ul
+    // --- DESELECT ---
     current.splice(i, 1);
     __chipSetSelected(btn, false);
-    // dacă nu mai rămâne nicio subcategorie, închide panoul copiilor
+    // curățăm bifele stocate pentru această subcategorie
+    __sel.bySub.delete(item.id);
+
     if (current.length === 0) {
       document.getElementById('children').innerHTML = '';
       document.getElementById('child-wrap').hidden = true;
+    } else {
+      // arată copiii primei subcategorii rămase
+      loadChildrenForSignup(parseInt(current[0], 10), null);
     }
   } else {
-    // select → adaugă id‑ul și deschide panoul copiilor pentru acest chip
+    // --- SELECT ---
     current.push(idStr);
-    __chipSetSelected(btn, false); // inițial gri/alb, îl vom colora albastru după ce bifezi copii
+    // inițial gri/alb; devine albastru când bifezi cel puțin un copil
+    __chipSetSelected(btn, false);
     document.getElementById('child-wrap').hidden = false;
-    // încarcă/afișează copiii DOAR pentru subcategoria tocmai apăsată
     loadChildrenForSignup(item.id, btn);
   }
 
