@@ -35,8 +35,7 @@
     .toolbar .right{display:flex;gap:8px}
     .btn-small{
       background:#fff;border:1px solid #ddd;padding:6px 12px;border-radius:999px;
-      font-size:12px;cursor:pointer;color:#111;font-weight:600;white-space:nowrap;
-      line-height:1.2;
+      font-size:12px;cursor:pointer;color:#111;font-weight:600;white-space:nowrap;line-height:1.2;
     }
     .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff}
     .meta-count{font-size:12px;color:#555}
@@ -49,9 +48,18 @@
       background:#fff;color:#1f2937;cursor:pointer;
       font-size:13px;font-weight:600;transition:all .18s;
     }
-    .chip:hover{background:#f3f4f6;border-color:#cfe0ff}
-    .chip.blue{background:#0f62fe;color:#fff;border-color:#0f62fe} /* SELECTAT: albastru solid + text alb */
-    .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;font-size:11px;font-weight:800;min-width:20px;text-align:center}
+    .chip:hover{background:#f7faff;border-color:#cadeff}
+    /* SELECTAT: fundal deschis + text/border albastre (contrast clar, dar nu „bloc”) */
+    .chip.blue{
+      background:#eaf1ff;
+      color:#0f3cc9;
+      border-color:#9db8ff;
+      box-shadow:0 0 0 1px rgba(13,110,253,.08) inset;
+    }
+    .chip .badge{
+      background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;
+      font-size:11px;font-weight:800;min-width:20px;text-align:center
+    }
 
     /* Sub-subcategorii */
     .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
@@ -68,7 +76,6 @@
     #vendor-card input,#vendor-card select,#vendor-card textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .v-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-
     /* Important: nu afectăm butoanele mici */
     button:not(.btn-small){
       padding:10px 16px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:700;cursor:pointer
