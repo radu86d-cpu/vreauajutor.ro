@@ -41,9 +41,7 @@
     .btn-outline{background:#fff;color:#111;border:1px solid #ddd}
     button[disabled]{cursor:not-allowed}
     /* buton Trimite: gri cât timp e dezactivat */
-    #submitBtn:disabled{
-      background:#cdd3dd; color:#6b7280; border:1px solid #d1d5db; box-shadow:none;
-    }
+    #submitBtn:disabled{ background:#cdd3dd; color:#6b7280; border:1px solid #d1d5db; box-shadow:none; }
     .msg{margin-top:10px}
 
     /* toolbar subcategorii */
@@ -54,7 +52,6 @@
       font-size:12px;cursor:pointer; color:#0b1220 !important; font-weight:700;
     }
     .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff;color:#0b1220 !important}
-
     .meta-count{font-size:12px;color:#555}
 
     /* chips subcategorii */
@@ -67,9 +64,7 @@
     }
     .chip:hover{background:#f9fbff;border-color:#cfe0ff}
     .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;min-width:20px;text-align:center}
-    /* activ: alb + contur albastru */
     .chip.active{border-color:var(--va-primary);box-shadow:0 0 0 3px rgba(15,98,254,.12)}
-    /* done: fundal albastru + text alb (are copii bifati) */
     .chip.done{background:var(--va-primary);color:#fff;border-color:var(--va-primary);box-shadow:none}
     .chip.done .badge{background:rgba(255,255,255,.2);color:#fff}
 
@@ -82,6 +77,15 @@
     .kid input{margin:0;width:18px;height:18px;accent-color:var(--va-primary)}
     .kid.on{background:#f4f7ff;border-color:#99b7ff;font-weight:700}
 
+    /* OTP UI */
+    .inline-field{display:flex;gap:8px;align-items:center}
+    .inline-field input{flex:1}
+    .otp-row{display:flex;gap:8px;align-items:center;margin-top:6px}
+    .otp-row input{max-width:160px;text-align:center;letter-spacing:2px;font-weight:700}
+    .status-ok{color:var(--va-success);font-weight:700}
+    .status-bad{color:var(--va-danger);font-weight:700}
+    .muted{color:#6b7280}
+
     @media (max-width:1100px){#grid{grid-template-columns:300px 280px 1fr}}
     @media (max-width:900px){
       #grid{grid-template-columns:1fr}
@@ -92,7 +96,7 @@
 <body>
   <main class="wrap">
     <h1>Înscriere furnizor</h1>
-    <div class="subtitle">Completează datele și alege serviciile oferite. Bifează minim o opțiune în sub-subcategorii.</div>
+    <div class="subtitle">Completează datele, verifică telefonul și emailul, apoi trimite.</div>
 
     <form id="f" novalidate>
       <section id="grid">
@@ -120,12 +124,28 @@
 
           <div class="row-2">
             <div>
-              <label for="phone">Telefon</label>
-              <input id="phone" placeholder="07..."/>
+              <label for="phone">Telefon *</label>
+              <div class="inline-field">
+                <input id="phone" placeholder="07XXXXXXXX"/>
+                <button type="button" class="btn-small" id="btn-phone-send">Verifică telefon</button>
+              </div>
+              <div class="otp-row" id="otp-phone-row" hidden>
+                <input id="otp-phone" maxlength="6" inputmode="numeric" placeholder="Cod 6 cifre"/>
+                <button type="button" class="btn-small" id="btn-phone-confirm">Confirmă</button>
+                <span id="otp-phone-status" class="muted"></span>
+              </div>
             </div>
             <div>
-              <label for="email">Email</label>
-              <input id="email" type="email" placeholder="contact@..."/>
+              <label for="email">Email *</label>
+              <div class="inline-field">
+                <input id="email" type="email" placeholder="contact@exemplu.ro"/>
+                <button type="button" class="btn-small" id="btn-email-send">Verifică email</button>
+              </div>
+              <div class="otp-row" id="otp-email-row" hidden>
+                <input id="otp-email" maxlength="6" inputmode="numeric" placeholder="Cod 6 cifre"/>
+                <button type="button" class="btn-small" id="btn-email-confirm">Confirmă</button>
+                <span id="otp-email-status" class="muted"></span>
+              </div>
             </div>
           </div>
 
@@ -211,10 +231,13 @@
         sO.addEventListener('change', ()=>{ if (sServ.value) loadSubcats(); updateSubmitState(); });
         sServ.addEventListener('change', ()=>{ loadSubcats(); updateSubmitState(); });
 
-        // input listeners pentru validare live
+        // input listeners pentru validare & reset verificări
         ['company_name','phone','email'].forEach(id=>{
-          const el=document.getElementById(id);
-          el.addEventListener('input', updateSubmitState);
+          document.getElementById(id).addEventListener('input', ()=>{
+            if (id==='phone') resetPhoneVerification();
+            if (id==='email') resetEmailVerification();
+            updateSubmitState();
+          });
         });
 
         if (!sServ.value && services.length){ sServ.value = services[0]; loadSubcats(); }
@@ -271,6 +294,7 @@
           ev.target.reset(); document.getElementById('reg_oras').disabled=true;
           document.getElementById('right').hidden=true; document.getElementById('mid').hidden=true;
           __state.bySub.clear(); __meta.clear(); __cacheKids.clear();
+          resetPhoneVerification(); resetEmailVerification();
           updateSubmitState();
         }catch(e){ msg.style.color='#b00020'; msg.textContent='Eroare: '+e.message; }
         finally{ btn.textContent=orig; }
@@ -278,37 +302,39 @@
     })();
   </script>
 
-  <!-- === UI taxonomie (active/done) + VALIDARE SUBMIT === -->
+  <!-- === UI taxonomie (active/done) + VALIDARE SUBMIT + OTP === -->
   <script>
     /* STATE */
     const __state = { bySub:new Map() };   // subId -> Set(child string)
     const __meta  = new Map();             // subId -> {btn,badge,name}
     const __cacheKids = new Map();         // subId -> children[]
+    const __verify = {
+      phone: { sent:false, ok:false },
+      email: { sent:false, ok:false }
+    };
 
     /* helpers */
-    async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function ajx(url, opt){ const r=await fetch(url,{cache:'no-store', ...(opt||{})}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
     const kidGroupId = subId => 'g_'+String(subId).replace(/[^a-z0-9_-]/gi,'_');
     const setActive = (el,on)=> el && el.classList.toggle('active', !!on);
     const setDone   = (el,on)=> el && el.classList.toggle('done',   !!on);
 
+    // Validări stricte
     function emailValid(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(v||'').trim()); }
-    function phoneValid(v){ return /^\s*(0\d{9}|\+?\d{7,15})\s*$/.test(String(v||'').trim()); }
+    function phoneValid(v){ return /^\s*(?:\+4)?07\d{8}\s*$/.test(String(v||'').trim()); } // mobil RO: 07XXXXXXXX (+4 opțional)
 
     function submitReady(){
       const nameOk = (document.getElementById('company_name').value||'').trim().length>1;
       const serviceOk = !!document.getElementById('service_name').value;
       const judOk = !!document.getElementById('reg_judet').value;
       const orasOk = !!document.getElementById('reg_oras').value;
-      const phoneOk = phoneValid(document.getElementById('phone').value);
-      const emailOk = emailValid(document.getElementById('email').value);
       const hasSub = __state.bySub.size>0;
       const hasKid = Array.from(__state.bySub.values()).some(s=>s.size>0);
+      const phoneOk = __verify.phone.ok;   // trebuie să fie verificat
+      const emailOk = __verify.email.ok;   // trebuie să fie verificat
       return nameOk && serviceOk && hasSub && hasKid && judOk && orasOk && phoneOk && emailOk;
     }
-    function updateSubmitState(){
-      const btn=document.getElementById('submitBtn');
-      btn.disabled = !submitReady();
-    }
+    function updateSubmitState(){ document.getElementById('submitBtn').disabled = !submitReady(); }
 
     function syncHidden(){
       const ids=[], names=[];
@@ -478,12 +504,110 @@
       }
     }, true);
 
-    /* Butoane utilitare */
+    /* =========================
+       OTP: UI + apeluri backend
+       ========================= */
+    function resetPhoneVerification(){
+      __verify.phone = { sent:false, ok:false };
+      document.getElementById('otp-phone-row').hidden = true;
+      document.getElementById('otp-phone-status').textContent='';
+      document.getElementById('btn-phone-send').disabled=false;
+      updateSubmitState();
+    }
+    function resetEmailVerification(){
+      __verify.email = { sent:false, ok:false };
+      document.getElementById('otp-email-row').hidden = true;
+      document.getElementById('otp-email-status').textContent='';
+      document.getElementById('btn-email-send').disabled=false;
+      updateSubmitState();
+    }
+
+    async function startOtp(channel, to){
+      const body = JSON.stringify({ channel, to });
+      return ajx('/.netlify/functions/otp_start', { method:'POST', headers:{'Content-Type':'application/json'}, body });
+    }
+    async function verifyOtp(channel, to, code){
+      const body = JSON.stringify({ channel, to, code });
+      return ajx('/.netlify/functions/otp_verify', { method:'POST', headers:{'Content-Type':'application/json'}, body });
+    }
+
+    // PHONE
+    document.getElementById('btn-phone-send')?.addEventListener('click', async ()=>{
+      const phone = (document.getElementById('phone').value||'').trim();
+      const status = document.getElementById('otp-phone-status');
+      if (!phoneValid(phone)){ status.textContent='Număr invalid (format 07XXXXXXXX)'; status.className='status-bad'; return; }
+      try{
+        document.getElementById('btn-phone-send').disabled = true;
+        status.textContent='Trimit codul...'; status.className='muted';
+        await startOtp('sms', phone);
+        __verify.phone.sent = true;
+        document.getElementById('otp-phone-row').hidden = false;
+        status.textContent='Cod trimis prin SMS.'; status.className='muted';
+      }catch(e){
+        status.textContent='Nu am putut trimite codul: '+e.message; status.className='status-bad';
+        document.getElementById('btn-phone-send').disabled = false;
+      }
+    });
+    document.getElementById('btn-phone-confirm')?.addEventListener('click', async ()=>{
+      const phone = (document.getElementById('phone').value||'').trim();
+      const code = (document.getElementById('otp-phone').value||'').trim();
+      const status = document.getElementById('otp-phone-status');
+      if (!code || code.length<4){ status.textContent='Introdu codul primit.'; status.className='status-bad'; return; }
+      try{
+        status.textContent='Verific...'; status.className='muted';
+        await verifyOtp('sms', phone, code);
+        __verify.phone.ok = true;
+        status.textContent='Telefon verificat ✓'; status.className='status-ok';
+        document.getElementById('phone').readOnly = true;
+        document.getElementById('btn-phone-send').disabled = true;
+        updateSubmitState();
+      }catch(e){
+        status.textContent='Cod incorect sau expirat.'; status.className='status-bad';
+      }
+    });
+
+    // EMAIL
+    document.getElementById('btn-email-send')?.addEventListener('click', async ()=>{
+      const email = (document.getElementById('email').value||'').trim();
+      const status = document.getElementById('otp-email-status');
+      if (!emailValid(email)){ status.textContent='Email invalid'; status.className='status-bad'; return; }
+      try{
+        document.getElementById('btn-email-send').disabled = true;
+        status.textContent='Trimit codul...'; status.className='muted';
+        await startOtp('email', email);
+        __verify.email.sent = true;
+        document.getElementById('otp-email-row').hidden = false;
+        status.textContent='Cod trimis pe email.'; status.className='muted';
+      }catch(e){
+        status.textContent='Nu am putut trimite codul: '+e.message; status.className='status-bad';
+        document.getElementById('btn-email-send').disabled = false;
+      }
+    });
+    document.getElementById('btn-email-confirm')?.addEventListener('click', async ()=>{
+      const email = (document.getElementById('email').value||'').trim();
+      const code = (document.getElementById('otp-email').value||'').trim();
+      const status = document.getElementById('otp-email-status');
+      if (!code || code.length<4){ status.textContent='Introdu codul primit.'; status.className='status-bad'; return; }
+      try{
+        status.textContent='Verific...'; status.className='muted';
+        await verifyOtp('email', email, code);
+        __verify.email.ok = true;
+        status.textContent='Email verificat ✓'; status.className='status-ok';
+        document.getElementById('email').readOnly = true;
+        document.getElementById('btn-email-send').disabled = true;
+        updateSubmitState();
+      }catch(e){
+        status.textContent='Cod incorect sau expirat.'; status.className='status-bad';
+      }
+    });
+
+    /* Butoane utilitare (existente) */
     document.getElementById('btn-reset')?.addEventListener('click', ()=>{
       __state.bySub.clear();
       for (const {btn,badge} of __meta.values()){ setActive(btn,false); setDone(btn,false); if (badge) badge.textContent='0'; }
       document.getElementById('kids').innerHTML=''; document.getElementById('right').hidden=true;
       document.getElementById('subcat').value=''; document.getElementById('subcat_name').value=''; document.getElementById('subsub').value='';
+      resetPhoneVerification(); resetEmailVerification();
       updateSubcatCounter(); updateSubmitState();
     });
     document.getElementById('btn-collapse-sub')?.addEventListener('click', (e)=>{
