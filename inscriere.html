@@ -9,7 +9,7 @@
       --va-bg:#f6f7f9; --va-card:#fff; --va-text:#0f172a; --va-muted:#64748b;
       --va-primary:#0f62fe; --va-border:#e6e8ec;
       --va-radius:16px; --va-softshadow:0 6px 16px rgba(16,24,40,.06);
-      --va-danger:#b00020; --va-success:#1ea759;
+      --va-danger:#b00020;
     }
     body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--va-bg);margin:0;color:var(--va-text)}
     .wrap{max-width:1280px;margin:2rem auto;padding:0 16px}
@@ -30,7 +30,7 @@
     #subcat-wrap{position:sticky; top:12px; padding:14px; max-height:calc(100vh - 24px); overflow:auto}
     #child-wrap{position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto}
 
-    /* Toolbar / butoane mici */
+    /* Toolbar */
     .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .toolbar .right{display:flex;gap:8px}
     .btn-small{
@@ -40,35 +40,31 @@
     .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff}
     .meta-count{font-size:12px;color:#555}
 
-    /* Subcategorii: chip-uri */
+    /* Subcategorii (chips) */
     #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
     .chip{
-      position:relative;
       display:flex;align-items:center;justify-content:space-between;gap:8px;
       border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;
       background:#fff;color:#111827;cursor:pointer;
       font-size:13px;font-weight:600;transition:all .18s;
     }
     .chip:hover{background:#f9fbff;border-color:#cfe0ff}
-    /* activ = ai deschis grupul de copii (alb + contur albastru fin) */
+    /* activ: alb + contur albastru */
     .chip.active{
       background:#fff;
       border-color:var(--va-primary);
       box-shadow:0 0 0 3px rgba(15,98,254,.10);
+      color:#111827;
     }
-    /* blue = are cel puțin un copil bifat (fundal albastru + text alb) */
-    .chip.blue{
+    /* done: fundal albastru + text alb (are copii selectați) */
+    .chip.done{
       background:var(--va-primary) !important;
       color:#fff !important;
       border-color:var(--va-primary);
       box-shadow:none;
     }
-    .chip .badge{
-      background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;
-      font-size:11px;font-weight:800;min-width:20px;text-align:center
-    }
 
-    /* Sub-subcategorii (dreapta) */
+    /* Sub-subcategorii */
     .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
     .child-title .tools{display:flex;gap:8px;align-items:center}
     .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding:10px}
@@ -297,9 +293,9 @@
 
     /* --- HELPERS --- */
     async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-    function setChipDone(btn, on){ if(btn) btn.classList.toggle('blue', !!on); } // „blue” = are copii selectați
     function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
+    const hasAnyKids = (subId)=> (__sel.bySub.get(subId)?.size || 0) > 0;
 
     function syncHiddenFromState(){
       const ids=[], names=[];
@@ -332,13 +328,13 @@
         const btn = document.createElement('button');
         btn.type='button';
         btn.textContent=name;
-        btn.className='chip';
+        btn.className='chip';                            // implicit: alb
         btn.setAttribute('role','tab');
         btn.setAttribute('aria-controls', childGroupId(id));
         btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); btn.click(); } });
 
         __subMeta.set(id,{btn,name});
-        setChipDone(btn, (__sel.bySub.get(id)?.size||0)>0);
+        if (hasAnyKids(id)) btn.classList.add('done');   // done (albastru) doar dacă are copii bifați
         btn.addEventListener('click', ()=>toggleChildGroup(id));
         container.appendChild(btn);
       });
@@ -353,11 +349,15 @@
       group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
         cb.checked = set.has(String(cb.value));
       });
-      setChipDone((__subMeta.get(subId)||{}).btn, set.size>0);
+      const chip = (__subMeta.get(subId)||{}).btn;
+      if (chip){
+        chip.classList.toggle('done', set.size>0);
+        if (!group.hidden && set.size===0) chip.classList.add('active');
+      }
       updateSidebarSelectedCount();
     }
 
-    /* Toggle copii (deschide/închide grup + stări vizuale) */
+    /* Toggle copii (activ/done) */
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
 
@@ -369,13 +369,13 @@
       const isOpen = !!group && !group.hidden;
       if (isOpen){
         group.hidden = true;
-        chip?.classList.remove('active'); // nu mai e deschis
+        chip?.classList.remove('active');
         return;
       }
 
-      // setează „active” doar pe chip-ul curent
-      document.querySelectorAll('#subcats .chip').forEach(c=> c.classList.remove('active'));
-      chip?.classList.add('active');
+      // „active” doar pe chip-ul curent (dacă nu e „done”)
+      document.querySelectorAll('#subcats .chip').forEach(c=>{ if(!c.classList.contains('done')) c.classList.remove('active'); });
+      if (!chip?.classList.contains('done')) chip?.classList.add('active');
 
       if (!group){
         const kids = await loadChildren(subId);
@@ -433,9 +433,9 @@
             if (cb.checked) set.add(val); else set.delete(val);
             if (set.size === 0) __sel.bySub.delete(subId);
 
-            const hasAny = (__sel.bySub.get(subId)?.size || 0) > 0;
-            setChipDone(chip, hasAny);               // „blue” dacă are cel puțin un copil
-            if (!hasAny) chip?.classList.add('active'); // dacă nu mai sunt copii, rămâne doar activ (alb cu contur)
+            const has = set.size>0;
+            chip?.classList.toggle('done', has);
+            if (!has) chip?.classList.add('active'); // rămâne activă (alb + contur)
             syncHiddenFromState();
 
             if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
@@ -487,12 +487,13 @@
       const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
 
-      // reset
+      // reset UI
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
       __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
       childW.hidden=true; childC.innerHTML='';
+      document.querySelectorAll('#subcats .chip').forEach(c=>c.classList.remove('done','active'));
 
       if (!service){ wrap.hidden=true; cont.innerHTML=''; return; }
 
@@ -509,7 +510,7 @@
       }catch(e){ console.error(e); wrap.hidden=true; }
     }
 
-    /* Validare minim 1 copil dacă există cel puțin o subcategorie selectată */
+    /* Validare minim 1 copil dacă există subcategorie selectată */
     (function(){
       const form=document.getElementById('f');
       if (!form) return;
@@ -530,7 +531,7 @@
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
       __sel.bySub.clear();
-      document.querySelectorAll('#subcats .chip').forEach(c=>{ c.classList.remove('blue','active'); });
+      document.querySelectorAll('#subcats .chip').forEach(c=> c.classList.remove('done','active'));
       document.getElementById('children').innerHTML='';
       document.getElementById('child-wrap').hidden=true;
       updateSidebarSelectedCount();
