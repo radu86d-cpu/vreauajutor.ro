@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Înscriere furnizor</title>
   <style>
-    /* --- layout de bază --- */
     *{box-sizing:border-box}
     body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;color:#111827;margin:0}
     .wrap{max-width:960px;margin:24px auto;background:#fff;padding:20px;border-radius:14px;border:1px solid #e6e6e6}
@@ -15,8 +14,6 @@
     button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#0f62fe;color:#fff;cursor:pointer}
     button[disabled]{opacity:.6;cursor:not-allowed}
     .msg{margin-top:12px}
-
-    /* --- panouri moderne pentru subcategorii (accordion) --- */
     #taxo-wrap{margin-top:12px}
     .acc-list{display:flex;flex-direction:column;gap:10px}
     .acc-item{border:1px solid #e5e7eb;border-radius:12px;background:#fff;overflow:hidden}
@@ -36,14 +33,9 @@
     .child-item{
       display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff
     }
-
-    /* stare subcategorie selectată (≥1 copil bifat) */
     .blue{background:#0f62fe !important;color:#fff !important}
     .blue .acc-badge{background:#fff;color:#0f62fe;border-color:#cfe0ff}
-
-    /* rândul de titlu pentru copii */
     .child-title{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px;font-weight:600}
-
     @media (max-width:680px){
       .wrap{margin:0;border-radius:0;border:0}
     }
@@ -52,13 +44,12 @@
 <body>
   <main class="wrap">
     <h1>Înscriere furnizor</h1>
-
     <form id="f">
-      <label>Companie *</label>
-      <input id="company_name" required/>
+      <label for="company_name">Companie *</label>
+      <input id="company_name" name="company_name" required/>
 
-      <label>Serviciu *</label>
-      <select id="service_name" required>
+      <label for="service_name">Serviciu *</label>
+      <select id="service_name" name="service_name" required>
         <option value="">Alege serviciul</option>
       </select>
 
@@ -73,36 +64,36 @@
       </section>
 
       <!-- valori pentru backend -->
-      <input type="hidden" id="subcat">
-      <input type="hidden" id="subcat_name">
-      <input type="hidden" id="subsub">
+      <input type="hidden" id="subcat" name="subcat">
+      <input type="hidden" id="subcat_name" name="subcat_name">
+      <input type="hidden" id="subsub" name="subsub">
 
       <label for="reg_judet">Județ *</label>
-      <select id="reg_judet" required>
+      <select id="reg_judet" name="reg_judet" required>
         <option value="">Alege județul</option>
       </select>
 
       <label for="reg_oras">Oraș *</label>
-      <select id="reg_oras" required disabled>
+      <select id="reg_oras" name="reg_oras" required disabled>
         <option value="">Alege orașul</option>
       </select>
 
-      <label>Telefon</label>
-      <input id="phone" placeholder="07..."/>
+      <label for="phone">Telefon</label>
+      <input id="phone" name="phone" type="tel" pattern="^07[0-9]{8}$" title="Număr valid de telefon mobil (ex: 0712345678)" placeholder="07..."/>
 
-      <label>Email</label>
-      <input id="email" type="email" placeholder="contact@..."/>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" placeholder="contact@..."/>
 
-      <label>Descriere</label>
-      <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
+      <label for="description">Descriere</label>
+      <textarea id="description" name="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
 
       <button type="submit">Trimite</button>
-      <div class="msg" id="msg"></div>
+      <div class="msg" id="msg" aria-live="polite"></div>
     </form>
   </main>
 
+  <!-- Helpers pentru selecturi și ajax -->
   <script>
-    /* --- helpers simple --- */
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
       const first = document.createElement('option');
@@ -143,7 +134,6 @@
     document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
   }
 
-  /* ------- UI: header vizual + badge ------- */
   function updateHeaderVisual(subId){
     const meta   = __subMeta.get(subId) || {};
     const header = meta.btn;
@@ -172,7 +162,6 @@
     updateHeaderVisual(subId);
   }
 
-  /* ------- RENDER: accordion cu subcategorii ------- */
   function renderAccordion(container, items){
     container.innerHTML = '';
     __subMeta.clear();
@@ -240,7 +229,6 @@
     });
   }
 
-  /* ------- creează/umple corpul unui accordion cu copiii ------- */
   async function toggleChildGroup(subId){
     const bodyId = childGroupId(subId);
     const body   = document.getElementById(bodyId);
@@ -310,7 +298,6 @@
     return children;
   }
 
-  /* ------- încărcare liste + subcategorii ------- */
   document.addEventListener('DOMContentLoaded', async () => {
     try{
       const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
@@ -346,7 +333,6 @@
     const wrap    = document.getElementById('taxo-wrap');
     const cont    = document.getElementById('subcats');
 
-    // resetare stare
     document.getElementById('subcat').value='';
     document.getElementById('subcat_name').value='';
     document.getElementById('subsub').value='';
@@ -368,7 +354,6 @@
     }catch(e){ console.error(e); }
   }
 
-  // validare minim 1 dacă există subcategorii selectate
   (function(){
     const form=document.getElementById('f');
     if (!form) return;
@@ -385,7 +370,6 @@
   </script>
 
   <script>
-  // ======= Submit cu Supabase (token) =======
   (async () => {
     const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
