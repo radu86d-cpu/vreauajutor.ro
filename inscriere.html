@@ -14,10 +14,10 @@
     button[disabled]{opacity:.6;cursor:not-allowed}
     .msg{margin-top:12px}
 
-    /* === MODIFICARE: Layout taxonomie pe 2 coloane cu sidebar sticky === */
+    /* === Layout taxonomie pe 2 coloane cu sidebar sticky === */
     #taxo-grid{
       display:grid;
-      grid-template-columns:280px 1fr; /* stânga: sidebar, dreapta: conținut */
+      grid-template-columns:280px 1fr;
       gap:16px;
       align-items:start;
       margin-top:12px;
@@ -25,35 +25,36 @@
     #subcat-wrap{
       position:sticky; top:12px;
       background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px;
-      max-height:70vh; overflow:auto; /* să poți derula subcategoriile dacă sunt multe */
+      max-height:70vh; overflow:auto;
     }
     #child-wrap{
       background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px;
       min-height:220px;
     }
 
-    /* === MODIFICARE: subcategoriile ca listă verticală (full-width) === */
-    #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    /* === Subcategorii listă verticală (compact) === */
+    #subcats{display:flex;flex-direction:column;gap:6px;margin-top:4px}
     .chip{
       display:flex;align-items:center;justify-content:space-between;
-      border:1px solid #e5e7eb;padding:10px 12px;border-radius:10px;
-      background:#fff;color:#1f2937;cursor:pointer
+      border:1px solid #e5e7eb;padding:6px 10px;border-radius:8px;
+      background:#fff;color:#1f2937;cursor:pointer;
+      font-size:14px; line-height:1.3;
     }
     .chip.blue{background:#0f62fe;color:#fff;border-color:#0f62fe}
     .chip:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
 
-    /* Grup copii (dreapta) – neschimbat funcțional, doar cosmetizat ușor */
-    .child-group{margin:12px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-    .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eee;font-weight:600}
+    /* Copii (compact) */
+    .child-group{margin:8px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+    .child-title{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #eee;font-weight:600;font-size:14px}
     .child-title button{background:#fff;color:#111;border:1px solid #ddd;padding:4px 8px;border-radius:999px;font-size:12px;line-height:1.2;min-width:auto}
-    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:10px}
-    .child-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;background:#fff}
+    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding:8px}
+    .child-item{display:flex;align-items:center;gap:6px;padding:6px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:14px}
     .child-item input{margin:0}
 
     /* Accesibilitate */
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-    /* Responsive: pe mobil, sidebar devine deasupra și derulabil orizontal */
+    /* Responsive */
     @media (max-width: 720px){
       #taxo-grid{grid-template-columns:1fr}
       #subcats{flex-direction:row;gap:8px;overflow:auto}
@@ -173,7 +174,6 @@
 
   <script>
   (async () => {
-    // handle submit with Supabase auth (nemodificat)
     const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
     const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -220,7 +220,6 @@
         if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
         msg.style.color='green'; msg.textContent='Înscriere reușită! Mulțumim.';
         form.reset(); document.getElementById('reg_oras').disabled=true;
-        // reset UI taxonomy
         document.getElementById('child-wrap').hidden=true;
         document.getElementById('subcat-wrap').hidden=true;
         __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
@@ -234,7 +233,7 @@
   </script>
 
   <script>
-    /* --- STATE (nemodificat ca logică) --- */
+    /* --- STATE --- */
     const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
     const __subMeta = new Map();          // subId -> {btn, name}
     const __cacheChildren = new Map();    // subId -> children[]
@@ -309,7 +308,6 @@
       }
 
       if (!group){
-        // creare nou
         const kids = await loadChildren(subId);
         const meta = __subMeta.get(subId) || {};
 
