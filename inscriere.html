@@ -35,9 +35,15 @@
     input:focus,select:focus,textarea:focus{outline:none;border-color:var(--va-primary);box-shadow:0 0 0 4px rgba(15,98,254,.08)}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+
+    /* butoane principale */
     button{padding:10px 16px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:700;cursor:pointer}
     .btn-outline{background:#fff;color:#111;border:1px solid #ddd}
-    button[disabled]{opacity:.6;cursor:not-allowed}
+    button[disabled]{cursor:not-allowed}
+    /* buton Trimite: gri cât timp e dezactivat */
+    #submitBtn:disabled{
+      background:#cdd3dd; color:#6b7280; border:1px solid #d1d5db; box-shadow:none;
+    }
     .msg{margin-top:10px}
 
     /* toolbar subcategorii */
@@ -45,9 +51,7 @@
     .toolbar .right{display:flex;gap:8px}
     .btn-small{
       background:#fff;border:1px solid #c8cdd6;padding:6px 12px;border-radius:999px;
-      font-size:12px;cursor:pointer;
-      color:#0b1220 !important;      /* text negru închis */
-      font-weight:700;               /* mai vizibil */
+      font-size:12px;cursor:pointer; color:#0b1220 !important; font-weight:700;
     }
     .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff;color:#0b1220 !important}
 
@@ -135,7 +139,7 @@
 
           <div class="actions">
             <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
-            <button type="submit">Trimite</button>
+            <button type="submit" id="submitBtn" disabled>Trimite</button>
           </div>
           <div class="msg" id="msg" aria-live="polite"></div>
         </aside>
@@ -202,11 +206,19 @@
           const { orase=[] } = await rr.json();
           fillSelect(sO, orase, 'Alege orașul'); sO.disabled=false;
           if (sServ.value) loadSubcats();
+          updateSubmitState();
         });
-        sO.addEventListener('change', ()=>{ if (sServ.value) loadSubcats(); });
-        sServ.addEventListener('change', loadSubcats);
+        sO.addEventListener('change', ()=>{ if (sServ.value) loadSubcats(); updateSubmitState(); });
+        sServ.addEventListener('change', ()=>{ loadSubcats(); updateSubmitState(); });
+
+        // input listeners pentru validare live
+        ['company_name','phone','email'].forEach(id=>{
+          const el=document.getElementById(id);
+          el.addEventListener('input', updateSubmitState);
+        });
 
         if (!sServ.value && services.length){ sServ.value = services[0]; loadSubcats(); }
+        updateSubmitState();
       }catch(e){ console.error(e); }
     });
   </script>
@@ -220,7 +232,7 @@
 
       document.getElementById('f').addEventListener('submit', async ev=>{
         ev.preventDefault();
-        const btn = ev.target.querySelector('button[type="submit"]');
+        const btn = document.getElementById('submitBtn');
         const msg = document.getElementById('msg');
         const orig = btn.textContent; btn.disabled=true; btn.textContent='Se trimite...'; msg.textContent='';
 
@@ -259,13 +271,14 @@
           ev.target.reset(); document.getElementById('reg_oras').disabled=true;
           document.getElementById('right').hidden=true; document.getElementById('mid').hidden=true;
           __state.bySub.clear(); __meta.clear(); __cacheKids.clear();
+          updateSubmitState();
         }catch(e){ msg.style.color='#b00020'; msg.textContent='Eroare: '+e.message; }
-        finally{ btn.disabled=false; btn.textContent=orig; }
+        finally{ btn.textContent=orig; }
       });
     })();
   </script>
 
-  <!-- === UI taxonomie (active/done) === -->
+  <!-- === UI taxonomie (active/done) + VALIDARE SUBMIT === -->
   <script>
     /* STATE */
     const __state = { bySub:new Map() };   // subId -> Set(child string)
@@ -277,6 +290,25 @@
     const kidGroupId = subId => 'g_'+String(subId).replace(/[^a-z0-9_-]/gi,'_');
     const setActive = (el,on)=> el && el.classList.toggle('active', !!on);
     const setDone   = (el,on)=> el && el.classList.toggle('done',   !!on);
+
+    function emailValid(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(v||'').trim()); }
+    function phoneValid(v){ return /^\s*(0\d{9}|\+?\d{7,15})\s*$/.test(String(v||'').trim()); }
+
+    function submitReady(){
+      const nameOk = (document.getElementById('company_name').value||'').trim().length>1;
+      const serviceOk = !!document.getElementById('service_name').value;
+      const judOk = !!document.getElementById('reg_judet').value;
+      const orasOk = !!document.getElementById('reg_oras').value;
+      const phoneOk = phoneValid(document.getElementById('phone').value);
+      const emailOk = emailValid(document.getElementById('email').value);
+      const hasSub = __state.bySub.size>0;
+      const hasKid = Array.from(__state.bySub.values()).some(s=>s.size>0);
+      return nameOk && serviceOk && hasSub && hasKid && judOk && orasOk && phoneOk && emailOk;
+    }
+    function updateSubmitState(){
+      const btn=document.getElementById('submitBtn');
+      btn.disabled = !submitReady();
+    }
 
     function syncHidden(){
       const ids=[], names=[];
@@ -290,6 +322,7 @@
       const firstKid = Array.from(__state.bySub.values()).flatMap(s=>Array.from(s))[0];
       document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
       updateSubcatCounter();
+      updateSubmitState();
     }
 
     function updateSubcatCounter(){
@@ -319,7 +352,6 @@
 
         __meta.set(id,{btn,badge,name});
 
-        // stare inițială
         const has = (__state.bySub.get(id)?.size||0)>0;
         setDone(btn, has); setActive(btn, false); if (has) badge.textContent=String(__state.bySub.get(id).size);
 
@@ -328,6 +360,7 @@
       });
       document.getElementById('mid').hidden=false;
       updateSubcatCounter();
+      updateSubmitState();
     }
 
     /* resync checkboxes + stări pe chip */
@@ -340,7 +373,7 @@
       });
       const chip = (__meta.get(subId)||{}).btn;
       setDone(chip, set.size>0); if (!group.hidden && set.size===0) setActive(chip,true);
-      updateBadge(subId); updateSubcatCounter();
+      updateBadge(subId); updateSubcatCounter(); updateSubmitState();
     }
 
     /* toggle deschidere grup copii */
@@ -353,7 +386,6 @@
       const isOpen = !!g && !g.hidden;
       if (isOpen){ g.hidden=true; setActive(chip,false); return; }
 
-      // set active doar pe chipul curent (nu atinge .done)
       document.querySelectorAll('#subcats .chip').forEach(c=>{ if(!c.classList.contains('done')) c.classList.remove('active'); });
       if (!chip.classList.contains('done')) setActive(chip,true);
 
@@ -394,7 +426,6 @@
         cont.appendChild(g);
       }
 
-      // deschide doar acest grup
       document.querySelectorAll('#kids .group').forEach(el=> el.hidden = (el.id!==gid));
       g.hidden=false; resyncKidsUI(subId);
     }
@@ -422,6 +453,7 @@
       document.getElementById('subcat').value=''; document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value=''; __state.bySub.clear(); __meta.clear(); __cacheKids.clear();
       rc.hidden=true; kids.innerHTML='';
+      updateSubmitState();
 
       if (!service){ wrap.hidden=true; cont.innerHTML=''; return; }
       const url='/.netlify/functions/taxonomy?mode=subcategories&service='+encodeURIComponent(service)
@@ -452,7 +484,7 @@
       for (const {btn,badge} of __meta.values()){ setActive(btn,false); setDone(btn,false); if (badge) badge.textContent='0'; }
       document.getElementById('kids').innerHTML=''; document.getElementById('right').hidden=true;
       document.getElementById('subcat').value=''; document.getElementById('subcat_name').value=''; document.getElementById('subsub').value='';
-      updateSubcatCounter();
+      updateSubcatCounter(); updateSubmitState();
     });
     document.getElementById('btn-collapse-sub')?.addEventListener('click', (e)=>{
       const mid=document.getElementById('mid'); const collapsed=mid.classList.toggle('collapsed');
