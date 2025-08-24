@@ -6,78 +6,54 @@
   <title>Înscriere furnizor</title>
   <style>
     :root{
-      --va-bg: #f6f7f9;
-      --va-card: #ffffff;
-      --va-text: #0f172a;
-      --va-muted:#64748b;
-      --va-primary:#0f62fe;
-      --va-primary-100:#eef4ff;
-      --va-border:#e6e8ec;
-      --va-radius:14px;
-      --va-softshadow:0 6px 16px rgba(16,24,40,.06);
-      --va-danger:#b00020;
-      --va-success:#1ea759;
+      --va-bg:#f6f7f9; --va-card:#fff; --va-text:#0f172a; --va-muted:#64748b;
+      --va-primary:#0f62fe; --va-primary-100:#eef4ff; --va-border:#e6e8ec;
+      --va-radius:16px; --va-softshadow:0 6px 16px rgba(16,24,40,.06);
+      --va-danger:#b00020; --va-success:#1ea759;
     }
-
-    /* Layout de bază */
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;margin:0;color:var(--va-text)}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--va-bg);margin:0;color:var(--va-text)}
     .wrap{max-width:1280px;margin:2rem auto;padding:0 16px}
     h1{margin:0 0 6px;font-size:clamp(24px,3vw,32px)}
     .subtitle{color:var(--va-muted);margin-bottom:18px}
 
-    /* === Grid 3 coloane: stânga (subcats), mijloc (children), dreapta (formular) === */
+    /* Grid 3 coloane: stânga (vendor), mijloc (subcats), dreapta (children) */
     #taxo-grid{
       display:grid;
-      grid-template-columns:280px minmax(0,1fr) 320px;
-      gap:16px; align-items:start;
-      margin-top:12px;
+      grid-template-columns:320px 300px minmax(0,1fr);
+      gap:16px; align-items:start; margin-top:12px;
     }
-
-    /* Cardurile principale */
-    #subcat-wrap,#child-wrap,#vendor-card{
-      background:#fff;border-radius:16px;border:1px solid var(--va-border);
-      box-shadow:var(--va-softshadow);
+    #vendor-card,#subcat-wrap,#child-wrap{
+      background:var(--va-card); border:1px solid var(--va-border);
+      border-radius:var(--va-radius); box-shadow:var(--va-softshadow);
     }
-    #subcat-wrap{position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; padding:14px}
-    #child-wrap {position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto;}
-    #vendor-card{position:sticky; top:12px; padding:16px}
+    #vendor-card{position:sticky; top:12px; padding:16px; max-height:calc(100vh - 24px); overflow:auto}
+    #subcat-wrap{position:sticky; top:12px; padding:14px; max-height:calc(100vh - 24px); overflow:auto}
+    #child-wrap{position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto}
 
     /* Toolbar / butoane mici */
-    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .toolbar .left{display:flex;align-items:center;gap:8px}
-    .toolbar .right{display:flex;align-items:center;gap:8px}
-    .btn-small{
-      background:#fff; color:#111; border:1px solid #ddd; padding:6px 12px; border-radius:999px;
-      font-size:12px; line-height:1.2; cursor:pointer; transition:border-color .15s, background .15s
-    }
-    .btn-small:hover{ border-color:var(--va-primary); background:#f6f9ff }
+    .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .toolbar .right{display:flex;gap:8px}
+    .btn-small{background:#fff;border:1px solid #ddd;padding:6px 12px;border-radius:999px;font-size:12px;cursor:pointer}
+    .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff}
     .meta-count{font-size:12px;color:#555}
 
-    /* Subcategorii (chips) */
+    /* Chips subcategorii */
     #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
-    .chip{
-      display:flex;align-items:center;justify-content:space-between;
-      border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;
-      background:#fff;color:#1f2937;cursor:pointer;font-size:13px;font-weight:600;
-      transition: border-color .18s, background .18s, box-shadow .18s;
-    }
-    .chip:hover{ background:#f9fbff; border-color:#cfe0ff; box-shadow:0 4px 12px rgba(16,24,40,.08) }
-    .chip.blue{ background:var(--va-primary-100); color:#173bce; border-color:#b8ccff }
-    .chip .badge{
-      background:#eef2ff; color:#173bce; border-radius:999px; padding:2px 6px;
-      font-size:11px; font-weight:800; min-width:20px; text-align:center;
-    }
+    .chip{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;font-weight:600;cursor:pointer}
+    .chip:hover{background:#f9fbff;border-color:#cfe0ff}
+    .chip.blue{background:var(--va-primary-100);color:#173bce;border-color:#b8ccff}
+    .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;font-size:11px;font-weight:800;min-width:20px;text-align:center}
 
     /* Sub-subcategorii */
     .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
     .child-title .tools{display:flex;gap:8px;align-items:center}
-    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:10px}
-    .child-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:13px}
+    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding:10px}
+    .child-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:13px;cursor:pointer}
     .child-item:hover{background:#fafcff;border-color:#cfe0ff}
-    .child-item input{margin:0; width:18px; height:18px; accent-color:#0f62fe}
+    .child-item input{margin:0;width:18px;height:18px;accent-color:var(--va-primary)}
     .child-item.on{background:#f4f7ff;border-color:#99b7ff;font-weight:600}
 
-    /* Formular (dreapta) */
+    /* Formular dreapta (acum stânga 😄) */
     #vendor-card h3{margin:0 0 10px;font-size:16px}
     #vendor-card label{display:block;margin:.45rem 0 .25rem;font-weight:600;font-size:14px}
     #vendor-card input,#vendor-card select,#vendor-card textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px}
@@ -91,13 +67,12 @@
     .hint-ok{color:var(--va-success);font-weight:600}
 
     /* Responsive */
-    @media (max-width:1100px){
-      #taxo-grid{grid-template-columns:260px 1fr}
-      #vendor-card{grid-column:1 / -1; position:relative; top:0; margin-top:16px}
+    @media (max-width:1200px){
+      #taxo-grid{grid-template-columns:300px 280px 1fr;}
     }
-    @media (max-width:820px){
+    @media (max-width:980px){
       #taxo-grid{grid-template-columns:1fr}
-      #subcat-wrap,#child-wrap{position:relative; top:0; max-height:none}
+      #vendor-card,#subcat-wrap,#child-wrap{position:relative; top:0; max-height:none}
       .row-2{grid-template-columns:1fr}
     }
   </style>
@@ -108,14 +83,59 @@
     <div class="subtitle">Completează datele și alege serviciile oferite. Bifează minim o opțiune în sub‑subcategorii.</div>
 
     <form id="f" novalidate>
-      <section id="taxo-grid" aria-label="Selecție subcategorii">
-        <!-- Stânga: Subcategorii -->
+      <section id="taxo-grid" aria-label="Selecție">
+        <!-- STÂNGA: Detalii furnizor -->
+        <aside id="vendor-card">
+          <h3>Detalii furnizor</h3>
+
+          <label for="company_name">Companie *</label>
+          <input id="company_name" required/>
+
+          <label for="service_name">Serviciu *</label>
+          <select id="service_name" required>
+            <option value="">Alege serviciul</option>
+          </select>
+
+          <label for="reg_judet">Județ *</label>
+          <select id="reg_judet" required>
+            <option value="">Alege județul</option>
+          </select>
+
+          <label for="reg_oras">Oraș *</label>
+          <select id="reg_oras" required disabled>
+            <option value="">Alege orașul</option>
+          </select>
+
+          <div class="row-2">
+            <div>
+              <label for="phone">Telefon</label>
+              <input id="phone" placeholder="07..."/>
+            </div>
+            <div>
+              <label for="email">Email</label>
+              <input id="email" type="email" placeholder="contact@..."/>
+            </div>
+          </div>
+
+          <label for="description">Descriere</label>
+          <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
+
+          <!-- Hidden pentru backend -->
+          <input type="hidden" id="subcat">
+          <input type="hidden" id="subcat_name">
+          <input type="hidden" id="subsub">
+
+          <div class="v-actions">
+            <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
+            <button type="submit">Trimite</button>
+          </div>
+          <div class="msg" id="msg" role="status" aria-live="polite"></div>
+        </aside>
+
+        <!-- MIJLOC: Subcategorii -->
         <div id="subcat-wrap" hidden>
           <div class="toolbar">
-            <div class="left">
-              <strong>Subcategorie</strong>
-              <span class="meta-count" id="subcat-count-chip" aria-live="polite"></span>
-            </div>
+            <strong>Subcategorie <span id="subcat-count-chip" class="meta-count"></span></strong>
             <div class="right">
               <button type="button" class="btn-small" id="subcat-toggle" aria-expanded="true">Restrânge</button>
               <button type="button" class="btn-small" id="subcat-reset">Reset</button>
@@ -124,7 +144,7 @@
           <div id="subcats" role="tablist" aria-label="Subcategorii"></div>
         </div>
 
-        <!-- Mijloc: Sub-subcategorii -->
+        <!-- DREAPTA: Sub‑subcategorii -->
         <div id="child-wrap" hidden aria-live="polite">
           <div class="child-title">
             <label style="margin:0;">Sub‑subcategorii (bifează minim 1)</label>
@@ -136,64 +156,14 @@
           </div>
           <div id="children"></div>
         </div>
-
-        <!-- Dreapta: Detalii furnizor + submit -->
-        <aside id="vendor-card">
-          <div class="vcard">
-            <h3>Detalii furnizor</h3>
-
-            <label for="company_name">Companie *</label>
-            <input id="company_name" required/>
-
-            <label for="service_name">Serviciu *</label>
-            <select id="service_name" required>
-              <option value="">Alege serviciul</option>
-            </select>
-
-            <label for="reg_judet">Județ *</label>
-            <select id="reg_judet" required>
-              <option value="">Alege județul</option>
-            </select>
-
-            <label for="reg_oras">Oraș *</label>
-            <select id="reg_oras" required disabled>
-              <option value="">Alege orașul</option>
-            </select>
-
-            <div class="row-2">
-              <div>
-                <label for="phone">Telefon</label>
-                <input id="phone" placeholder="07..."/>
-              </div>
-              <div>
-                <label for="email">Email</label>
-                <input id="email" type="email" placeholder="contact@..."/>
-              </div>
-            </div>
-
-            <label for="description">Descriere</label>
-            <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
-
-            <!-- Hidden pentru backend -->
-            <input type="hidden" id="subcat">
-            <input type="hidden" id="subcat_name">
-            <input type="hidden" id="subsub">
-
-            <div class="v-actions">
-              <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
-              <button type="submit">Trimite</button>
-            </div>
-            <div class="msg" id="msg"></div>
-          </div>
-        </aside>
       </section>
     </form>
   </main>
 
-  <!-- ===== Scripturile TALE (copiate identic) ===== -->
+  <!-- ========== LOGICA (păstrată 1:1) ========== -->
 
   <script>
-    /* --- Helpers select --- */
+    /* Helpers select */
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
       const first = document.createElement('option');
@@ -331,7 +301,7 @@
       el.textContent = n ? `(${n} selectate)` : '';
     }
 
-    /* RENDER: lista verticală de subcategorii (chips pe toată lățimea) */
+    /* RENDER: lista verticală de subcategorii */
     function renderChips(container, items){
       container.innerHTML=''; __subMeta.clear();
       items.forEach(it=>{
@@ -368,7 +338,7 @@
       updateSidebarSelectedCount();
     }
 
-    /* UI copii (dreapta) */
+    /* Copii (dreapta) */
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
 
@@ -397,7 +367,6 @@
         const tspan = document.createElement('span');
         tspan.textContent = meta.name || ('Subcategorie ' + subId);
 
-        /* butoane pentru fiecare grup de copii (ascunde acest grup) */
         const ttools = document.createElement('div');
         ttools.className = 'tools';
         const tbtn = document.createElement('button');
@@ -458,7 +427,7 @@
         container.appendChild(group);
       }
 
-      // Deschide doar grupul selectat și închide celelalte (curat vizual)
+      // Deschide doar grupul selectat și închide celelalte
       document.querySelectorAll('#children .child-group').forEach(g=>{
         g.hidden = (g.id !== groupId) ? true : false;
       });
@@ -568,6 +537,5 @@
       if (document.getElementById('service_name')?.value) loadSubcatsForSignup();
     });
   </script>
-
 </body>
 </html>
