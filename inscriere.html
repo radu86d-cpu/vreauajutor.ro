@@ -16,7 +16,7 @@
     h1{margin:0 0 6px;font-size:clamp(24px,3vw,32px)}
     .subtitle{color:var(--va-muted);margin-bottom:18px}
 
-    /* Grid 3 coloane: STÂNGA (vendor), MIJLOC (subcats), DREAPTA (children) */
+    /* Grid 3 coloane */
     #taxo-grid{
       display:grid;
       grid-template-columns:320px 300px minmax(0,1fr);
@@ -50,8 +50,10 @@
       font-size:13px;font-weight:600;transition:all .18s;
     }
     .chip:hover{background:#f9fbff;border-color:#cfe0ff}
-    /* SELECTAT: rămâne alb, doar accente albastre (bordură + bară stânga + text) */
+
+    /* SELECTAT: rămâne alb, doar accente albastre */
     .chip.blue{
+      background:#fff !important;     /* forțează fără fundal albastru */
       color:#0f3cc9;
       border-color:var(--va-primary);
       box-shadow:0 0 0 3px rgba(15,98,254,.08);
@@ -81,7 +83,6 @@
     #vendor-card input,#vendor-card select,#vendor-card textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .v-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    /* Important: nu afectăm butoanele mici */
     button:not(.btn-small){
       padding:10px 16px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:700;cursor:pointer
     }
@@ -185,10 +186,9 @@
     </form>
   </main>
 
-  <!-- ===== Scripturi: logica ta, integrată 1:1 ===== -->
-
+  <!-- === JS === -->
   <script>
-    /* --- Helpers select --- */
+    /* Helpers select */
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
       const first = document.createElement('option');
@@ -318,7 +318,6 @@
       updateSidebarSelectedCount();
     }
 
-    /* Sidebar: contor subcategorii cu selecții */
     function updateSidebarSelectedCount(){
       const n = Array.from(__sel.bySub.values()).filter(s=>s.size>0).length;
       const el = document.getElementById('subcat-count-chip');
@@ -326,7 +325,6 @@
       el.textContent = n ? `(${n} selectate)` : '';
     }
 
-    /* RENDER: lista verticală de subcategorii (chips) */
     function renderChips(container, items){
       container.innerHTML=''; __subMeta.clear();
       items.forEach(it=>{
@@ -363,7 +361,6 @@
       updateSidebarSelectedCount();
     }
 
-    /* UI copii (dreapta) */
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
 
@@ -392,7 +389,6 @@
         const tspan = document.createElement('span');
         tspan.textContent = meta.name || ('Subcategorie ' + subId);
 
-        /* buton „Ascunde” pentru acest grup */
         const ttools = document.createElement('div');
         ttools.className = 'tools';
         const tbtn = document.createElement('button');
@@ -453,7 +449,6 @@
         container.appendChild(group);
       }
 
-      // Deschide doar grupul selectat și închide celelalte
       document.querySelectorAll('#children .child-group').forEach(g=>{
         g.hidden = (g.id !== groupId) ? true : false;
       });
@@ -489,7 +484,6 @@
       const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
 
-      // reset
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
@@ -511,7 +505,6 @@
       }catch(e){ console.error(e); wrap.hidden=true; }
     }
 
-    /* Validare minim 1 copil dacă există cel puțin o subcategorie selectată */
     (function(){
       const form=document.getElementById('f');
       if (!form) return;
@@ -526,19 +519,17 @@
       }, true);
     })();
 
-    /* Reset subcategorii */
     document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
       __sel.bySub.clear();
-      for (const {btn} of __subMeta.values()) setChipColor(btn,false);
+      for (const {btn} of __subMeta.values()) btn.classList.remove('blue');
       document.getElementById('children').innerHTML='';
       document.getElementById('child-wrap').hidden=true;
       updateSidebarSelectedCount();
     });
 
-    /* Sidebar: restrânge / extinde lista de subcategorii */
     document.getElementById('subcat-toggle')?.addEventListener('click', (e)=>{
       const wrap = document.getElementById('subcat-wrap');
       const isCollapsed = wrap.classList.toggle('collapsed');
@@ -546,7 +537,6 @@
       e.target.setAttribute('aria-expanded', String(!isCollapsed));
     });
 
-    /* Panou copii: restrânge / extinde toate grupurile deschise */
     document.getElementById('children-collapse-all')?.addEventListener('click', ()=>{
       document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true);
     });
@@ -554,7 +544,6 @@
       document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false);
     });
 
-    /* Reîncarcă la schimbări */
     document.getElementById('service_name')?.addEventListener('change', loadSubcatsForSignup);
     document.getElementById('reg_judet')   ?.addEventListener('change', loadSubcatsForSignup);
     document.getElementById('reg_oras')    ?.addEventListener('change', loadSubcatsForSignup);
