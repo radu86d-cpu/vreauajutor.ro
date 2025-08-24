@@ -26,7 +26,23 @@
       position:sticky; top:12px;
       background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px;
       max-height:70vh; overflow:auto;
+      transition:all .2s ease;
     }
+    #subcat-wrap.collapsed{
+      padding:10px; max-height:none;
+    }
+    #subcat-wrap.collapsed #subcats{display:none}
+    #subcat-wrap .toolbar{
+      display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:6px
+    }
+    #subcat-wrap .toolbar .left{display:flex;align-items:center;gap:8px}
+    #subcat-wrap .toolbar .right{display:flex;align-items:center;gap:6px}
+    .btn-small{
+      background:#fff;color:#111;border:1px solid #ddd;padding:4px 10px;border-radius:999px;
+      font-size:12px;line-height:1.2;min-width:auto;cursor:pointer
+    }
+    .meta-count{font-size:12px;color:#555}
+
     #child-wrap{
       background:#fff;border-radius:12px;border:1px solid #e6e6e6;padding:12px;
       min-height:220px;
@@ -46,7 +62,8 @@
     /* Copii (compact) */
     .child-group{margin:8px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
     .child-title{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #eee;font-weight:600;font-size:14px}
-    .child-title button{background:#fff;color:#111;border:1px solid #ddd;padding:4px 8px;border-radius:999px;font-size:12px;line-height:1.2;min-width:auto}
+    .child-title .tools{display:flex;gap:8px;align-items:center}
+    .child-title .tools .btn-small{margin-top:0}
     .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding:8px}
     .child-item{display:flex;align-items:center;gap:6px;padding:6px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:14px}
     .child-item input{margin:0}
@@ -79,13 +96,16 @@
       <section id="taxo-grid">
         <!-- Subcategorii (sidebar) -->
         <div id="subcat-wrap" hidden>
-          <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <span>Subcategorie</span>
-            <button type="button" id="subcat-reset"
-              style="font-size:12px;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer;">
-              Reset
-            </button>
-          </label>
+          <div class="toolbar">
+            <div class="left">
+              <strong>Subcategorie</strong>
+              <span class="meta-count" id="subcat-count-chip" aria-live="polite"></span>
+            </div>
+            <div class="right">
+              <button type="button" class="btn-small" id="subcat-toggle" aria-expanded="true">Restrânge</button>
+              <button type="button" class="btn-small" id="subcat-reset">Reset</button>
+            </div>
+          </div>
           <div id="subcats" role="tablist" aria-label="Subcategorii"></div>
         </div>
 
@@ -93,7 +113,11 @@
         <div id="child-wrap" hidden aria-live="polite">
           <div class="child-title">
             <label style="margin:0;">Sub-subcategorii (bifează minim 1)</label>
-            <small id="min1-hint" style="color:#b00020;display:none;">Selectează cel puțin una</small>
+            <div class="tools">
+              <button type="button" class="btn-small" id="children-collapse-all">Restrânge toate</button>
+              <button type="button" class="btn-small" id="children-expand-all">Extinde toate</button>
+              <small id="min1-hint" style="color:#b00020;display:none;margin-left:6px;">Selectează cel puțin una</small>
+            </div>
           </div>
           <div id="children"></div>
         </div>
@@ -145,7 +169,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
-        const { services=[], judete=[] } = await r.json();
+      const { services=[], judete=[] } = await r.json();
         const selServ = document.getElementById('service_name');
         const selJ = document.getElementById('reg_judet');
         const selO = document.getElementById('reg_oras');
@@ -256,6 +280,15 @@
       document.getElementById('subcat_name').value = names.join(',');
       const firstKid = Array.from(__sel.bySub.values()).flatMap(s=>Array.from(s))[0];
       document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
+      updateSidebarSelectedCount();
+    }
+
+    /* Sidebar: contor subcategorii cu selecții */
+    function updateSidebarSelectedCount(){
+      const n = Array.from(__sel.bySub.values()).filter(s=>s.size>0).length;
+      const el = document.getElementById('subcat-count-chip');
+      if(!el) return;
+      el.textContent = n ? `(${n} selectate)` : '';
     }
 
     /* RENDER: lista verticală de subcategorii (chips pe toată lățimea) */
@@ -279,6 +312,7 @@
         container.appendChild(btn);
       });
       document.getElementById('subcat-wrap').hidden = false;
+      updateSidebarSelectedCount();
     }
 
     function resyncGroupCheckboxes(subId){
@@ -289,6 +323,9 @@
         cb.checked = set.has(String(cb.value));
       });
       setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
+      const chip = (__subMeta.get(subId)||{}).btn;
+      if (chip) chip.setAttribute('aria-selected', set.size>0 ? 'true' : 'false');
+      updateSidebarSelectedCount();
     }
 
     /* UI copii (dreapta) */
@@ -319,11 +356,18 @@
         title.className = 'child-title';
         const tspan = document.createElement('span');
         tspan.textContent = meta.name || ('Subcategorie ' + subId);
+
+        /* butoane pentru fiecare grup de copii (ascunde acest grup) */
+        const ttools = document.createElement('div');
+        ttools.className = 'tools';
         const tbtn = document.createElement('button');
         tbtn.type = 'button';
+        tbtn.className = 'btn-small';
         tbtn.textContent = 'Ascunde';
         tbtn.addEventListener('click', ()=>{ group.hidden = true; });
-        title.appendChild(tspan); title.appendChild(tbtn);
+        ttools.appendChild(tbtn);
+
+        title.appendChild(tspan); title.appendChild(ttools);
         group.appendChild(title);
 
         const grid = document.createElement('div');
@@ -374,7 +418,7 @@
         container.appendChild(group);
       }
 
-      // deschide grupul selectat și închide-le pe celelalte (opțional, arată curat)
+      // Deschide doar grupul selectat și închide celelalte (curat vizual)
       document.querySelectorAll('#children .child-group').forEach(g=>{
         g.hidden = (g.id !== groupId) ? true : false;
       });
@@ -428,6 +472,7 @@
         const { subcategories=[] } = await ajx(url);
         if (!subcategories.length){ wrap.hidden=true; cont.innerHTML=''; return; }
         renderChips(cont, subcategories);
+        wrap.hidden = false;
       }catch(e){ console.error(e); wrap.hidden=true; }
     }
 
@@ -446,7 +491,7 @@
       }, true);
     })();
 
-    /* Reset */
+    /* Reset subcategorii */
     document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
@@ -455,6 +500,23 @@
       for (const {btn} of __subMeta.values()) setChipColor(btn,false);
       document.getElementById('children').innerHTML='';
       document.getElementById('child-wrap').hidden=true;
+      updateSidebarSelectedCount();
+    });
+
+    /* Sidebar: restrânge/ extinde lista de subcategorii */
+    document.getElementById('subcat-toggle')?.addEventListener('click', (e)=>{
+      const wrap = document.getElementById('subcat-wrap');
+      const isCollapsed = wrap.classList.toggle('collapsed');
+      e.target.textContent = isCollapsed ? 'Extinde' : 'Restrânge';
+      e.target.setAttribute('aria-expanded', String(!isCollapsed));
+    });
+
+    /* Panou copii: restrânge / extinde toate grupurile deschise */
+    document.getElementById('children-collapse-all')?.addEventListener('click', ()=>{
+      document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true);
+    });
+    document.getElementById('children-expand-all')?.addEventListener('click', ()=>{
+      document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false);
     });
 
     /* Reîncarcă la schimbări */
