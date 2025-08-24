@@ -7,7 +7,7 @@
   <style>
     :root{
       --va-bg:#f6f7f9; --va-card:#fff; --va-text:#0f172a; --va-muted:#64748b;
-      --va-primary:#0f62fe; --va-primary-100:#eef4ff; --va-border:#e6e8ec;
+      --va-primary:#0f62fe; --va-border:#e6e8ec;
       --va-radius:16px; --va-softshadow:0 6px 16px rgba(16,24,40,.06);
       --va-danger:#b00020; --va-success:#1ea759;
     }
@@ -16,7 +16,7 @@
     h1{margin:0 0 6px;font-size:clamp(24px,3vw,32px)}
     .subtitle{color:var(--va-muted);margin-bottom:18px}
 
-    /* Grid 3 coloane: stânga (vendor), mijloc (subcats), dreapta (children) */
+    /* Grid 3 coloane: STÂNGA (vendor), MIJLOC (subcats), DREAPTA (children) */
     #taxo-grid{
       display:grid;
       grid-template-columns:320px 300px minmax(0,1fr);
@@ -39,9 +39,14 @@
 
     /* Chips subcategorii */
     #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
-    .chip{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;font-weight:600;cursor:pointer}
-    .chip:hover{background:#f9fbff;border-color:#cfe0ff}
-    .chip.blue{background:var(--va-primary-100);color:#173bce;border-color:#b8ccff}
+    .chip{
+      display:flex;align-items:center;justify-content:space-between;
+      border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;
+      background:#fff;color:#1f2937;cursor:pointer;
+      font-size:13px;font-weight:600;transition:all .18s;
+    }
+    .chip:hover{background:#f3f4f6;border-color:#cfe0ff}
+    .chip.blue{background:#0f62fe;color:#fff;border-color:#0f62fe} /* SELECTAT: albastru solid + text alb */
     .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;font-size:11px;font-weight:800;min-width:20px;text-align:center}
 
     /* Sub-subcategorii */
@@ -53,7 +58,7 @@
     .child-item input{margin:0;width:18px;height:18px;accent-color:var(--va-primary)}
     .child-item.on{background:#f4f7ff;border-color:#99b7ff;font-weight:600}
 
-    /* Formular dreapta (acum stânga 😄) */
+    /* Formular stânga */
     #vendor-card h3{margin:0 0 10px;font-size:16px}
     #vendor-card label{display:block;margin:.45rem 0 .25rem;font-weight:600;font-size:14px}
     #vendor-card input,#vendor-card select,#vendor-card textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px}
@@ -160,10 +165,10 @@
     </form>
   </main>
 
-  <!-- ========== LOGICA (păstrată 1:1) ========== -->
+  <!-- ===== Scripturi: logica ta, integrată 1:1 ===== -->
 
   <script>
-    /* Helpers select */
+    /* --- Helpers select --- */
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
       const first = document.createElement('option');
@@ -301,7 +306,7 @@
       el.textContent = n ? `(${n} selectate)` : '';
     }
 
-    /* RENDER: lista verticală de subcategorii */
+    /* RENDER: lista verticală de subcategorii (chips) */
     function renderChips(container, items){
       container.innerHTML=''; __subMeta.clear();
       items.forEach(it=>{
@@ -338,7 +343,7 @@
       updateSidebarSelectedCount();
     }
 
-    /* Copii (dreapta) */
+    /* UI copii (dreapta) */
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
 
@@ -367,6 +372,7 @@
         const tspan = document.createElement('span');
         tspan.textContent = meta.name || ('Subcategorie ' + subId);
 
+        /* buton „Ascunde” pentru acest grup */
         const ttools = document.createElement('div');
         ttools.className = 'tools';
         const tbtn = document.createElement('button');
@@ -512,7 +518,7 @@
       updateSidebarSelectedCount();
     });
 
-    /* Sidebar: restrânge/ extinde lista de subcategorii */
+    /* Sidebar: restrânge / extinde lista de subcategorii */
     document.getElementById('subcat-toggle')?.addEventListener('click', (e)=>{
       const wrap = document.getElementById('subcat-wrap');
       const isCollapsed = wrap.classList.toggle('collapsed');
