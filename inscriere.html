@@ -40,28 +40,21 @@
     .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff}
     .meta-count{font-size:12px;color:#555}
 
-    /* Chips subcategorii */
+    /* Chips subcategorii (albe, text negru) */
     #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
     .chip{
-      position:relative;
       display:flex;align-items:center;justify-content:space-between;gap:8px;
-      border:1px solid #e5e7eb;padding:10px 12px 10px 18px;border-radius:12px;
+      border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;
       background:#fff;color:#111827;cursor:pointer;
       font-size:13px;font-weight:600;transition:all .18s;
     }
     .chip:hover{background:#f9fbff;border-color:#cfe0ff}
-
-    /* SELECTAT: rămâne alb, doar accente albastre */
+    /* SELECTAT: rămâne alb, text negru; doar bordură/halo albastru */
     .chip.blue{
-      background:#fff !important;     /* forțează fără fundal albastru */
-      color:#0f3cc9;
+      background:#fff !important;
+      color:#111827 !important;
       border-color:var(--va-primary);
-      box-shadow:0 0 0 3px rgba(15,98,254,.08);
-    }
-    .chip.blue::before{
-      content:"";
-      position:absolute; left:6px; top:50%; transform:translateY(-50%);
-      width:6px; height:60%; border-radius:4px; background:var(--va-primary);
+      box-shadow:0 0 0 3px rgba(15,98,254,.10);
     }
     .chip .badge{
       background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;
@@ -513,7 +506,7 @@
         const hasAnyKid = Array.from(__sel.bySub.values()).some(s=>s.size>0);
         if (hasAnySub && !hasAnyKid){
           ev.preventDefault();
-          document.getElementById('min1-hint').style.display='inline';
+          document.getElementById('min1-hint').display='inline';
           document.getElementById('child-wrap').scrollIntoView({behavior:'smooth', block:'center'});
         }
       }, true);
