@@ -6,124 +6,87 @@
   <title>Înscriere furnizor</title>
   <style>
     :root{
-      --va-bg: #f6f7f9;
-      --va-card: #ffffff;
-      --va-text: #0f172a;
-      --va-muted:#64748b;
-      --va-primary:#0f62fe;
-      --va-primary-100:#eef4ff;
-      --va-border:#e6e8ec;
-      --va-radius:14px;
-      --va-shadow:0 10px 28px rgba(16,24,40,.08);
-      --va-softshadow:0 5px 16px rgba(16,24,40,.06);
-      --va-danger:#b00020;
-      --va-success:#1ea759;
-      --va-warn:#b08900;
+      --bg:#f6f7f9;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --primary:#0f62fe;
+      --primary-100:#eef4ff;
+      --border:#e6e8ec;
+      --radius:14px;
+      --shadow:0 10px 28px rgba(16,24,40,.08);
+      --soft:0 5px 16px rgba(16,24,40,.06);
+      --danger:#b00020;
+      --success:#1ea759;
     }
-
-    body{
-      font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
-      background: linear-gradient(180deg, #f2f5f9 0%, #fff 100%);
-      color:var(--va-text); margin:0
-    }
-    .wrap{
-      max-width: 1180px;
-      margin: 2rem auto;
-      background: var(--va-card);
-      padding: 22px;
-      border-radius: var(--va-radius);
-      border:1px solid var(--va-border);
-      box-shadow: var(--va-shadow);
-    }
-    h1{ margin:0 0 10px; font-size: clamp(24px, 3vw, 32px); letter-spacing:-.02em }
-    .subtitle{ color:var(--va-muted); margin-bottom: 18px; }
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f2f5f9 0%,#fff 100%);color:var(--text);margin:0}
+    .wrap{max-width:1100px;margin:2rem auto;background:var(--card);padding:22px;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow)}
+    h1{margin:0 0 .5rem;font-size:clamp(24px,3vw,32px);letter-spacing:-.02em}
+    .subtitle{color:var(--muted);margin-bottom:18px}
 
     label{display:block;margin:.6rem 0 .35rem;font-weight:600}
     input,select,textarea{
-      width:100%;padding:12px 12px;border:1px solid #dfe3ea;border-radius:12px;background:#fff;transition:border-color .18s, box-shadow .18s
+      width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px;background:#fff;
+      transition:border-color .18s,box-shadow .18s
     }
-    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--va-primary);box-shadow:0 0 0 4px rgba(15,98,254,.08)}
-    button{
-      padding:12px 18px;border:0;border-radius:12px;background:var(--va-primary);color:#fff;cursor:pointer;font-weight:700;
-      box-shadow: var(--va-softshadow); transition: filter .15s, transform .05s
-    }
-    button:hover{ filter: brightness(1.02); }
-    button:active{ transform: translateY(1px); }
-    button[disabled]{opacity:.55;cursor:not-allowed}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(15,98,254,.08)}
+    .row{display:flex;gap:8px;align-items:center}
+    .w-auto{width:auto}
+    .hint{font-size:12px;margin-top:4px}
+    .hint-danger{color:var(--danger);font-weight:700}
+    .hint-ok{color:var(--success);font-weight:700}
+
+    button{padding:12px 18px;border:0;border-radius:12px;background:var(--primary);color:#fff;cursor:pointer;font-weight:700;box-shadow:var(--soft);transition:filter .15s,transform .05s}
+    button:hover{filter:brightness(1.02)}
+    button:active{transform:translateY(1px)}
+    button[disabled]{opacity:1;cursor:not-allowed;background:#d1d5db;color:#6b7280;box-shadow:none}
+
     .btn-outline{background:#fff;color:#111;border:1px solid #dfe3ea}
-    .btn-chip{background:#fff;color:#111;border:1px solid #dfe3ea;padding:10px 12px;border-radius:999px;font-size:12px}
-    .msg{margin-top:12px}
+    .btn-small{background:#fff;color:#111;border:1px solid #dfe3ea;padding:6px 12px;border-radius:999px;font-size:12px;line-height:1.2;min-width:auto;cursor:pointer}
+    .btn-small:hover{border-color:var(--primary);background:#f6f9ff}
 
-    /* grilă 3 coloane: detalii – subcategorii – copii */
-    .grid-3{
-      display:grid;
-      grid-template-columns: 340px 1fr 1.3fr;
-      gap:16px;
-      align-items:start;
-      margin-top:10px;
-    }
-    .card{
-      background:#fff;border:1px solid var(--va-border);border-radius:16px;box-shadow:var(--va-softshadow);padding:14px;
-    }
+    .grid-main{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+    .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--soft)}
 
-    /* subcategorii */
-    #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px; max-height:70vh; overflow:auto}
-    .chip{
-      display:flex;align-items:center;justify-content:space-between; gap:10px;
-      border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;background:#fff;color:#111827;cursor:pointer;font-size:14px;font-weight:600;
-      transition: border-color .18s, background .18s, box-shadow .18s;
-      box-shadow: 0 1px 0 rgba(0,0,0,.02);
-    }
-    .chip:hover{ background:#f9fbff; border-color:#cfe0ff; box-shadow: 0 4px 12px rgba(16,24,40,.08); }
-    .chip.blue{background:var(--va-primary-100);color:#173bce;border-color:#b8ccff}
+    #subcat-wrap{position:sticky;top:12px;max-height:72vh;overflow:auto}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .meta-count{font-size:12px;color:var(--muted)}
+    #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .chip{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;background:#fff;color:#111827;cursor:pointer;font-size:14px;font-weight:600;transition:border-color .18s,background .18s,box-shadow .18s}
+    .chip:hover{background:#f9fbff;border-color:#cfe0ff;box-shadow:0 4px 12px rgba(16,24,40,.08)}
+    .chip.blue{background:var(--primary-100);color:#173bce;border-color:#b8ccff}
+    .chip .title{flex:1}
     .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800;min-width:20px;text-align:center}
 
-    /* copii */
-    .child-title{display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
-    .child-title .tools{display:flex;gap:8px;align-items:center}
-    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding-top:10px}
-    .child-item{
-      display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;
-      transition: border-color .18s, box-shadow .18s, background .18s; box-shadow: 0 1px 0 rgba(0,0,0,.02); cursor:pointer;
-    }
-    .child-item:hover{ border-color:#cfe0ff; background:#fafcff; box-shadow: 0 6px 16px rgba(16,24,40,.06); }
-    .child-item input{margin:0; width:18px; height:18px; accent-color: var(--va-primary);}
-    .child-item.on{ background:#f4f7ff; border-color:#99b7ff; box-shadow: 0 8px 20px rgba(23, 59, 206, .10); font-weight:700; }
+    .child-title{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
+    .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px}
+    .child-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:14px;transition:border-color .18s,box-shadow .18s,background .18s;box-shadow:0 1px 0 rgba(0,0,0,.02);cursor:pointer}
+    .child-item:hover{border-color:#cfe0ff;background:#fafcff;box-shadow:0 6px 16px rgba(16,24,40,.06)}
+    .child-item input{margin:0;width:18px;height:18px;accent-color:var(--primary)}
+    .child-item.on{background:#f4f7ff;border-color:#99b7ff;box-shadow:0 8px 20px rgba(23,59,206,.10);font-weight:700}
 
-    .hint-danger{ color: var(--va-danger); font-weight:700; }
-    .hint-ok{ color: var(--va-success); font-weight:700; }
-    .hint-warn{ color: var(--va-warn); font-weight:700; }
+    .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .msg{margin-top:10px}
 
-    /* input group pentru OTP */
-    .row{display:flex;gap:10px;align-items:center}
-    .grow{flex:1}
-    .otp-wrap{display:flex;gap:8px;align-items:center;margin-top:6px}
-    .code6{width:140px;text-align:center;letter-spacing:.2em}
-    .status-dot{width:10px;height:10px;border-radius:50%}
-    .st-red{background:#e5484d}.st-green{background:#2fb344}.st-amber{background:#f59f00}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:4px 8px}
+    .ok{color:#065f46;background:#d1fae5;border:1px solid #10b981}
+    .bad{color:#7f1d1d;background:#fee2e2;border:1px solid #ef4444}
+    .warn{color:#92400e;background:#fef3c7;border:1px solid #f59e0b}
 
-    .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
-    #submitBtn{ background:#8592a3 } /* gri până devine activ */
-
-    @media (max-width: 1080px){
-      .grid-3{grid-template-columns:1fr}
-      #subcats{max-height:none}
-    }
+    @media(max-width:920px){.grid-main{grid-template-columns:1fr}#subcat-wrap{position:relative;top:0}}
   </style>
 </head>
 <body>
   <main class="wrap">
     <h1>Înscriere furnizor</h1>
-    <div class="subtitle">Completează datele, verifică telefonul și emailul, apoi trimite.</div>
+    <div class="subtitle">Completează datele, alege serviciile oferite, verifică telefonul (SMS), apoi trimite. Emailul trebuie doar să fie valid.</div>
 
     <form id="f" novalidate>
-      <section class="grid-3">
-        <!-- 1) Detalii furnizor -->
+      <section class="grid-main">
+        <!-- STÂNGA: date furnizor -->
         <div class="card">
-          <h3 style="margin:4px 0 10px;">Detalii furnizor</h3>
-
           <label for="company_name">Companie *</label>
-          <input id="company_name" required/>
+          <input id="company_name" autocomplete="organization" required/>
 
           <label for="service_name">Serviciu *</label>
           <select id="service_name" required>
@@ -140,196 +103,94 @@
             <option value="">Alege orașul</option>
           </select>
 
-          <div style="margin-top:6px"></div>
-
-          <label>Telefon *</label>
+          <label for="phone">Telefon *</label>
           <div class="row">
-            <input id="phone" class="grow" placeholder="07..." inputmode="tel"/>
-            <button type="button" id="smsSend" class="btn-chip" disabled>Trimite cod</button>
+            <input id="phone" placeholder="07..." class="w-auto" style="flex:1" inputmode="numeric"/>
+            <button type="button" id="btnSendOtp" class="w-auto">Trimite cod</button>
           </div>
-          <div class="otp-wrap">
-            <input id="smsCode" class="code6" maxlength="6" placeholder="cod 6 cifre" inputmode="numeric" disabled/>
-            <button type="button" id="smsVerify" class="btn-chip" disabled>Verifică</button>
-            <span id="smsState" class="hint-warn">Neînceput</span>
-            <span id="smsDot" class="status-dot st-amber" aria-hidden="true"></span>
+          <div class="row" style="margin-top:8px">
+            <input id="otp_code" placeholder="cod 6 cifre" maxlength="6" class="w-auto" style="flex:1" inputmode="numeric"/>
+            <button type="button" id="btnVerifyOtp" class="w-auto">Verifică</button>
+            <span id="phone_status" class="hint"></span>
           </div>
 
-          <label style="margin-top:12px;">Email *</label>
+          <label for="email">Email *</label>
           <div class="row">
-            <input id="email" class="grow" type="email" placeholder="contact@..."/>
-            <button type="button" id="emlSend" class="btn-chip" disabled>Trimite cod</button>
+            <input id="email" type="email" placeholder="contact@..." style="flex:1"/>
           </div>
-          <div class="otp-wrap">
-            <input id="emlCode" class="code6" maxlength="6" placeholder="cod 6 cifre" inputmode="numeric" disabled/>
-            <button type="button" id="emlVerify" class="btn-chip" disabled>Verifică</button>
-            <span id="emlState" class="hint-warn">Neînceput</span>
-            <span id="emlDot" class="status-dot st-amber" aria-hidden="true"></span>
-          </div>
+          <div id="email_status" class="hint"></div>
 
-          <label for="description" style="margin-top:12px;">Descriere</label>
+          <label for="description">Descriere</label>
           <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
 
-          <div class="actions">
+          <div class="form-actions">
             <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
-            <button id="submitBtn" type="submit" disabled>Trimite</button>
+            <button type="submit" id="btnSubmit" disabled>Trimite</button>
           </div>
           <div class="msg" id="msg" role="status" aria-live="polite"></div>
         </div>
 
-        <!-- 2) Subcategorii -->
+        <!-- DREAPTA: subcategorii / copii -->
         <div class="card">
-          <div class="row" style="justify-content:space-between;">
-            <h3 style="margin:4px 0;">Subcategorii</h3>
+          <div class="toolbar">
+            <div><strong>Subcategorii</strong> <span id="subcat-count-chip" class="meta-count"></span></div>
             <div class="row">
-              <button type="button" id="subcat-toggle" class="btn-chip">Restrânge</button>
-              <button type="button" id="subcat-reset" class="btn-chip">Reset</button>
+              <button type="button" class="btn-small" id="subcat-toggle">Restrânge</button>
+              <button type="button" class="btn-small" id="subcat-reset">Reset</button>
             </div>
           </div>
-          <div id="subcats"></div>
-          <!-- hidden back-end fields -->
-          <input type="hidden" id="subcat">
-          <input type="hidden" id="subcat_name">
-          <input type="hidden" id="subsub">
+          <div id="subcat-wrap">
+            <div id="subcats"></div>
+          </div>
         </div>
 
-        <!-- 3) Copii -->
-        <div class="card" id="child-wrap" hidden aria-live="polite">
+        <div class="card" id="child-wrap" hidden>
           <div class="child-title">
             <span>Sub-subcategorii (bifează minim 1)</span>
-            <div class="tools">
-              <button type="button" class="btn-chip" id="children-collapse-all">Restrânge toate</button>
-              <button type="button" class="btn-chip" id="children-expand-all">Extinde toate</button>
+            <div class="row">
+              <button type="button" class="btn-small" id="children-collapse-all">Restrânge toate</button>
+              <button type="button" class="btn-small" id="children-expand-all">Extinde toate</button>
               <small id="min1-hint" class="hint-danger" style="display:none;margin-left:6px;">Selectează cel puțin una</small>
             </div>
           </div>
           <div id="children"></div>
         </div>
       </section>
+
+      <!-- hidden pt backend -->
+      <input type="hidden" id="subcat">
+      <input type="hidden" id="subcat_name">
+      <input type="hidden" id="subsub">
     </form>
   </main>
 
-  <!-- ===== Helpers pentru selecturi (liste) ===== -->
-  <script>
-    function fillSelect(sel, arr, firstLabel) {
-      sel.innerHTML = '';
-      const first = document.createElement('option');
-      first.value = ''; first.textContent = firstLabel; sel.appendChild(first);
-      (arr||[]).forEach(v=>{
-        const name  = typeof v==='string' ? v : (v.name||v.label||v.text||'');
-        const value = typeof v==='string' ? v : (v.value||v.name||v.id||'');
-        if (!name) return;
-        const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
-        const { services=[], judete=[] } = await r.json();
-
-        const selServ = document.getElementById('service_name');
-        const selJ = document.getElementById('reg_judet');
-        const selO = document.getElementById('reg_oras');
-
-        fillSelect(selServ, services, 'Alege serviciul');
-        fillSelect(selJ, judete,  'Alege județul');
-        fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
-
-        selJ.addEventListener('change', async (ev)=>{
-          const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
-          if (!judet) { updateSubmitState(); return; }
-          const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
-          const { orase=[] } = await rr.json();
-          fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
-          updateSubmitState();
-          if (selServ.value) loadSubcatsForSignup();
-        });
-        selO.addEventListener('change', ()=>{ updateSubmitState(); if (selServ.value) loadSubcatsForSignup(); });
-        selServ.addEventListener('change', ()=>{ loadSubcatsForSignup(); updateSubmitState(); });
-
-        if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
-      } catch(e){ console.error(e); }
-    });
-  </script>
-
+  <!-- Supabase (pt autentificare, neschimbat) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- ===== Supabase + submit ===== -->
   <script>
-  (async () => {
-    const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    /* =================== State & helpers =================== */
+    const state = {
+      phoneVerified: false,
+      emailValid: false
+    };
 
-    document.getElementById('f').addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      if (document.getElementById('submitBtn').disabled) return;
-
-      const form=ev.target, btn=document.getElementById('submitBtn');
-      const originalLabel=btn.textContent;
-      btn.disabled=true; btn.textContent='Se trimite...';
-      const msg=document.getElementById('msg'); msg.className='msg'; msg.textContent='Trimit...';
-
-      const { data:{session} } = await supa.auth.getSession();
-      if (!session?.access_token){
-        msg.classList.add('hint-danger'); msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
-        btn.disabled=false; btn.textContent=originalLabel; return;
-      }
-
-      const selectedChildIds = Array.from(__sel.bySub.values())
-        .flatMap(s => Array.from(s))
-        .map(v => Number(v))
-        .filter(n => Number.isFinite(n));
-
-      const payload = {
-        company_name: document.getElementById('company_name').value.trim(),
-        service_name: document.getElementById('service_name').value,
-        judet:        document.getElementById('reg_judet').value,
-        oras:         document.getElementById('reg_oras').value,
-        phone:        document.getElementById('phone').value,
-        email:        document.getElementById('email').value,
-        description:  document.getElementById('description').value,
-        subcat:       document.getElementById('subcat').value || null,
-        subcat_name:  document.getElementById('subcat_name').value || null,
-        subsub:       document.getElementById('subsub').value || null,
-        subsubs:      selectedChildIds,
-        phone_verified: window.__otp?.phoneVerified || false,
-        email_verified: window.__otp?.emailVerified || false
-      };
-
-      try{
-        const r = await fetch('/.netlify/functions/register_provider', {
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-          body:JSON.stringify(payload)
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
-        msg.classList.add('hint-ok'); msg.textContent='Înscriere reușită! Mulțumim.';
-        form.reset(); document.getElementById('reg_oras').disabled=true;
-        document.getElementById('child-wrap').hidden=true;
-        __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-        resetOtpUI();
-        updateSubmitState();
-      }catch(e){
-        msg.classList.add('hint-danger'); msg.textContent='Eroare: '+e.message;
-      }finally{
-        btn.disabled=false; btn.textContent=originalLabel;
-      }
-    });
-  })();
-  </script>
-
-  <!-- ===== State & UI pentru subcategorii/copii ===== -->
-  <script>
     const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
     const __subMeta = new Map();          // subId -> {btn, name, badge}
     const __cacheChildren = new Map();    // subId -> children[]
 
-    async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function ajx(url){
+      const r = await fetch(url,{cache:'no-store'});
+      if(!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+    function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
     function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
-    function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
+    function updateSidebarSelectedCount(){
+      const n = Array.from(__sel.bySub.values()).filter(s=>s.size>0).length;
+      const el = document.getElementById('subcat-count-chip');
+      if(!el) return; el.textContent = n ? `(${n} selectate)` : '';
+    }
 
     function syncHiddenFromState(){
       const ids=[], names=[];
@@ -343,7 +204,8 @@
       document.getElementById('subcat_name').value = names.join(',');
       const firstKid = Array.from(__sel.bySub.values()).flatMap(s=>Array.from(s))[0];
       document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
-      updateSubmitState();
+      updateSidebarSelectedCount();
+      recalcSubmitState();
     }
 
     function renderChips(container, items){
@@ -353,16 +215,23 @@
         const name = it.name ?? it.subcat_name ?? '';
 
         const btn = document.createElement('button');
-        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
-        const title = document.createElement('span'); title.textContent=name;
+        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab'); btn.setAttribute('aria-controls', childGroupId(id));
+
+        const title = document.createElement('span'); title.className='title'; title.textContent=name;
         const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
-        btn.appendChild(title); btn.appendChild(badge);
+        btn.append(title,badge);
 
         __subMeta.set(id,{btn,name,badge});
-        setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
+
+        const has = (__sel.bySub.get(id)?.size||0)>0;
+        setChipColor(btn, has);
+        if (has) badge.textContent = String(__sel.bySub.get(id).size || 0);
+
         btn.addEventListener('click', ()=>toggleChildGroup(id));
         container.appendChild(btn);
       });
+      document.getElementById('subcat-wrap').hidden = false;
+      updateSidebarSelectedCount();
     }
 
     function updateChipBadge(subId){
@@ -383,7 +252,8 @@
       const meta = __subMeta.get(subId)||{};
       setChipColor(meta.btn, set.size>0);
       updateChipBadge(subId);
-      updateSubmitState();
+      updateSidebarSelectedCount();
+      recalcSubmitState();
     }
 
     async function toggleChildGroup(subId){
@@ -400,42 +270,37 @@
         const kids = await loadChildren(subId);
         const meta = __subMeta.get(subId) || {};
 
-        group = document.createElement('section'); group.className = 'child-group'; group.id = groupId;
+        group = document.createElement('section');
+        group.className = 'child-group';
+        group.id = groupId;
 
-        const title = document.createElement('div'); title.className = 'child-title';
-        const tspan = document.createElement('span'); tspan.textContent = meta.name || ('Subcategorie ' + subId);
-        const ttools = document.createElement('div'); ttools.className = 'tools';
-        const tbtn = document.createElement('button'); tbtn.type='button'; tbtn.className='btn-chip'; tbtn.textContent='Ascunde';
-        tbtn.addEventListener('click', ()=>{ group.hidden = true; });
-        ttools.appendChild(tbtn);
-        title.appendChild(tspan); title.appendChild(ttools);
+        const title = document.createElement('div');
+        title.className = 'child-title';
+        title.appendChild(document.createTextNode(meta.name || ('Subcategorie ' + subId)));
         group.appendChild(title);
 
-        const grid = document.createElement('div'); grid.className = 'child-grid';
+        const grid = document.createElement('div');
+        grid.className = 'child-grid';
         const selectedSet = __sel.bySub.get(subId) || new Set();
 
         kids.forEach(kid=>{
           const safeKey = (kid.id != null) ? String(kid.id) : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
           const inputId = `kid_${subId}_${safeKey}`;
 
-          const lab = document.createElement('label'); lab.className = 'child-item'; lab.setAttribute('for', inputId);
-
-          const cb  = document.createElement('input'); cb.type='checkbox'; cb.id=inputId;
-          cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
+          const lab = document.createElement('label'); lab.className='child-item'; lab.setAttribute('for', inputId);
+          const cb  = document.createElement('input');
+          cb.type='checkbox'; cb.id=inputId; cb.value=(kid.id != null) ? String(kid.id) : (kid.name || '');
           cb.checked = selectedSet.has(String(cb.value));
           if (cb.checked) lab.classList.add('on');
 
           cb.addEventListener('change', ()=>{
-            let set = __sel.bySub.get(subId);
-            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
-
+            let set = __sel.bySub.get(subId); if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
             const val = String(cb.value);
             if (cb.checked) set.add(val); else set.delete(val);
-            if (set.size === 0) __sel.bySub.delete(subId);
+            if (set.size===0) __sel.bySub.delete(subId);
 
             lab.classList.toggle('on', cb.checked);
-            setChipColor(chip, (__sel.bySub.get(subId)?.size || 0) > 0);
-
+            setChipColor(chip, set.size>0);
             updateChipBadge(subId);
             syncHiddenFromState();
 
@@ -453,7 +318,7 @@
         container.appendChild(group);
       }
 
-      document.querySelectorAll('#children .child-group').forEach(g=>{ g.hidden = (g.id !== groupId) ? true : false; });
+      document.querySelectorAll('#children .child-group').forEach(g=>{ g.hidden = (g.id !== groupId); });
       group.hidden = false;
       resyncGroupCheckboxes(subId);
     }
@@ -464,6 +329,7 @@
       const judet = document.getElementById('reg_judet')?.value || '';
       const oras  = document.getElementById('reg_oras')?.value || '';
       const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
+
       const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam)
                 + (judet ? '&judet=' + encodeURIComponent(judet) : '')
                 + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
@@ -476,6 +342,7 @@
       const service = document.getElementById('service_name')?.value || '';
       const judet   = document.getElementById('reg_judet')?.value || '';
       const oras    = document.getElementById('reg_oras')?.value || '';
+      const wrap    = document.getElementById('subcat-wrap');
       const cont    = document.getElementById('subcats');
       const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
@@ -485,8 +352,10 @@
       document.getElementById('subsub').value='';
       __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
       childW.hidden=true; childC.innerHTML='';
+      updateSidebarSelectedCount();
+      recalcSubmitState();
 
-      if (!service){ cont.innerHTML=''; updateSubmitState(); return; }
+      if (!service){ wrap.hidden=true; cont.innerHTML=''; return; }
 
       const url = '/.netlify/functions/taxonomy?mode=subcategories'
                 + '&service=' + encodeURIComponent(service)
@@ -495,209 +364,261 @@
 
       try{
         const { subcategories=[] } = await ajx(url);
-        if (!subcategories.length){ cont.innerHTML=''; updateSubmitState(); return; }
+        if (!subcategories.length){ wrap.hidden=true; cont.innerHTML=''; return; }
         renderChips(cont, subcategories);
-      }catch(e){ console.error(e); cont.innerHTML=''; }
-      updateSubmitState();
+        wrap.hidden = false;
+      }catch(e){ console.error(e); wrap.hidden=true; }
     }
 
-    document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
+    /* =================== OTP SMS (Twilio via Netlify Functions) =================== */
+    const phoneEl = document.getElementById('phone');
+    const otpEl = document.getElementById('otp_code');
+    const phoneStatus = document.getElementById('phone_status');
+
+    async function otpStart(){
+      const to = phoneEl.value.trim();
+      if (!to) return;
+      phoneStatus.className='hint';
+      phoneStatus.textContent='Trimit cod...';
+      try{
+        const r = await fetch('/.netlify/functions/otp_start', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ channel:'sms', to })
+        });
+        const txt = await r.text();
+        let data; try{ data = JSON.parse(txt); } catch{ data = { error: txt }; }
+        if (!r.ok || !data.ok){
+          phoneStatus.className='hint hint-danger';
+          phoneStatus.textContent = data.error || 'Nu am putut trimite codul.';
+          return;
+        }
+        phoneStatus.className='hint';
+        phoneStatus.textContent='Cod trimis. Verifică SMS-ul.';
+      }catch(e){
+        phoneStatus.className='hint hint-danger';
+        phoneStatus.textContent='Eroare rețea.';
+      }
+    }
+
+    async function otpVerify(){
+      const to = phoneEl.value.trim();
+      const code = otpEl.value.trim();
+      if (!to || !code) return;
+      phoneStatus.className='hint';
+      phoneStatus.textContent='Verific...';
+      try{
+        const r = await fetch('/.netlify/functions/otp_verify', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ channel:'sms', to, code })
+        });
+        const txt = await r.text();
+        let data; try{ data = JSON.parse(txt); } catch{ data = { error: txt }; }
+        if (!r.ok || !data.ok || (data.status && data.status!=='approved')){
+          state.phoneVerified = false;
+          phoneStatus.className='hint hint-danger';
+          phoneStatus.textContent = data.error || 'Cod invalid sau expirat.';
+          recalcSubmitState();
+          return;
+        }
+        state.phoneVerified = true;
+        phoneStatus.className='hint hint-ok';
+        phoneStatus.textContent='Verificat';
+        recalcSubmitState();
+      }catch(e){
+        state.phoneVerified = false;
+        phoneStatus.className='hint hint-danger';
+        phoneStatus.textContent='Eroare verificare.';
+        recalcSubmitState();
+      }
+    }
+
+    document.getElementById('btnSendOtp').addEventListener('click', otpStart);
+    document.getElementById('btnVerifyOtp').addEventListener('click', otpVerify);
+
+    /* =================== Email: doar validare =================== */
+    const emailEl = document.getElementById('email');
+    const emailStatus = document.getElementById('email_status');
+    function emailIsValid(v){
+      // simplu dar robust pentru formă
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    }
+    function validateEmail(){
+      const v = emailEl.value.trim();
+      if (!v){ state.emailValid=false; emailStatus.textContent=''; recalcSubmitState(); return; }
+      if (emailIsValid(v)){ state.emailValid=true; emailStatus.className='hint hint-ok'; emailStatus.textContent='Email valid'; }
+      else { state.emailValid=false; emailStatus.className='hint hint-danger'; emailStatus.textContent='Email invalid'; }
+      recalcSubmitState();
+    }
+    emailEl.addEventListener('input', validateEmail);
+
+    /* =================== Submit button gating =================== */
+    function hasAtLeastOneSubcat(){ return Array.from(__sel.bySub.values()).length>0; }
+    function hasAtLeastOneChild(){ return Array.from(__sel.bySub.values()).some(s=>s.size>0); }
+
+    function recalcSubmitState(){
+      const company = document.getElementById('company_name').value.trim()!==''; 
+      const service = document.getElementById('service_name').value.trim()!=='';
+      const judet   = document.getElementById('reg_judet').value.trim()!=='';
+      const oras    = document.getElementById('reg_oras').value.trim()!=='';
+      const phoneOk = state.phoneVerified && (phoneEl.value.trim()!=='');
+      const emailOk = state.emailValid;
+
+      const structuralOk = company && service && judet && oras && hasAtLeastOneSubcat() && hasAtLeastOneChild();
+      const finalOk = structuralOk && phoneOk && emailOk;
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = !finalOk;
+    }
+
+    ['company_name','service_name','reg_judet','reg_oras'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.addEventListener('input', recalcSubmitState);
+      el.addEventListener('change', recalcSubmitState);
+    });
+    phoneEl.addEventListener('input', ()=>{ state.phoneVerified=false; phoneStatus.textContent=''; recalcSubmitState(); });
+
+    /* =================== Bootstrap lists (services, judete, orase) =================== */
+    function fillSelect(sel, arr, firstLabel) {
+      sel.innerHTML = '';
+      const first = document.createElement('option');
+      first.value = ''; first.textContent = firstLabel; sel.appendChild(first);
+      (arr||[]).forEach(v=>{
+        const name  = typeof v==='string' ? v : (v.name||v.label||v.text||'');
+        const value = typeof v==='string' ? v : (v.value||v.name||v.id||'');
+        if (!name) return;
+        const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // lists
+      try {
+        const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
+        const { services=[], judete=[] } = await r.json();
+
+        const selServ = document.getElementById('service_name');
+        const selJ = document.getElementById('reg_judet');
+        const selO = document.getElementById('reg_oras');
+
+        fillSelect(selServ, services, 'Alege serviciul');
+        fillSelect(selJ, judete,  'Alege județul');
+        fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
+
+        selJ.addEventListener('change', async (ev)=>{
+          const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
+          if (!judet) { recalcSubmitState(); return; }
+          const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
+          const { orase=[] } = await rr.json();
+          fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
+          if (selServ.value) loadSubcatsForSignup();
+          recalcSubmitState();
+        });
+        selO.addEventListener('change', ()=>{ if (selServ.value) loadSubcatsForSignup(); recalcSubmitState(); });
+        selServ.addEventListener('change', ()=>{ loadSubcatsForSignup(); recalcSubmitState(); });
+
+        if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
+      } catch(e){ console.error(e); }
+
+      validateEmail(); // init
+      recalcSubmitState();
+    });
+
+    /* =================== Submit handler (neschimbat pe backend) =================== */
+    (async () => {
+      const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+      const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      document.getElementById('f').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        // safety re-check
+        recalcSubmitState();
+        if (document.getElementById('btnSubmit').disabled) return;
+
+        const form=ev.target, btn=document.getElementById('btnSubmit');
+        const originalLabel=btn.textContent;
+        btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Se trimite...';
+        const msg=document.getElementById('msg'); msg.className='msg'; msg.textContent='Trimit...';
+
+        const { data:{session} } = await supa.auth.getSession();
+        if (!session?.access_token){
+          msg.className='msg hint-danger'; msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
+          btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel; return;
+        }
+
+        const selectedChildIds = Array.from(__sel.bySub.values()).flatMap(s => Array.from(s)).map(v => Number(v)).filter(n => Number.isFinite(n));
+
+        const payload = {
+          company_name: document.getElementById('company_name').value.trim(),
+          service_name: document.getElementById('service_name').value,
+          judet:        document.getElementById('reg_judet').value,
+          oras:         document.getElementById('reg_oras').value,
+          phone:        document.getElementById('phone').value,
+          email:        document.getElementById('email').value,
+          description:  document.getElementById('description').value,
+          subcat:       document.getElementById('subcat').value || null,
+          subcat_name:  document.getElementById('subcat_name').value || null,
+          subsub:       document.getElementById('subsub').value || null,
+          subsubs:      selectedChildIds
+        };
+
+        try{
+          const r = await fetch('/.netlify/functions/register_provider', {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+            body:JSON.stringify(payload)
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
+          msg.className='msg hint-ok'; msg.textContent='Înscriere reușită! Mulțumim.';
+          form.reset(); document.getElementById('reg_oras').disabled=true;
+          document.getElementById('child-wrap').hidden=true;
+          document.getElementById('subcat-wrap').hidden=true;
+          __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
+          state.phoneVerified=false; state.emailValid=false; document.getElementById('phone_status').textContent=''; document.getElementById('email_status').textContent='';
+        }catch(e){
+          msg.className='msg hint-danger'; msg.textContent='Eroare: '+e.message;
+        }finally{
+          btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel;
+          recalcSubmitState();
+        }
+      });
+    })();
+
+    /* UI buttons */
+    document.getElementById('subcat-reset').addEventListener('click', ()=>{
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
       __sel.bySub.clear();
+      for (const {btn,badge} of __subMeta.values()){ setChipColor(btn,false); if (badge) badge.textContent='0'; }
       document.getElementById('children').innerHTML='';
       document.getElementById('child-wrap').hidden=true;
-      updateSubmitState();
+      updateSidebarSelectedCount();
+      recalcSubmitState();
+    });
+    document.getElementById('children-collapse-all').addEventListener('click', ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true); });
+    document.getElementById('children-expand-all').addEventListener('click', ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false); });
+    document.getElementById('subcat-toggle').addEventListener('click', (e)=>{
+      const wrap = document.getElementById('subcat-wrap');
+      const isHidden = wrap.style.display==='none';
+      wrap.style.display = isHidden ? '' : 'none';
+      e.target.textContent = isHidden ? 'Restrânge' : 'Extinde';
     });
 
-    document.getElementById('children-collapse-all')?.addEventListener('click', ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true); });
-    document.getElementById('children-expand-all')?.addEventListener('click',  ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false); });
-
-    /* Sidebar toggle */
-    document.getElementById('subcat-toggle')?.addEventListener('click', ()=>{
-      const sc = document.getElementById('subcats');
-      const hidden = sc.style.display === 'none';
-      sc.style.display = hidden ? '' : 'none';
-      document.getElementById('subcat-toggle').textContent = hidden ? 'Restrânge' : 'Extinde';
-    });
-
-    // ===== OTP UI/logic + gating buton Trimite =====
-    window.__otp = { phoneVerified:false, emailVerified:false };
-
-    const el = {
-      phone:   document.getElementById('phone'),
-      email:   document.getElementById('email'),
-      smsSend: document.getElementById('smsSend'),
-      smsCode: document.getElementById('smsCode'),
-      smsVerify: document.getElementById('smsVerify'),
-      smsState: document.getElementById('smsState'),
-      smsDot:   document.getElementById('smsDot'),
-      emlSend: document.getElementById('emlSend'),
-      emlCode: document.getElementById('emlCode'),
-      emlVerify: document.getElementById('emlVerify'),
-      emlState: document.getElementById('emlState'),
-      emlDot:   document.getElementById('emlDot'),
-      submit: document.getElementById('submitBtn'),
-      company: document.getElementById('company_name'),
-      service: document.getElementById('service_name'),
-      judet: document.getElementById('reg_judet'),
-      oras: document.getElementById('reg_oras'),
-    };
-
-    function normalizeRO(p){ // 07xxxxxxxx -> +407xxxxxxxx
-      const s=(p||'').replace(/\s+/g,'');
-      if (/^07\d{8}$/.test(s)) return '+4'+s;
-      if (/^\+?4\d{9,12}$/.test(s)) return s.startsWith('+')?s:'+'+s;
-      return s;
-    }
-    function validPhone(p){ return /^07\d{8}$/.test((p||'').replace(/\s+/g,'')) || /^\+4\d{9,12}$/.test((p||'').replace(/\s+/g,'')); }
-    function validEmail(x){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x||''); }
-
-    function setSmsState(t, kind='warn'){
-      el.smsState.textContent=t;
-      el.smsDot.className='status-dot '+(kind==='ok'?'st-green':kind==='err'?'st-red':'st-amber');
-    }
-    function setEmlState(t, kind='warn'){
-      el.emlState.textContent=t;
-      el.emlDot.className='status-dot '+(kind==='ok'?'st-green':kind==='err'?'st-red':'st-amber');
-    }
-
-    async function startOtp(channel, to){
-      const body = { channel, to };
-      const r = await fetch('/.netlify/functions/otp_start', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
-      });
-      let data={};
-      try{ data = await r.json(); }catch(_){}
-      if (!r.ok || data.ok!==true) throw new Error(data.error||'Nu am putut trimite codul');
-      return true;
-    }
-    async function verifyOtp(channel, to, code){
-      const r = await fetch('/.netlify/functions/otp_verify', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ channel, to, code })
-      });
-      let data={};
-      try{ data = await r.json(); }catch(_){}
-      if (!r.ok || data.ok!==true) throw new Error(data.error||'Cod invalid');
-      return true;
-    }
-
-    function resetOtpUI(){
-      __otp.phoneVerified=false; __otp.emailVerified=false;
-      el.smsSend.disabled = !validPhone(el.phone.value);
-      el.smsCode.value=''; el.smsCode.disabled=true; el.smsVerify.disabled=true; setSmsState('Neînceput','warn');
-      el.emlSend.disabled = !validEmail(el.email.value);
-      el.emlCode.value=''; el.emlCode.disabled=true; el.emlVerify.disabled=true; setEmlState('Neînceput','warn');
-      updateSubmitState();
-    }
-
-    el.phone.addEventListener('input', ()=>{
-      __otp.phoneVerified=false;
-      el.smsSend.disabled = !validPhone(el.phone.value);
-      el.smsCode.disabled = true; el.smsVerify.disabled = true; setSmsState('Neînceput','warn');
-      updateSubmitState();
-    });
-    el.email.addEventListener('input', ()=>{
-      __otp.emailVerified=false;
-      el.emlSend.disabled = !validEmail(el.email.value);
-      el.emlCode.disabled = true; el.emlVerify.disabled = true; setEmlState('Neînceput','warn');
-      updateSubmitState();
-    });
-
-    el.smsSend.addEventListener('click', async ()=>{
-      try{
-        el.smsSend.disabled=true;
-        setSmsState('Trimit...', 'warn');
-        await startOtp('sms', normalizeRO(el.phone.value));
-        setSmsState('Trimis. Verifică SMS.', 'warn');
-        el.smsCode.disabled=false; el.smsVerify.disabled=false; el.smsCode.focus();
-      }catch(e){
-        setSmsState(e.message||'Eroare trimitere', 'err');
-      }finally{
-        el.smsSend.disabled = !validPhone(el.phone.value);
+    // Validare "minim 1 copil" dacă există cel puțin o subcategorie – guard la submit
+    document.getElementById('f').addEventListener('submit',(ev)=>{
+      const hasAnySub = __sel.bySub.size>0;
+      const hasAnyKid = Array.from(__sel.bySub.values()).some(s=>s.size>0);
+      if (hasAnySub && !hasAnyKid){
+        ev.preventDefault();
+        const hint = document.getElementById('min1-hint');
+        hint.style.display='inline';
+        document.getElementById('child-wrap').scrollIntoView({behavior:'smooth', block:'center'});
       }
-    });
-
-    el.emlSend.addEventListener('click', async ()=>{
-      try{
-        el.emlSend.disabled=true;
-        setEmlState('Trimit...', 'warn');
-        await startOtp('email', el.email.value.trim());
-        setEmlState('Trimis. Verifică email.', 'warn');
-        el.emlCode.disabled=false; el.emlVerify.disabled=false; el.emlCode.focus();
-      }catch(e){
-        setEmlState(e.message||'Eroare trimitere', 'err');
-      }finally{
-        el.emlSend.disabled = !validEmail(el.email.value);
-      }
-    });
-
-    el.smsVerify.addEventListener('click', async ()=>{
-      try{
-        el.smsVerify.disabled=true;
-        setSmsState('Verific...', 'warn');
-        await verifyOtp('sms', normalizeRO(el.phone.value), (el.smsCode.value||'').trim());
-        __otp.phoneVerified=true;
-        setSmsState('Verificat', 'ok');
-        el.smsCode.disabled=true;
-      }catch(e){
-        setSmsState(e.message||'Cod invalid', 'err');
-      }finally{
-        el.smsVerify.disabled=false;
-        updateSubmitState();
-      }
-    });
-
-    el.emlVerify.addEventListener('click', async ()=>{
-      try{
-        el.emlVerify.disabled=true;
-        setEmlState('Verific...', 'warn');
-        await verifyOtp('email', el.email.value.trim(), (el.emlCode.value||'').trim());
-        __otp.emailVerified=true;
-        setEmlState('Verificat', 'ok');
-        el.emlCode.disabled=true;
-      }catch(e){
-        setEmlState(e.message||'Cod invalid', 'err');
-      }finally{
-        el.emlVerify.disabled=false;
-        updateSubmitState();
-      }
-    });
-
-    // ===== Gating pentru butonul Trimite =====
-    function hasAnyKid(){
-      return Array.from(__sel.bySub.values()).some(s=>s.size>0);
-    }
-
-    function updateSubmitState(){
-      const okCompany = (el.company.value||'').trim().length>1;
-      const okService = !!el.service.value;
-      const okJudet   = !!el.judet.value;
-      const okOras    = !!el.oras.value;
-      const okKids    = hasAnyKid();
-
-      const okPhoneV  = validPhone(el.phone.value) && __otp.phoneVerified;
-      const okEmailV  = validEmail(el.email.value) && __otp.emailVerified;
-
-      const allOk = okCompany && okService && okJudet && okOras && okKids && okPhoneV && okEmailV;
-
-      el.submit.disabled = !allOk;
-      el.submit.style.background = allOk ? 'var(--va-primary)' : '#8592a3';
-    }
-
-    // urmărește câmpuri cheie pentru gating
-    ['input','change'].forEach(evt=>{
-      document.getElementById('company_name').addEventListener(evt, updateSubmitState);
-      document.getElementById('service_name').addEventListener(evt, updateSubmitState);
-      document.getElementById('reg_judet').addEventListener(evt, updateSubmitState);
-      document.getElementById('reg_oras').addEventListener(evt, updateSubmitState);
-    });
-
-    // initialize OTP states
-    resetOtpUI();
+    }, true);
   </script>
-
 </body>
 </html>
