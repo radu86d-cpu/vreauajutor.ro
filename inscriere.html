@@ -14,72 +14,90 @@
       --va-primary-100:#eef4ff;
       --va-border:#e6e8ec;
       --va-radius:14px;
-      --va-shadow:0 10px 28px rgba(16,24,40,.08);
-      --va-softshadow:0 5px 16px rgba(16,24,40,.06);
+      --va-softshadow:0 6px 16px rgba(16,24,40,.06);
       --va-danger:#b00020;
       --va-success:#1ea759;
     }
 
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--va-bg);margin:0;color:var(--va-text);}
-    .wrap{max-width:1280px;margin:2rem auto;padding:0 16px;}
-    h1{margin:0 0 6px;font-size: clamp(24px, 3vw, 32px);}
-    .subtitle{color:var(--va-muted);margin-bottom:18px;}
+    /* Layout de bază */
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;margin:0;color:var(--va-text)}
+    .wrap{max-width:1280px;margin:2rem auto;padding:0 16px}
+    h1{margin:0 0 6px;font-size:clamp(24px,3vw,32px)}
+    .subtitle{color:var(--va-muted);margin-bottom:18px}
 
-    /* Grid 3 coloane */
+    /* === Grid 3 coloane: stânga (subcats), mijloc (children), dreapta (formular) === */
     #taxo-grid{
       display:grid;
       grid-template-columns:280px minmax(0,1fr) 320px;
       gap:16px; align-items:start;
+      margin-top:12px;
     }
+
+    /* Cardurile principale */
     #subcat-wrap,#child-wrap,#vendor-card{
-      background:#fff;border:1px solid var(--va-border);border-radius:16px;box-shadow:var(--va-softshadow);
+      background:#fff;border-radius:16px;border:1px solid var(--va-border);
+      box-shadow:var(--va-softshadow);
     }
-    #subcat-wrap{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding:14px;}
-    #child-wrap{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
-    #vendor-card{position:sticky;top:12px;padding:16px;}
+    #subcat-wrap{position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; padding:14px}
+    #child-wrap {position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto;}
+    #vendor-card{position:sticky; top:12px; padding:16px}
 
-    /* Toolbar */
-    .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .toolbar .right{display:flex;gap:8px}
-    .btn-small{background:#fff;border:1px solid #ddd;padding:6px 12px;border-radius:999px;font-size:12px;cursor:pointer}
-    .btn-small:hover{border-color:var(--va-primary);background:#f6f9ff}
+    /* Toolbar / butoane mici */
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .toolbar .left{display:flex;align-items:center;gap:8px}
+    .toolbar .right{display:flex;align-items:center;gap:8px}
+    .btn-small{
+      background:#fff; color:#111; border:1px solid #ddd; padding:6px 12px; border-radius:999px;
+      font-size:12px; line-height:1.2; cursor:pointer; transition:border-color .15s, background .15s
+    }
+    .btn-small:hover{ border-color:var(--va-primary); background:#f6f9ff }
+    .meta-count{font-size:12px;color:#555}
 
-    /* Chips */
-    #subcats{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-    .chip{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;
-      padding:8px 10px;border-radius:10px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
-    .chip:hover{background:#f9fbff;border-color:#cfe0ff}
-    .chip.blue{background:var(--va-primary-100);color:#173bce;border-color:#b8ccff}
-    .chip .badge{background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 6px;font-size:11px;font-weight:700;min-width:20px;text-align:center;}
+    /* Subcategorii (chips) */
+    #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .chip{
+      display:flex;align-items:center;justify-content:space-between;
+      border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;
+      background:#fff;color:#1f2937;cursor:pointer;font-size:13px;font-weight:600;
+      transition: border-color .18s, background .18s, box-shadow .18s;
+    }
+    .chip:hover{ background:#f9fbff; border-color:#cfe0ff; box-shadow:0 4px 12px rgba(16,24,40,.08) }
+    .chip.blue{ background:var(--va-primary-100); color:#173bce; border-color:#b8ccff }
+    .chip .badge{
+      background:#eef2ff; color:#173bce; border-radius:999px; padding:2px 6px;
+      font-size:11px; font-weight:800; min-width:20px; text-align:center;
+    }
 
     /* Sub-subcategorii */
     .child-title{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px}
     .child-title .tools{display:flex;gap:8px;align-items:center}
     .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:10px}
-    .child-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:13px;cursor:pointer}
+    .child-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-size:13px}
     .child-item:hover{background:#fafcff;border-color:#cfe0ff}
-    .child-item input{margin:0;width:18px;height:18px;accent-color:var(--va-primary);}
+    .child-item input{margin:0; width:18px; height:18px; accent-color:#0f62fe}
     .child-item.on{background:#f4f7ff;border-color:#99b7ff;font-weight:600}
 
-    /* Formular dreapta */
+    /* Formular (dreapta) */
     #vendor-card h3{margin:0 0 10px;font-size:16px}
     #vendor-card label{display:block;margin:.45rem 0 .25rem;font-weight:600;font-size:14px}
     #vendor-card input,#vendor-card select,#vendor-card textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:12px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .v-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    button{padding:10px 16px;border-radius:12px;border:0;font-weight:700;cursor:pointer}
-    .btn-outline{background:#fff;border:1px solid #ddd}
+    button{padding:10px 16px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:700;cursor:pointer}
+    .btn-outline{background:#fff;color:#111;border:1px solid #ddd}
+    button[disabled]{opacity:.6;cursor:not-allowed}
     .msg{margin-top:12px}
     .hint-danger{color:var(--va-danger);font-weight:600}
     .hint-ok{color:var(--va-success);font-weight:600}
 
-    @media(max-width:1100px){
-      #taxo-grid{grid-template-columns:260px 1fr;}
-      #vendor-card{grid-column:1/-1;position:relative;top:0;margin-top:16px}
+    /* Responsive */
+    @media (max-width:1100px){
+      #taxo-grid{grid-template-columns:260px 1fr}
+      #vendor-card{grid-column:1 / -1; position:relative; top:0; margin-top:16px}
     }
-    @media(max-width:820px){
+    @media (max-width:820px){
       #taxo-grid{grid-template-columns:1fr}
-      #subcat-wrap,#child-wrap{position:relative;top:0;max-height:none}
+      #subcat-wrap,#child-wrap{position:relative; top:0; max-height:none}
       .row-2{grid-template-columns:1fr}
     }
   </style>
@@ -87,66 +105,95 @@
 <body>
   <main class="wrap">
     <h1>Înscriere furnizor</h1>
-    <div class="subtitle">Completează datele și alege serviciile oferite. Bifează minim o opțiune.</div>
+    <div class="subtitle">Completează datele și alege serviciile oferite. Bifează minim o opțiune în sub‑subcategorii.</div>
 
     <form id="f" novalidate>
-      <section id="taxo-grid">
-        <!-- Stânga -->
+      <section id="taxo-grid" aria-label="Selecție subcategorii">
+        <!-- Stânga: Subcategorii -->
         <div id="subcat-wrap" hidden>
           <div class="toolbar">
-            <strong>Subcategorie <span id="subcat-count-chip"></span></strong>
+            <div class="left">
+              <strong>Subcategorie</strong>
+              <span class="meta-count" id="subcat-count-chip" aria-live="polite"></span>
+            </div>
             <div class="right">
-              <button type="button" class="btn-small" id="subcat-toggle">Restrânge</button>
+              <button type="button" class="btn-small" id="subcat-toggle" aria-expanded="true">Restrânge</button>
               <button type="button" class="btn-small" id="subcat-reset">Reset</button>
             </div>
           </div>
-          <div id="subcats"></div>
+          <div id="subcats" role="tablist" aria-label="Subcategorii"></div>
         </div>
 
-        <!-- Mijloc -->
-        <div id="child-wrap" hidden>
+        <!-- Mijloc: Sub-subcategorii -->
+        <div id="child-wrap" hidden aria-live="polite">
           <div class="child-title">
-            <span>Sub-subcategorii</span>
+            <label style="margin:0;">Sub‑subcategorii (bifează minim 1)</label>
             <div class="tools">
               <button type="button" class="btn-small" id="children-collapse-all">Restrânge toate</button>
               <button type="button" class="btn-small" id="children-expand-all">Extinde toate</button>
-              <small id="min1-hint" class="hint-danger" style="display:none;">Selectează cel puțin una</small>
+              <small id="min1-hint" style="color:#b00020;display:none;margin-left:6px;">Selectează cel puțin una</small>
             </div>
           </div>
           <div id="children"></div>
         </div>
 
-        <!-- Dreapta -->
+        <!-- Dreapta: Detalii furnizor + submit -->
         <aside id="vendor-card">
-          <h3>Detalii furnizor</h3>
-          <label for="company_name">Companie *</label>
-          <input id="company_name" required>
-          <label for="service_name">Serviciu *</label>
-          <select id="service_name" required><option value="">Alege serviciul</option></select>
-          <label for="reg_judet">Județ *</label>
-          <select id="reg_judet" required><option value="">Alege județul</option></select>
-          <label for="reg_oras">Oraș *</label>
-          <select id="reg_oras" required disabled><option value="">Alege orașul</option></select>
-          <div class="row-2">
-            <div><label for="phone">Telefon</label><input id="phone" placeholder="07..."></div>
-            <div><label for="email">Email</label><input id="email" type="email" placeholder="contact@..."></div>
+          <div class="vcard">
+            <h3>Detalii furnizor</h3>
+
+            <label for="company_name">Companie *</label>
+            <input id="company_name" required/>
+
+            <label for="service_name">Serviciu *</label>
+            <select id="service_name" required>
+              <option value="">Alege serviciul</option>
+            </select>
+
+            <label for="reg_judet">Județ *</label>
+            <select id="reg_judet" required>
+              <option value="">Alege județul</option>
+            </select>
+
+            <label for="reg_oras">Oraș *</label>
+            <select id="reg_oras" required disabled>
+              <option value="">Alege orașul</option>
+            </select>
+
+            <div class="row-2">
+              <div>
+                <label for="phone">Telefon</label>
+                <input id="phone" placeholder="07..."/>
+              </div>
+              <div>
+                <label for="email">Email</label>
+                <input id="email" type="email" placeholder="contact@..."/>
+              </div>
+            </div>
+
+            <label for="description">Descriere</label>
+            <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
+
+            <!-- Hidden pentru backend -->
+            <input type="hidden" id="subcat">
+            <input type="hidden" id="subcat_name">
+            <input type="hidden" id="subsub">
+
+            <div class="v-actions">
+              <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
+              <button type="submit">Trimite</button>
+            </div>
+            <div class="msg" id="msg"></div>
           </div>
-          <label for="description">Descriere</label>
-          <textarea id="description" rows="3"></textarea>
-          <input type="hidden" id="subcat"><input type="hidden" id="subcat_name"><input type="hidden" id="subsub">
-          <div class="v-actions">
-            <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
-            <button type="submit">Trimite</button>
-          </div>
-          <div id="msg" class="msg"></div>
         </aside>
       </section>
     </form>
   </main>
 
-  <!-- === Scripturi === -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- ===== Scripturile TALE (copiate identic) ===== -->
+
   <script>
+    /* --- Helpers select --- */
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
       const first = document.createElement('option');
@@ -158,101 +205,369 @@
         const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
       });
     }
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
         const { services=[], judete=[] } = await r.json();
-        fillSelect(document.getElementById('service_name'), services, 'Alege serviciul');
-        fillSelect(document.getElementById('reg_judet'), judete,  'Alege județul');
+        const selServ = document.getElementById('service_name');
+        const selJ = document.getElementById('reg_judet');
+        const selO = document.getElementById('reg_oras');
+
+        fillSelect(selServ, services, 'Alege serviciul');
+        fillSelect(selJ, judete,  'Alege județul');
+        fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
+
+        selJ.addEventListener('change', async (ev)=>{
+          const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
+          if (!judet) return;
+          const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
+          const { orase=[] } = await rr.json();
+          fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
+          if (selServ.value) loadSubcatsForSignup();
+        });
+        selO.addEventListener('change', ()=>{ if (selServ.value) loadSubcatsForSignup(); });
+        selServ.addEventListener('change', loadSubcatsForSignup);
+
+        if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
       } catch(e){ console.error(e); }
     });
   </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    (async () => {
-      const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-      const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  (async () => {
+    const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      document.getElementById('f').addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const form=ev.target, btn=form.querySelector('button[type="submit"]');
-        const originalLabel=btn.textContent;
-        btn.disabled=true; btn.textContent='Se trimite...';
-        const msg=document.getElementById('msg'); msg.textContent='Trimit...';
+    document.getElementById('f').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const form=ev.target, btn=form.querySelector('button[type="submit"]');
+      const originalLabel=btn.textContent;
+      btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Se trimite...';
+      const msg=document.getElementById('msg'); msg.style.color=''; msg.textContent='Trimit...';
 
-        const { data:{session} } = await supa.auth.getSession();
-        if (!session?.access_token){
-          msg.className='msg hint-danger'; msg.textContent='Trebuie autentificare.';
-          btn.disabled=false; btn.textContent=originalLabel; return;
-        }
-        const selectedChildIds = Array.from(__sel.bySub.values()).flatMap(s => Array.from(s)).map(v => Number(v)).filter(n => Number.isFinite(n));
-        const payload = {
-          company_name: document.getElementById('company_name').value.trim(),
-          service_name: document.getElementById('service_name').value,
-          judet:document.getElementById('reg_judet').value,
-          oras:document.getElementById('reg_oras').value,
-          phone:document.getElementById('phone').value,
-          email:document.getElementById('email').value,
-          description:document.getElementById('description').value,
-          subcat:document.getElementById('subcat').value||null,
-          subcat_name:document.getElementById('subcat_name').value||null,
-          subsub:document.getElementById('subsub').value||null,
-          subsubs:selectedChildIds
-        };
-        try{
-          const r = await fetch('/.netlify/functions/register_provider', {
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-            body:JSON.stringify(payload)
-          });
-          const data = await r.json();
-          if (!r.ok) throw new Error(data.error||'Eroare necunoscută');
-          msg.className='msg hint-ok'; msg.textContent='Înscriere reușită!';
-          form.reset(); document.getElementById('reg_oras').disabled=true;
-          document.getElementById('child-wrap').hidden=true; document.getElementById('subcat-wrap').hidden=true;
-          __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-        }catch(e){ msg.className='msg hint-danger'; msg.textContent='Eroare: '+e.message; }
-        finally{ btn.disabled=false; btn.textContent=originalLabel; }
+      const { data:{session} } = await supa.auth.getSession();
+      if (!session?.access_token){
+        msg.style.color='crimson'; msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
+        btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel; return;
+      }
+
+      const selectedChildIds = Array.from(__sel.bySub.values())
+        .flatMap(s => Array.from(s))
+        .map(v => Number(v))
+        .filter(n => Number.isFinite(n));
+
+      const payload = {
+        company_name: document.getElementById('company_name').value.trim(),
+        service_name: document.getElementById('service_name').value,
+        judet:        document.getElementById('reg_judet').value,
+        oras:         document.getElementById('reg_oras').value,
+        phone:        document.getElementById('phone').value,
+        email:        document.getElementById('email').value,
+        description:  document.getElementById('description').value,
+        subcat:       document.getElementById('subcat').value || null,
+        subcat_name:  document.getElementById('subcat_name').value || null,
+        subsub:       document.getElementById('subsub').value || null,
+        subsubs:      selectedChildIds
+      };
+
+      try{
+        const r = await fetch('/.netlify/functions/register_provider', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
+        msg.style.color='green'; msg.textContent='Înscriere reușită! Mulțumim.';
+        form.reset(); document.getElementById('reg_oras').disabled=true;
+        document.getElementById('child-wrap').hidden=true;
+        document.getElementById('subcat-wrap').hidden=true;
+        __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
+      }catch(e){
+        msg.style.color='crimson'; msg.textContent='Eroare: '+e.message;
+      }finally{
+        btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent=originalLabel;
+      }
+    });
+  })();
+  </script>
+
+  <script>
+    /* --- STATE --- */
+    const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
+    const __subMeta = new Map();          // subId -> {btn, name}
+    const __cacheChildren = new Map();    // subId -> children[]
+
+    /* --- HELPERS --- */
+    async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+    function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
+    function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
+    function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
+
+    function syncHiddenFromState(){
+      const ids=[], names=[];
+      for (const [key,set] of __sel.bySub.entries()){
+        if (!set.size) continue;
+        const meta = __subMeta.get(key) || {};
+        if (Number.isInteger(key)) ids.push(String(key));
+        else names.push(meta.name || String(key));
+      }
+      document.getElementById('subcat').value = ids.join(',');
+      document.getElementById('subcat_name').value = names.join(',');
+      const firstKid = Array.from(__sel.bySub.values()).flatMap(s=>Array.from(s))[0];
+      document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
+      updateSidebarSelectedCount();
+    }
+
+    /* Sidebar: contor subcategorii cu selecții */
+    function updateSidebarSelectedCount(){
+      const n = Array.from(__sel.bySub.values()).filter(s=>s.size>0).length;
+      const el = document.getElementById('subcat-count-chip');
+      if(!el) return;
+      el.textContent = n ? `(${n} selectate)` : '';
+    }
+
+    /* RENDER: lista verticală de subcategorii (chips pe toată lățimea) */
+    function renderChips(container, items){
+      container.innerHTML=''; __subMeta.clear();
+      items.forEach(it=>{
+        const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
+        const name = it.name ?? it.subcat_name ?? '';
+        const btn = document.createElement('button');
+        btn.type='button';
+        btn.textContent=name;
+        btn.className='chip';
+        btn.setAttribute('role','tab');
+        btn.setAttribute('aria-selected', ((__sel.bySub.get(id)?.size||0)>0) ? 'true' : 'false');
+        btn.setAttribute('aria-controls', childGroupId(id));
+        btn.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); btn.click(); } });
+
+        __subMeta.set(id,{btn,name});
+        setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
+        btn.addEventListener('click', ()=>toggleChildGroup(id));
+        container.appendChild(btn);
       });
+      document.getElementById('subcat-wrap').hidden = false;
+      updateSidebarSelectedCount();
+    }
+
+    function resyncGroupCheckboxes(subId){
+      const group = document.getElementById(childGroupId(subId));
+      if (!group) return;
+      const set = __sel.bySub.get(subId) || new Set();
+      group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = set.has(String(cb.value));
+      });
+      setChipColor((__subMeta.get(subId)||{}).btn, set.size>0);
+      const chip = (__subMeta.get(subId)||{}).btn;
+      if (chip) chip.setAttribute('aria-selected', set.size>0 ? 'true' : 'false');
+      updateSidebarSelectedCount();
+    }
+
+    /* UI copii (dreapta) */
+    async function toggleChildGroup(subId){
+      ensureChildWrapVisible();
+
+      const container = document.getElementById('children');
+      const groupId = childGroupId(subId);
+      let group = document.getElementById(groupId);
+      const chip  = (__subMeta.get(subId)||{}).btn;
+
+      const isOpen = !!group && !group.hidden;
+      if (isOpen){
+        group.hidden = true;
+        if (chip) chip.setAttribute('aria-selected', ((__sel.bySub.get(subId)?.size||0)>0) ? 'true' : 'false');
+        return;
+      }
+
+      if (!group){
+        const kids = await loadChildren(subId);
+        const meta = __subMeta.get(subId) || {};
+
+        group = document.createElement('section');
+        group.className = 'child-group';
+        group.id = groupId;
+
+        const title = document.createElement('div');
+        title.className = 'child-title';
+        const tspan = document.createElement('span');
+        tspan.textContent = meta.name || ('Subcategorie ' + subId);
+
+        /* butoane pentru fiecare grup de copii (ascunde acest grup) */
+        const ttools = document.createElement('div');
+        ttools.className = 'tools';
+        const tbtn = document.createElement('button');
+        tbtn.type = 'button';
+        tbtn.className = 'btn-small';
+        tbtn.textContent = 'Ascunde';
+        tbtn.addEventListener('click', ()=>{ group.hidden = true; });
+        ttools.appendChild(tbtn);
+
+        title.appendChild(tspan); title.appendChild(ttools);
+        group.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'child-grid';
+        const selectedSet = __sel.bySub.get(subId) || new Set();
+
+        kids.forEach(kid=>{
+          const safeKey = (kid.id != null)
+            ? String(kid.id)
+            : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+          const inputId = `kid_${subId}_${safeKey}`;
+
+          const lab = document.createElement('label');
+          lab.className = 'child-item';
+          lab.setAttribute('for', inputId);
+
+          const cb  = document.createElement('input');
+          cb.type   = 'checkbox';
+          cb.id     = inputId;
+          cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
+          cb.checked = selectedSet.has(String(cb.value));
+
+          cb.addEventListener('change', ()=>{
+            let set = __sel.bySub.get(subId);
+            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
+
+            const val = String(cb.value);
+            if (cb.checked) set.add(val); else set.delete(val);
+            if (set.size === 0) __sel.bySub.delete(subId);
+
+            const hasAny = (__sel.bySub.get(subId)?.size || 0) > 0;
+            setChipColor(chip, hasAny);
+            if (chip) chip.setAttribute('aria-selected', hasAny ? 'true' : 'false');
+
+            syncHiddenFromState();
+
+            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+              document.getElementById('min1-hint').style.display = 'none';
+            }
+          });
+
+          lab.appendChild(cb);
+          lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+          grid.appendChild(lab);
+        });
+
+        group.appendChild(grid);
+        container.appendChild(group);
+      }
+
+      // Deschide doar grupul selectat și închide celelalte (curat vizual)
+      document.querySelectorAll('#children .child-group').forEach(g=>{
+        g.hidden = (g.id !== groupId) ? true : false;
+      });
+
+      group.hidden = false;
+      if (chip) chip.setAttribute('aria-selected', 'true');
+      resyncGroupCheckboxes(subId);
+    }
+
+    async function loadChildren(subId){
+      if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
+
+      const meta = __subMeta.get(subId) || {};
+      const judet = document.getElementById('reg_judet')?.value || '';
+      const oras  = document.getElementById('reg_oras')?.value || '';
+      const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
+
+      const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam)
+                + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+                + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+      const { children=[] } = await ajx(url);
+      __cacheChildren.set(subId, children);
+      return children;
+    }
+
+    async function loadSubcatsForSignup(){
+      const service = document.getElementById('service_name')?.value || '';
+      const judet   = document.getElementById('reg_judet')?.value || '';
+      const oras    = document.getElementById('reg_oras')?.value || '';
+      const wrap    = document.getElementById('subcat-wrap');
+      const cont    = document.getElementById('subcats');
+      const childW  = document.getElementById('child-wrap');
+      const childC  = document.getElementById('children');
+
+      // reset
+      document.getElementById('subcat').value='';
+      document.getElementById('subcat_name').value='';
+      document.getElementById('subsub').value='';
+      __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
+      childW.hidden=true; childC.innerHTML='';
+
+      if (!service){ wrap.hidden=true; cont.innerHTML=''; return; }
+
+      const url = '/.netlify/functions/taxonomy?mode=subcategories'
+                + '&service=' + encodeURIComponent(service)
+                + (judet ? '&judet=' + encodeURIComponent(judet) : '')
+                + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+      try{
+        const { subcategories=[] } = await ajx(url);
+        if (!subcategories.length){ wrap.hidden=true; cont.innerHTML=''; return; }
+        renderChips(cont, subcategories);
+        wrap.hidden = false;
+      }catch(e){ console.error(e); wrap.hidden=true; }
+    }
+
+    /* Validare minim 1 copil dacă există cel puțin o subcategorie selectată */
+    (function(){
+      const form=document.getElementById('f');
+      if (!form) return;
+      form.addEventListener('submit',(ev)=>{
+        const hasAnySub = __sel.bySub.size>0;
+        const hasAnyKid = Array.from(__sel.bySub.values()).some(s=>s.size>0);
+        if (hasAnySub && !hasAnyKid){
+          ev.preventDefault();
+          document.getElementById('min1-hint').style.display='inline';
+          document.getElementById('child-wrap').scrollIntoView({behavior:'smooth', block:'center'});
+        }
+      }, true);
     })();
+
+    /* Reset subcategorii */
+    document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
+      document.getElementById('subcat').value='';
+      document.getElementById('subcat_name').value='';
+      document.getElementById('subsub').value='';
+      __sel.bySub.clear();
+      for (const {btn} of __subMeta.values()) setChipColor(btn,false);
+      document.getElementById('children').innerHTML='';
+      document.getElementById('child-wrap').hidden=true;
+      updateSidebarSelectedCount();
+    });
+
+    /* Sidebar: restrânge/ extinde lista de subcategorii */
+    document.getElementById('subcat-toggle')?.addEventListener('click', (e)=>{
+      const wrap = document.getElementById('subcat-wrap');
+      const isCollapsed = wrap.classList.toggle('collapsed');
+      e.target.textContent = isCollapsed ? 'Extinde' : 'Restrânge';
+      e.target.setAttribute('aria-expanded', String(!isCollapsed));
+    });
+
+    /* Panou copii: restrânge / extinde toate grupurile deschise */
+    document.getElementById('children-collapse-all')?.addEventListener('click', ()=>{
+      document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true);
+    });
+    document.getElementById('children-expand-all')?.addEventListener('click', ()=>{
+      document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false);
+    });
+
+    /* Reîncarcă la schimbări */
+    document.getElementById('service_name')?.addEventListener('change', loadSubcatsForSignup);
+    document.getElementById('reg_judet')   ?.addEventListener('change', loadSubcatsForSignup);
+    document.getElementById('reg_oras')    ?.addEventListener('change', loadSubcatsForSignup);
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      if (document.getElementById('service_name')?.value) loadSubcatsForSignup();
+    });
   </script>
-  <script>
-    const __sel={bySub:new Map()},__subMeta=new Map(),__cacheChildren=new Map();
-    async function ajx(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(await r.text());return r.json();}
-    function setChipColor(btn,on){if(btn)btn.classList.toggle('blue',!!on);}
-    function childGroupId(subId){return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_');}
-    function ensureChildWrapVisible(){document.getElementById('child-wrap').hidden=false;}
-    function updateSidebarSelectedCount(){const n=Array.from(__sel.bySub.values()).filter(s=>s.size>0).length;
-      document.getElementById('subcat-count-chip').textContent=n?`(${n} selectate)`:'';}
-    function renderChips(container,items){container.innerHTML='';__subMeta.clear();items.forEach(it=>{
-      const id=(it.id!=null)?Number(it.id):(it.subcat_id!=null?Number(it.subcat_id):String(it.name||it.subcat_name||''));const name=it.name??it.subcat_name??'';
-      const btn=document.createElement('button');btn.type='button';btn.className='chip';
-      const title=document.createElement('span');title.textContent=name;
-      const badge=document.createElement('span');badge.className='badge';badge.textContent='0';btn.append(title,badge);
-      __subMeta.set(id,{btn,name,badge});
-      btn.addEventListener('click',()=>toggleChildGroup(id));container.appendChild(btn);});
-      document.getElementById('subcat-wrap').hidden=false;updateSidebarSelectedCount();}
-    function updateChipBadge(subId){const meta=__subMeta.get(subId);if(!meta)return;const set=__sel.bySub.get(subId)||new Set();meta.badge.textContent=String(set.size||0);}
-    function resyncGroupCheckboxes(subId){const group=document.getElementById(childGroupId(subId));if(!group)return;const set=__sel.bySub.get(subId)||new Set();
-      group.querySelectorAll('input').forEach(cb=>{cb.checked=set.has(String(cb.value));cb.closest('.child-item')?.classList.toggle('on',cb.checked);});
-      updateChipBadge(subId);updateSidebarSelectedCount();}
-    async function toggleChildGroup(subId){ensureChildWrapVisible();const container=document.getElementById('children');
-      const groupId=childGroupId(subId);let group=document.getElementById(groupId);if(group){group.hidden=!group.hidden;return;}
-      const kids=await loadChildren(subId);const meta=__subMeta.get(subId)||{};
-      group=document.createElement('section');group.className='child-group';group.id=groupId;
-      const title=document.createElement('div');title.className='child-title';title.textContent=meta.name;group.appendChild(title);
-      const grid=document.createElement('div');grid.className='child-grid';
-      kids.forEach(kid=>{const inputId=`kid_${subId}_${kid.id||kid.name}`;const lab=document.createElement('label');lab.className='child-item';lab.setAttribute('for',inputId);
-        const cb=document.createElement('input');cb.type='checkbox';cb.id=inputId;cb.value=kid.id||kid.name;cb.addEventListener('change',()=>{
-          let set=__sel.bySub.get(subId);if(!set){set=new Set();__sel.bySub.set(subId,set);}
-          cb.checked?set.add(cb.value):set.delete(cb.value);if(set.size===0)__sel.bySub.delete(subId);
-          lab.classList.toggle('on',cb.checked);updateChipBadge(subId);updateSidebarSelectedCount();});lab.append(cb,document.createTextNode(kid.name));grid.appendChild(lab);});
-      group.appendChild(grid);container.appendChild(group);}
-    async function loadChildren(subId){if(__cacheChildren.has(subId))return __cacheChildren.get(subId);
-      const {children=[]}=await ajx('/.netlify/functions/taxonomy?mode=children&subcat='+encodeURIComponent(subId));__cacheChildren.set(subId,children);return children;}
-    async function loadSubcatsForSignup(){const service=document.getElementById('service_name')?.value||'';if(!service){document.getElementById('subcat-wrap').hidden=true;return;}
-      const {subcategories=[]}=await ajx('/.netlify/functions/taxonomy?mode=subcategories&service='+encodeURIComponent(service));renderChips(document.getElementById('subcats'),subcategories);}
-    document.getElementById('service_name')?.addEventListener('change',loadSubcatsForSignup);
-  </script>
+
 </body>
 </html>
