@@ -6,13 +6,13 @@
   node_bundler = "esbuild"
   external_node_modules = ["twilio","@supabase/supabase-js"]
 
-# Proxy API
+# Proxy API -> Functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-# (opțional) fallback pentru SPA/rute client
+# (opțional) fallback pentru SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"
