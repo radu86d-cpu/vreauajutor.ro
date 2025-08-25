@@ -14,6 +14,16 @@ function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 function refreshSubmitState() {
   const emailOk = validEmail(emailInput?.value || "");
   if (submitBtn) submitBtn.disabled = !(emailOk && phoneVerified);
+
+  // marchează email valid/invalid vizual
+  if (emailInput) {
+    if (emailOk) {
+      emailInput.classList.add("valid");
+      emailInput.classList.remove("invalid");
+    } else {
+      emailInput.classList.remove("valid");
+    }
+  }
 }
 
 function normalizePhone(raw) {
@@ -74,8 +84,10 @@ otpBtn?.addEventListener("click", async () => {
 
     if (phoneVerified) {
       setStatus("✅ Telefon verificat", "verified");
+      phoneInput.classList.add("valid");
     } else {
       setStatus("Cod invalid sau expirat", "error");
+      phoneInput.classList.remove("valid");
       alert("Cod invalid");
     }
 
