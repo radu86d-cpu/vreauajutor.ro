@@ -5,55 +5,34 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Oferă servicii • VreauAjutor.ro</title>
 
-  <!-- Dacă ai deja style.css global, îl păstrăm -->
+  <!-- Stiluri globale site -->
   <link rel="stylesheet" href="./style.css" />
-
-  <style>
-    /* UI minim ca să arate ok și fără CSS global */
-    .container { max-width: 980px; margin: 24px auto; padding: 16px; }
-    .card { background:#fff; border:1px solid #eee; border-radius:16px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
-    .grid { display:grid; gap:14px; }
-    .grid-2 { grid-template-columns: 1fr 1fr; }
-    label { font-weight:600; display:block; margin-bottom:6px; }
-    input, select, textarea, button {
-      width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:16px;
-    }
-    textarea { min-height:120px; resize:vertical; }
-    button { cursor:pointer; }
-    button[disabled] { opacity:.6; cursor:not-allowed; }
-    .row { display:flex; gap:10px; align-items:center; }
-    .row > * { flex:1; }
-    .service-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-    .service-chip { padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fff; cursor:pointer; }
-    .service-chip:hover { border-color:#bbb; }
-    .hint { color:#666; font-size:13px; margin-top:4px; }
-    header.page { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-    header.page h1 { font-size:24px; margin:0; }
-  </style>
+  <!-- Stiluri scoped pentru această pagină -->
+  <link rel="stylesheet" href="./assets/css/offer.css" />
 </head>
-<body>
-  <div class="container">
+<body class="offer">
+  <div class="offer-container">
     <header class="page">
       <h1>Înregistrează-ți serviciul</h1>
       <a href="./index.html" style="text-decoration:none">← Înapoi la Acasă</a>
     </header>
 
-    <div class="card grid">
+    <div class="offer-card offer-grid">
       <!-- 1) Date de contact + verificare telefon + email valid -->
-      <div class="grid grid-2">
+      <div class="offer-grid offer-grid-2">
         <div>
           <label for="email">Email (obligatoriu)</label>
           <input id="email" type="email" placeholder="ex: firma@exemplu.ro" required />
-          <div class="hint">Butonul „Trimite” se activează doar cu email valid + telefon verificat.</div>
+          <div class="offer-hint">Butonul „Trimite” se activează doar cu email valid + telefon verificat.</div>
         </div>
 
         <div>
           <label for="phone">Telefon (cu verificare SMS)</label>
-          <div class="row">
+          <div class="offer-row">
             <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
             <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
           </div>
-          <div class="hint">Primești un cod prin SMS. Introdu-l când ți se cere.</div>
+          <div class="offer-hint">Primești un cod prin SMS. Introdu-l când ți se cere.</div>
         </div>
       </div>
 
@@ -63,14 +42,14 @@
         <select id="serviceSelect">
           <option value="">Se încarcă...</option>
         </select>
-        <div class="hint">Lista se încarcă din baza de date (Supabase) prin endpointul /api/categories.</div>
+        <div class="offer-hint">Lista se încarcă din baza de date (Supabase) prin endpointul /api/categories.</div>
       </div>
 
-      <!-- (Opțional) listă de butoane „chips” dacă vrei afișare alternativă -->
+      <!-- (Opțional) listă de butoane „chips” -->
       <div>
         <label>Servicii populare</label>
         <div id="serviceList" class="service-list"></div>
-        <div class="hint">Click pe un serviciu ca să-l preselectezi în dropdown.</div>
+        <div class="offer-hint">Click pe un serviciu ca să-l preselectezi în dropdown.</div>
       </div>
 
       <!-- 3) Descriere și detalii -->
@@ -82,23 +61,19 @@
       <!-- 4) Trimite -->
       <div>
         <button id="btnSubmit" type="button" disabled>Trimite</button>
-        <div class="hint">După trimitere, datele vor fi verificate și vei primi confirmare pe email.</div>
+        <div class="offer-hint">După trimitere, datele vor fi verificate și vei primi confirmare pe email.</div>
       </div>
     </div>
   </div>
 
-  <!-- Scripturile de UI (module) -->
+  <!-- Scripturi -->
   <script type="module">
-    // 1) Importăm helper-ele pentru categorii (frontend)
     import { initServiceSelect, initServiceButtons } from "./assets/js/categories-ui.js";
-    // 2) Importăm logica de email valid + verificare telefon (OTP)
     import "./assets/js/auth-ui.js";
 
-    // Populează dropdown-ul și lista de butoane
     await initServiceSelect("#serviceSelect");
     await initServiceButtons("#serviceList");
 
-    // Când utilizatorul apasă pe un „chip”, îl folosim ca să setăm selectul
     document.getElementById("serviceList").addEventListener("click", (e) => {
       const btn = e.target.closest(".service-chip");
       if (!btn) return;
@@ -107,7 +82,6 @@
       if (id && select) select.value = id;
     });
 
-    // (Exemplu) handler „Trimite” – aici pui call-ul tău către backend când e gata
     document.getElementById("btnSubmit").addEventListener("click", async () => {
       const email = document.getElementById("email").value.trim();
       const phone = document.getElementById("phone").value.trim();
@@ -115,11 +89,6 @@
       const descriere = document.getElementById("descriere").value.trim();
 
       if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
-
-      // TODO: aici faci POST către endpointul tău care salvează oferta în DB
-      // exemplu:
-      // const r = await fetch("/api/create-offer", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, phone, serviceId, descriere }) }).then(r=>r.json());
-      // if (r?.ok) { alert("Gata!"); } else { alert(r?.error || "Eroare la trimitere"); }
 
       alert("Demo: formularul ar trimite aceste date:\n" +
         JSON.stringify({ email, phone, serviceId, descriere }, null, 2));
