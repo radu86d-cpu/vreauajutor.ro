@@ -1,39 +1,35 @@
-import { cors, json, bad, method } from "./_shared/utils.js";
+// netlify/functions/otp_verify.js
+import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
 import twilio from "twilio";
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const VERIFY_SID = process.env.TWILIO_VERIFY_SID;
-
-// opțional DOAR pentru test: dacă îl setezi, codul egal cu această valoare va trece direct.
-// În producție lasă-l necompletat în Netlify (sau șters).
-const TEST_MASTER_OTP = process.env.TEST_MASTER_OTP || "";
+const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID } = process.env;
+const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 export default async (req) => {
+  const opt = handleOptions(req); if (opt) return opt;
+
   const m = method(req, ["POST"]);
-  const headers = cors(req);
-  if (m === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
 
-  let body = {};
-  try { body = await req.json(); } catch { /* ignore */ }
-
-  const phone = (body.phone || "").trim();
-  const code  = (body.code  || "").trim();
-
-  if (!phone || !code) return bad("Lipsește telefonul sau codul.");
-  if (!/^\+?[1-9]\d{6,15}$/.test(phone)) return bad("Număr de telefon invalid.");
-  if (!/^\d{3,10}$/.test(code) && code !== TEST_MASTER_OTP) return bad("Cod OTP invalid.");
-
-  // master OTP numai pentru dezvoltare
-  if (TEST_MASTER_OTP && code === TEST_MASTER_OTP) {
-    return json({ ok: true, bypass: true }, { headers });
+  if (!rateLimit(req, { windowSec: 60, max: 8 })) {
+    return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
   }
 
+  const body = await bodyJSON(req);
+  const phone = (body.phone || "").trim();
+  const code = (body.code || "").trim();
+
+  if (!phone || !code) return bad("Telefon și cod sunt obligatorii.");
+
   try {
-    const res = await client.verify.v2.services(VERIFY_SID).verificationChecks.create({ to: phone, code });
-    if (res.status === "approved") return json({ ok: true }, { headers });
-    return bad("Cod invalid sau expirat.", 400);
+    const resp = await client.verify.v2
+      .services(TWILIO_VERIFY_SID)
+      .verificationChecks
+      .create({ to: phone, code });
+
+    const verified = resp.status === "approved";
+    return json({ ok: verified, status: resp.status });
   } catch (e) {
-    console.error("otp_verify", e?.message || e);
-    return bad("Eroare la verificare. Încearcă din nou.", 500);
+    return bad(e?.message || "Eroare Twilio", 500);
   }
 };
