@@ -124,3 +124,9 @@
 @media (prefers-reduced-motion:reduce){
   .offer .child-item,.offer #subcats .chip{transition:none!important}
 }
+
+.offer #subcats .chip.blue {
+  background: #eef5ff !important;
+  border-color: #93c5fd !important;
+  color: #173bce !important;
+}
