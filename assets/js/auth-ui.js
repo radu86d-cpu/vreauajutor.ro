@@ -15,8 +15,25 @@ function refreshSubmitState() {
 
 emailInput?.addEventListener("input", refreshSubmitState);
 
+// --- helper pentru normalizare număr ---
+function normalizePhone(raw) {
+  let v = (raw || "").trim();
+  if (!v) return v;
+
+  // dacă începe cu 0 (ex. 07...), îl transformăm în +40...
+  if (/^0\d{8,}$/.test(v)) {
+    v = "+40" + v.substring(1);
+  }
+
+  // dacă nu începe cu +, prefixăm + în față
+  if (!v.startsWith("+")) {
+    v = "+" + v;
+  }
+  return v;
+}
+
 otpBtn?.addEventListener("click", async () => {
-  const phone = (phoneInput?.value || "").trim();
+  let phone = normalizePhone(phoneInput?.value || "");
   if (!phone) { alert("Introdu numărul de telefon"); return; }
 
   try {
