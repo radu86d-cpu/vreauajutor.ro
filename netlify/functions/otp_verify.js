@@ -1,6 +1,7 @@
 // netlify/functions/otp_verify.js
 import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
 import twilio from "twilio";
+import { signOtpToken } from "./_shared/tokens.js";
 
 const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID } = process.env;
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -27,8 +28,12 @@ export default async (req) => {
       .verificationChecks
       .create({ to: phone, code });
 
-    const verified = resp.status === "approved";
-    return json({ ok: verified, status: resp.status });
+    const approved = resp.status === "approved";
+    if (!approved) return json({ ok: false, status: resp.status });
+
+    // token OTP scurt‑viață, semnat pe server (valabil 15 min)
+    const otpToken = signOtpToken({ kind: "otp", phone });
+    return json({ ok: true, status: resp.status, otpToken });
   } catch (e) {
     return bad(e?.message || "Eroare Twilio", 500);
   }
