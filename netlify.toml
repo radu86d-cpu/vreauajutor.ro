@@ -1,20 +1,34 @@
+# --- Build & Functions ---
 [build]
   publish   = "."
   functions = "netlify/functions"
 
 [functions]
+  # Folosim ESM și bundling cu esbuild
   node_bundler = "esbuild"
+  # Include și utilitarele comune (_shared) în bundle (siguranță la build)
+  included_files = ["netlify/functions/_shared/**"]
 
 [build.environment]
   NODE_VERSION = "18"
 
-# (păstrează redirecțiile dacă le folosești)
+# --- Redirecturi ---
+# Proxy pentru endpointul de chat (poți adăuga și altele similar)
 [[redirects]]
   from = "/chat"
   to   = "/.netlify/functions/chat"
   status = 200
 
+# SPA fallback (rămâne ultimul redirect)
 [[redirects]]
   from = "/*"
   to   = "/index.html"
   status = 200
+
+# --- Security headers (opțional, recomandat) ---
+[[headers]]
+  for = "/*"
+  [headers.values]
+  X-Frame-Options = "DENY"
+  X-Content-Type-Options = "nosniff"
+  Referrer-Policy = "strict-origin-when-cross-origin"
