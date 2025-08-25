@@ -301,16 +301,17 @@ function applyBlueFromState(){
 }
 
     function resyncGroupCheckboxes(subId){
-      const group = document.getElementById(childGroupId(subId));
-      if (!group) return;
-      const set = __sel.bySub.get(subId) || new Set();
-      group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.checked = set.has(String(cb.value));
-        cb.closest('.child-item')?.classList.toggle('on', cb.checked);
-      });
-      updateChipVisuals(subId);
-      updateSubmitState();
-    }
+  const group = document.getElementById(childGroupId(subId));
+  if (!group) return;
+  const set = __sel.bySub.get(subId) || new Set();
+  group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+    cb.checked = set.has(String(cb.value));
+    cb.closest('.child-item')?.classList.toggle('on', cb.checked);
+  });
+  updateChipVisuals(subId);
+  applyBlueFromState(); // 🔵 adăugat
+  updateSubmitState();
+}
 
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
