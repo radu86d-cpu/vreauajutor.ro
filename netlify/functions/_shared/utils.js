@@ -1,7 +1,7 @@
 // netlify/functions/_shared/utils.js
 
-// ---- CORS helpers ----
-const ALLOWED_ORIGINS = ["*"]; // pune domeniul tău (ex: "https://vreauajutor.ro") dacă vrei să restrângi
+// ---- CORS ----
+const ALLOWED_ORIGINS = ["*"]; // pune domeniul tău (ex: https://vreauajutor.ro) dacă vrei să restrângi
 
 export function corsHeaders() {
   return {
@@ -11,12 +11,10 @@ export function corsHeaders() {
   };
 }
 
-// alias compatibilitate: unele functions importă { cors } – îl oferim ca alias la headers
-export function cors() {
-  return corsHeaders();
-}
+// alias pentru compatibilitate cu import { cors }
+export function cors() { return corsHeaders(); }
 
-// răspuns rapid pentru OPTIONS
+// OPTIONS preflight
 export function handleOptions(req) {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders() });
@@ -24,7 +22,7 @@ export function handleOptions(req) {
   return null;
 }
 
-// ---- JSON helpers ----
+// ---- Răspunsuri JSON ----
 export function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -36,13 +34,13 @@ export function bad(message = "Bad Request", status = 400) {
   return json({ error: message }, status);
 }
 
-// ---- Method / rate limit / body ----
+// ---- Metodă / Rate-limit / Body ----
 export function method(req, allowed = ["GET"]) {
   const m = req.method?.toUpperCase?.() || "GET";
   return allowed.includes(m) ? m : "METHOD_NOT_ALLOWED";
 }
 
-// Rate-limit simplu în memorie (se resetează la cold start – suficient ca protecție de bază)
+// rate-limit simplu în memorie (se resetează la cold start)
 const rlMap = globalThis.__RATE_LIMIT__ || new Map();
 globalThis.__RATE_LIMIT__ = rlMap;
 
