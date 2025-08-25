@@ -7,14 +7,14 @@
 
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css"/>
-  <!-- CSS izolat pentru pagina aceasta (îl trimiți după) -->
+  <!-- CSS izolat pentru pagina aceasta -->
   <link rel="stylesheet" href="./offer.css"/>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
-  <!-- Wrapper pentru stiluri scoped: tot conținutul paginii stă în .offer -->
+<body class="offer">
+  <!-- Wrapper pentru stiluri scoped (opțional, pe lângă body.offer) -->
   <div class="offer">
     <main class="wrap">
       <h1>Înscriere furnizor</h1>
@@ -111,7 +111,7 @@
         </section>
       </form>
     </main>
-  </div> <!-- end .offer -->
+  </div>
 
   <!-- ======================== Helpers liste (services/judete/orase) ======================== -->
   <script>
@@ -240,7 +240,9 @@
       const meta = __subMeta.get(subId);
       if (!meta) return;
       const size = (__sel.bySub.get(subId)?.size || 0);
-      meta.btn.classList.toggle('blue', size > 0);         // albastru dacă are copii
+      const on = size > 0;
+      meta.btn.classList.toggle('blue', on);
+      meta.btn.classList.toggle('active', on); // alias suplimentar
       if (meta.badge) meta.badge.textContent = String(size);
     }
 
@@ -567,7 +569,7 @@
       document.getElementById('reg_oras').addEventListener(evt, updateSubmitState);
     });
 
-    // init OTP buttons
+    // init OTP
     resetOtpUI();
   </script>
 </body>
