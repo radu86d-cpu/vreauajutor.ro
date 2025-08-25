@@ -1,330 +1,129 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Oferă servicii – Autentificare/Înregistrare</title>
-  <!-- Preconnects (Supabase origin set dinamic în JS) -->
-  <link id="preconnect-supabase" rel="preconnect" href="" crossorigin>
-  <link rel="preconnect" href="https://www.gstatic.com"/>
-  <link rel="preconnect" href="https://cdn.simpleicons.org"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Oferă servicii • VreauAjutor.ro</title>
+
+  <!-- Dacă ai deja style.css global, îl păstrăm -->
+  <link rel="stylesheet" href="./style.css" />
+
   <style>
-    :root{
-      /* Design tokens */
-      --bg: #f5f7fc;
-      --ink: #0f172a;
-      --muted: #667085;
-      --card: #ffffff;
-      --border: #e6ebf2;
-      --primary: #0f62fe;
-      --accent: #6a5cff;
-      --accent-2: #7dd3fc;
-      --ok: #16a34a;
-      --err: #b00020;
-      --focus: 0 0 0 4px rgba(15,98,254,.18);
-      --shadow: 0 24px 64px rgba(17,24,39,.14), 0 2px 10px rgba(17,24,39,.06);
-      --radius: 22px;
+    /* UI minim ca să arate ok și fără CSS global */
+    .container { max-width: 980px; margin: 24px auto; padding: 16px; }
+    .card { background:#fff; border:1px solid #eee; border-radius:16px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+    .grid { display:grid; gap:14px; }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    label { font-weight:600; display:block; margin-bottom:6px; }
+    input, select, textarea, button {
+      width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:16px;
     }
-
-    /* Background: radial lights + subtle pattern */
-    body{margin:0; font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink); background:
-      radial-gradient(1400px 600px at -10% -20%, rgba(125,211,252,.25), transparent 60%),
-      radial-gradient(1000px 600px at 110% 0%, rgba(106,92,255,.18), transparent 60%),
-      repeating-linear-gradient(45deg, #f8fafc 0 18px, #f3f6fb 18px 36px);
-      min-height:100svh; display:grid; place-items:center; padding:28px;
-    }
-
-    .card{width:min(640px,92vw); background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:relative}
-    .card::before{content:""; position:absolute; inset:0 0 0 auto; width:6px; background:linear-gradient(180deg,var(--primary),var(--accent));}
-
-    .head{display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border)}
-    .brand{width:36px; height:36px; border-radius:12px; display:grid; place-items:center; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--primary),var(--accent)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.42)}
-    .title{font-weight:900; letter-spacing:-.02em; font-size:18px}
-
-    .body{padding:16px}
-
-    /* Provider buttons */
-    .oauth{display:flex; flex-direction:column; gap:10px}
-    .btn{--g:linear-gradient(135deg,var(--accent-2),var(--accent)); border:2px solid transparent; background:
-      linear-gradient(#fff,#fff) padding-box,
-      var(--g) border-box; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px; width:100%; font-weight:800; cursor:pointer; transition:transform .06s ease, filter .2s ease; color:#0f1c2e}
-    .btn:hover{filter:brightness(1.02)}
-    .btn:active{transform:translateY(1px)}
-    .btn:focus-visible{outline:none; box-shadow:var(--focus)}
-    .btn .ico{width:20px; height:20px; display:block}
-
-    .divider{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; margin:14px 0}
-    .divider::before,.divider::after{content:""; flex:1; height:1px; background:var(--border)}
-
-    /* Segmented tabs */
-    .seg{background:#f2f5fb; border:1px solid var(--border); border-radius:999px; padding:4px; display:flex; gap:6px; margin-bottom:12px}
-    .seg button{flex:1; border:0; background:transparent; border-radius:999px; padding:8px 10px; font-weight:800; cursor:pointer; color:#334155}
-    .seg button[aria-selected="true"]{background:#fff; color:var(--primary); box-shadow:0 2px 10px rgba(15,98,254,.15)}
-    .seg button:focus-visible{outline:none; box-shadow:var(--focus)}
-
-    /* Forms */
-    .form{display:none}
-    .form.active{display:block}
-    .field{position:relative; margin:12px 0}
-    .field input{width:100%; padding:14px 14px 12px; border:1px solid var(--border); background:#fff; border-radius:12px; font-size:14px; outline:none; transition:box-shadow .15s, border-color .15s}
-    .field input:focus{border-color:var(--primary); box-shadow:var(--focus)}
-    .field label{position:absolute; left:12px; top:10px; padding:0 6px; background:#fff; color:#475569; font-size:12px; transform:translateY(-50%)}
-
-    .toggle{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:38px; height:34px; display:grid; place-items:center; border:1px solid var(--border); background:#fff; border-radius:10px; cursor:pointer}
-
-    .actions{display:flex; align-items:center; justify-content:space-between; margin:10px 0}
-    .small{font-size:12px; color:var(--muted)}
-    .link{background:none; border:0; color:var(--primary); cursor:pointer; font-weight:700}
-    .link:focus-visible{outline:none; box-shadow:var(--focus)}
-
-    .submit{width:100%; padding:12px; border:0; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff; cursor:pointer; font-weight:900; letter-spacing:.2px; box-shadow:0 10px 26px rgba(15,98,254,.25)}
-    .submit[disabled]{opacity:.6; cursor:not-allowed; box-shadow:none}
-    .submit:focus-visible{outline:none; box-shadow:var(--focus)}
-
-    .msg{margin-top:10px; font-weight:700; font-size:13px}
-    .msg.ok{color:var(--ok)}
-    .msg.err{color:var(--err)}
-
-    .notice{margin-top:10px; color:#475569; font-size:12px}
-
-    /* Overlay loader */
-    .va-overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);display:none;place-items:center;z-index:9999}
-    .va-overlay.on{display:grid}
-    .spinner{width:38px;height:38px;border:3px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite}
-    @keyframes sp{to{transform:rotate(360deg)}}
-
-    /* Motion reduced */
-    @media (prefers-reduced-motion: reduce){
-      .btn,.submit{transition:none}
-      .spinner{animation:none}
-    }
-
-    @media (max-width:560px){
-      .card{border-radius:18px}
-      .head{padding:14px}
-      .body{padding:14px}
-    }
+    textarea { min-height:120px; resize:vertical; }
+    button { cursor:pointer; }
+    button[disabled] { opacity:.6; cursor:not-allowed; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .row > * { flex:1; }
+    .service-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .service-chip { padding:6px 10px; border-radius:999px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+    .service-chip:hover { border-color:#bbb; }
+    .hint { color:#666; font-size:13px; margin-top:4px; }
+    header.page { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    header.page h1 { font-size:24px; margin:0; }
   </style>
 </head>
 <body>
-  <section class="card" role="dialog" aria-modal="true">
-    <header class="head">
-      <!-- Înlocuiește "VA" cu logo-ul tău dacă dorești -->
-      <div class="brand" aria-hidden="true">VA</div>
-      <div class="title">Autentificare / Înregistrare</div>
+  <div class="container">
+    <header class="page">
+      <h1>Înregistrează-ți serviciul</h1>
+      <a href="./index.html" style="text-decoration:none">← Înapoi la Acasă</a>
     </header>
-    <div class="body">
-      <div class="oauth">
-        <button class="btn" id="btnFacebook">
-          <img class="ico" src="https://cdn.simpleicons.org/facebook/1877F2" alt="" aria-hidden="true"/>
-          Continuă cu Facebook
-        </button>
-        <button class="btn" id="btnApple">
-          <img class="ico" src="https://cdn.simpleicons.org/apple/000000" alt="" aria-hidden="true"/>
-          Continuă cu Apple
-        </button>
-        <button class="btn" id="btnGoogle">
-          <!-- Google G (gstatic official works best; păstrăm pentru fidelitate) -->
-          <img class="ico" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true"/>
-          Continuă cu Google
-        </button>
-      </div>
 
-      <div class="divider">sau</div>
-
-      <div class="seg" role="tablist" aria-label="Alege acțiunea">
-        <button class="seg-btn" role="tab" id="tab-in" aria-controls="pane-in" aria-selected="true">Intră în cont</button>
-        <button class="seg-btn" role="tab" id="tab-up" aria-controls="pane-up" aria-selected="false">Creează un cont</button>
-      </div>
-
-      <!-- Sign In -->
-      <form id="pane-in" class="form active" autocomplete="on">
-        <div class="field">
-          <label for="si-email">Adresa de e-mail</label>
-          <input id="si-email" type="email" inputmode="email" autocomplete="email" required/>
+    <div class="card grid">
+      <!-- 1) Date de contact + verificare telefon + email valid -->
+      <div class="grid grid-2">
+        <div>
+          <label for="email">Email (obligatoriu)</label>
+          <input id="email" type="email" placeholder="ex: firma@exemplu.ro" required />
+          <div class="hint">Butonul „Trimite” se activează doar cu email valid + telefon verificat.</div>
         </div>
-        <div class="field">
-          <label for="si-pass">Parolă</label>
-          <input id="si-pass" type="password" autocomplete="current-password" required/>
-          <button type="button" class="toggle" data-toggle="#si-pass" aria-label="Arată/ascunde parola">👁</button>
-        </div>
-        <div class="actions">
-          <div>
-            <button type="button" class="link" id="btnForgot">Ai uitat parola?</button>
-            <span class="small"> · </span>
-            <button type="button" class="link" id="btnMagic">Primește link pe email</button>
+
+        <div>
+          <label for="phone">Telefon (cu verificare SMS)</label>
+          <div class="row">
+            <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
+            <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
           </div>
-          <span class="small">Continuând, ești de acord cu <a class="link" href="/termeni.html">Termenii</a>.</span>
+          <div class="hint">Primești un cod prin SMS. Introdu-l când ți se cere.</div>
         </div>
-        <button class="submit" id="btnSignIn">Intră în cont</button>
-        <div id="si-msg" class="msg err" role="alert" aria-live="polite" hidden></div>
-      </form>
+      </div>
 
-      <!-- Sign Up -->
-      <form id="pane-up" class="form" autocomplete="on">
-        <div class="field">
-          <label for="su-email">Adresa de e-mail</label>
-          <input id="su-email" type="email" inputmode="email" autocomplete="email" required/>
-        </div>
-        <div class="field">
-          <label for="su-pass">Parolă</label>
-          <input id="su-pass" type="password" autocomplete="new-password" required/>
-          <button type="button" class="toggle" data-toggle="#su-pass" aria-label="Arată/ascunde parola">👁</button>
-        </div>
-        <div class="small" style="margin:-2px 0 10px">Parola minim 8 caractere.</div>
-        <button class="submit" id="btnSignUp">Creează cont</button>
-        <div id="su-msg" class="msg ok" role="status" aria-live="polite" hidden></div>
-      </form>
+      <!-- 2) Alegerea serviciului (dropdown populat din /api/categories) -->
+      <div>
+        <label for="serviceSelect">Categoria / Serviciul oferit</label>
+        <select id="serviceSelect">
+          <option value="">Se încarcă...</option>
+        </select>
+        <div class="hint">Lista se încarcă din baza de date (Supabase) prin endpointul /api/categories.</div>
+      </div>
 
-      <p class="notice">Ne conectăm prin Supabase. Logarea cu providerii externi respectă politicile lor.
-        Dacă te întorci fără să fii autentificat, verifică permisiunile sau încearcă dintr-un browser complet (Chrome/Safari).</p>
+      <!-- (Opțional) listă de butoane „chips” dacă vrei afișare alternativă -->
+      <div>
+        <label>Servicii populare</label>
+        <div id="serviceList" class="service-list"></div>
+        <div class="hint">Click pe un serviciu ca să-l preselectezi în dropdown.</div>
+      </div>
+
+      <!-- 3) Descriere și detalii -->
+      <div>
+        <label for="descriere">Descrierea serviciului</label>
+        <textarea id="descriere" placeholder="Spune pe scurt ce oferi, experiență, program, prețuri orientative etc."></textarea>
+      </div>
+
+      <!-- 4) Trimite -->
+      <div>
+        <button id="btnSubmit" type="button" disabled>Trimite</button>
+        <div class="hint">După trimitere, datele vor fi verificate și vei primi confirmare pe email.</div>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Overlay global loader -->
-  <div class="va-overlay" id="overlay"><div class="spinner"></div></div>
+  <!-- Scripturile de UI (module) -->
+  <script type="module">
+    // 1) Importăm helper-ele pentru categorii (frontend)
+    import { initServiceSelect, initServiceButtons } from "./assets/js/categories-ui.js";
+    // 2) Importăm logica de email valid + verificare telefon (OTP)
+    import "./assets/js/auth-ui.js";
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    (function(){
-      // In-app browser warning (Facebook/Instagram etc.)
-      (function(){
-        const isInApp = /FBAN|FBAV|Instagram|Line/i.test(navigator.userAgent);
-        if(!isInApp) return;
-        const b=document.createElement('div');
-        b.style.cssText='position:fixed;bottom:12px;left:50%;transform:translateX(-50%);padding:10px 14px;background:#111;color:#fff;border-radius:10px;font-weight:700;z-index:9999';
-        b.textContent='Deschide în browser (Safari/Chrome) pentru a continua autentificarea.';
-        document.body.appendChild(b);
-      })();
+    // Populează dropdown-ul și lista de butoane
+    await initServiceSelect("#serviceSelect");
+    await initServiceButtons("#serviceList");
 
-      // Tabs
-      const tabIn = document.getElementById('tab-in');
-      const tabUp = document.getElementById('tab-up');
-      const paneIn = document.getElementById('pane-in');
-      const paneUp = document.getElementById('pane-up');
-      function selectTab(isIn){
-        tabIn.setAttribute('aria-selected', !!isIn);
-        tabUp.setAttribute('aria-selected', !isIn);
-        paneIn.classList.toggle('active', !!isIn);
-        paneUp.classList.toggle('active', !isIn);
-      }
-      tabIn.addEventListener('click', ()=>selectTab(true));
-      tabUp.addEventListener('click', ()=>selectTab(false));
+    // Când utilizatorul apasă pe un „chip”, îl folosim ca să setăm selectul
+    document.getElementById("serviceList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".service-chip");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const select = document.getElementById("serviceSelect");
+      if (id && select) select.value = id;
+    });
 
-      // Toggle password
-      document.querySelectorAll('.toggle').forEach(btn=>{
-        btn.addEventListener('click',()=>{
-          const input = document.querySelector(btn.getAttribute('data-toggle'));
-          if (!input) return; input.type = input.type==='password' ? 'text' : 'password';
-        });
-      });
+    // (Exemplu) handler „Trimite” – aici pui call-ul tău către backend când e gata
+    document.getElementById("btnSubmit").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const serviceId = document.getElementById("serviceSelect").value;
+      const descriere = document.getElementById("descriere").value.trim();
 
-      // Supabase client
-      let supa = null;
-      async function getSupa(){
-        if (supa) return supa;
-        const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-        // dynamic preconnect to Supabase origin
-        try{ const origin = new URL(SUPABASE_URL).origin; const pre = document.getElementById('preconnect-supabase'); if (pre) pre.href = origin; }catch(e){}
-        supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        return supa;
-      }
+      if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
 
-      function setBusy(on){
-        document.querySelectorAll('.btn, .submit, .link').forEach(el=> el.disabled = !!on);
-        const ov = document.getElementById('overlay'); if (ov) ov.classList.toggle('on', !!on);
-      }
-      function showMsg(elId, text, ok){
-        const el = document.getElementById(elId); if (!el) return;
-        el.textContent = text || ''; el.hidden = !text; el.className = 'msg ' + (ok? 'ok' : 'err');
-      }
-      function nextUrl(){ const u = new URL(location.href); return u.searchParams.get('next') || '/inscriere.html'; }
+      // TODO: aici faci POST către endpointul tău care salvează oferta în DB
+      // exemplu:
+      // const r = await fetch("/api/create-offer", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ email, phone, serviceId, descriere }) }).then(r=>r.json());
+      // if (r?.ok) { alert("Gata!"); } else { alert(r?.error || "Eroare la trimitere"); }
 
-      // On load: if logged in, go to form + auth logger
-      (async ()=>{
-        const sb = await getSupa();
-        const { data:{ session } } = await sb.auth.getSession();
-        if (session){ location.href = nextUrl(); }
-        sb.auth.onAuthStateChange((event, session)=>{
-          console.log('[auth]', event, session?.user?.email || '');
-          if (event==='PASSWORD_RECOVERY'){
-            showMsg('si-msg','Ți-am trimis un email de resetare a parolei.', true);
-          }
-        });
-      })();
-
-      // OAuth
-      async function oauth(provider){
-        setBusy(true);
-        const sb = await getSupa();
-        const { error } = await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: location.origin + nextUrl(), queryParams:{ prompt:'consent' } } });
-        if (error){ setBusy(false); showMsg('si-msg', error.message, false); }
-      }
-      document.getElementById('btnGoogle').addEventListener('click', ()=>oauth('google'));
-      document.getElementById('btnFacebook').addEventListener('click', ()=>oauth('facebook'));
-      document.getElementById('btnApple').addEventListener('click', ()=>oauth('apple'));
-
-      // Email: sign in
-      document.getElementById('pane-in').addEventListener('submit', async (ev)=>{
-        ev.preventDefault(); setBusy(true); showMsg('si-msg','',false);
-        const email = document.getElementById('si-email').value.trim();
-        const pass  = document.getElementById('si-pass').value;
-        try{
-          const sb = await getSupa();
-          const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-          if (error) throw error;
-          location.href = nextUrl();
-        }catch(e){ showMsg('si-msg', e.message || 'Eroare autentificare', false); }
-        finally{ setBusy(false); }
-      });
-
-      // Magic link
-      async function signInMagic(email){
-        if (!email){ showMsg('si-msg','Introdu adresa de email.', false); return; }
-        setBusy(true);
-        try{
-          const sb = await getSupa();
-          const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + nextUrl() }});
-          if (error) throw error;
-          showMsg('si-msg','Ți-am trimis un link de conectare. Verifică emailul.', true);
-        }catch(e){ showMsg('si-msg', e.message || 'Eroare la trimiterea linkului', false); }
-        finally{ setBusy(false); }
-      }
-      document.getElementById('btnMagic').addEventListener('click', ()=>{
-        const email = document.getElementById('si-email').value.trim();
-        signInMagic(email);
-      });
-
-      // Email: sign up
-      document.getElementById('pane-up').addEventListener('submit', async (ev)=>{
-        ev.preventDefault(); setBusy(true); showMsg('su-msg','',true); showMsg('si-msg','',false);
-        const email = document.getElementById('su-email').value.trim();
-        const pass  = document.getElementById('su-pass').value;
-        try{
-          const sb = await getSupa();
-          const { error } = await sb.auth.signUp({ email, password: pass, options:{ emailRedirectTo: location.origin + nextUrl() } });
-          if (error) throw error;
-          showMsg('su-msg','Cont creat! Verifică emailul pentru confirmare. După confirmare vei fi redirecționat.', true);
-          selectTab(true);
-        }catch(e){ showMsg('su-msg', e.message || 'Eroare înregistrare', false); }
-        finally{ setBusy(false); }
-      });
-
-      // Forgot password
-      document.getElementById('btnForgot').addEventListener('click', async ()=>{
-        const email = document.getElementById('si-email').value.trim();
-        if (!email){ showMsg('si-msg','Introdu adresa de email pentru resetare.', false); return; }
-        setBusy(true); showMsg('si-msg','',false);
-        try{
-          const sb = await getSupa();
-          const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + nextUrl() });
-          if (error) throw error;
-          showMsg('si-msg','Ți-am trimis un email de resetare a parolei.', true);
-        }catch(e){ showMsg('si-msg', e.message || 'Eroare resetare parolă', false); }
-        finally{ setBusy(false); }
-      });
-    })();
+      alert("Demo: formularul ar trimite aceste date:\n" +
+        JSON.stringify({ email, phone, serviceId, descriere }, null, 2));
+    });
   </script>
 </body>
 </html>
