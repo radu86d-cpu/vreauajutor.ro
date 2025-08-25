@@ -1,48 +1,51 @@
-// netlify/functions/categories.js (CommonJS)
-const { createClient } = require('@supabase/supabase-js');
+// netlify/functions/categories.js
+import { json, bad, method, handleOptions } from "./_shared/utils.js";
+import { createClient } from "@supabase/supabase-js";
 
-const toAsciiTitle = (s) =>
-  (s || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // fără diacritice
+function toAsciiTitle(s = "") {
+  return s
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // fără diacritice
     .trim().toLowerCase()
-    .replace(/^./, c => c.toUpperCase());             // prima literă mare
+    .replace(/^./, c => c.toUpperCase());            // prima literă mare
+}
 
-exports.handler = async (event) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Cache-Control': 'public, max-age=300, s-maxage=300',
-  };
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
-  if (event.httpMethod !== 'GET')     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async (req) => {
+  const opt = handleOptions(req);
+  if (opt) return opt;
+
+  const m = method(req, ["GET"]);
+  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
 
   try {
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'SUPABASE env missing' }) };
+      return bad("SUPABASE env missing", 500);
     }
-    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
 
     // toate categoriile (serviciile) ordonate alfabetic
     const { data, error } = await db
-      .from('services')
-      .select('id, name')
-      .order('name', { ascending: true });
+      .from("services")
+      .select("id, name")
+      .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (error) return bad(error.message, 500);
 
-    // trimitem și un „display” fără diacritice, ca în restul site-ului
     const items = (data || []).map(s => ({
       id: s.id,
-      name: s.name,                 // denumirea exactă din DB
-      display: toAsciiTitle(s.name) // pentru afișat în <select>
+      name: s.name,
+      display: toAsciiTitle(s.name)
     }));
 
-    return { statusCode: 200, headers, body: JSON.stringify({ items }) };
+    // cache ușor la edge (poți scoate dacă nu vrei)
+    return json({ items }, 200, {
+      "Cache-Control": "public, max-age=300, s-maxage=300"
+    });
   } catch (e) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message || String(e) }) };
+    return bad(e?.message || "Server error", 500);
   }
 };
