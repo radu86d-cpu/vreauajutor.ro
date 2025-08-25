@@ -281,9 +281,7 @@
         cb.checked = set.has(String(cb.value));
         cb.closest('.child-item')?.classList.toggle('on', cb.checked);
       });
-      const meta = __subMeta.get(subId)||{};
-      setChipColor(meta.btn, set.size>0);
-      updateChipBadge(subId);
+      updateChipVisuals(subId);
       updateSubmitState();
     }
 
@@ -291,11 +289,10 @@
   const meta = __subMeta.get(subId);
   if (!meta) return;
   const size = (__sel.bySub.get(subId)?.size || 0);
-  // toggle culoarea chip-ului
-  meta.btn.classList.toggle('blue', size > 0);
-  // badge
-  if (meta.badge) meta.badge.textContent = String(size);
+  meta.btn.classList.toggle('blue', size > 0);   // toggle albastru
+  if (meta.badge) meta.badge.textContent = String(size); // actualizează badge
 }
+
 
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
@@ -345,14 +342,17 @@
             if (set.size === 0) __sel.bySub.delete(subId);
 
             lab.classList.toggle('on', cb.checked);
-            setChipColor(chip, (__sel.bySub.get(subId)?.size || 0) > 0);
 
-            updateChipBadge(subId);
-            syncHiddenFromState();
+// reflectă vizual chip-ul + badge
+updateChipVisuals(subId);
 
-            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-              document.getElementById('min1-hint').style.display = 'none';
-            }
+// sincronizează câmpurile ascunse
+syncHiddenFromState();
+
+if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+  document.getElementById('min1-hint').style.display = 'none';
+}
+
           });
 
           lab.appendChild(cb);
