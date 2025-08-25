@@ -1,61 +1,25 @@
-export async function handler(event) {
-  // CORS preflight (sigur și pentru debug)
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    };
-  }
+import { cors, json, bad, method, rateLimit } from "./_shared/utils.js";
+import { supabaseFromRequest } from "./_shared/supabase.js";
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+export default async (req) => {
+  const m = method(req, ["POST"]);
+  const headers = cors(req);
+  if (m === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (!rateLimit(req, { windowSec: 15, max: 6 })) return bad("Prea multe cereri", 429);
 
-  try {
-    const { message } = JSON.parse(event.body || '{}');
-    if (!message || !message.trim()) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Mesaj lipsă' }) };
-    }
+  const supabase = supabaseFromRequest(req);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return bad("Necesită autentificare", 401);
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'OPENAI_API_KEY lipsă' }) };
-    }
+  let body = {};
+  try { body = await req.json(); } catch {}
+  const { message, context } = body;
+  if (typeof message !== "string" || !message.trim()) return bad("Mesaj invalid");
 
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini', // poți schimba în gpt-4o
-        temperature: 0.7,
-        messages: [
-          { role: 'system', content: 'Ești AjutorBot, asistent prietenos pentru marketplace-ul VreauAjutor.ro.' },
-          { role: 'user', content: message }
-        ]
-      }),
-    });
+  // TODO: aici faci apelul la LLM folosind chei doar din env (NU din client).
+  // Exemplu (pseudocod):
+  // const resp = await fetch("https://api.openai.com/v1/chat/completions", { ... });
+  // return json({ ok: true, reply: respText }, { headers });
 
-    if (!resp.ok) {
-      const errTxt = await resp.text();
-      return { statusCode: 500, body: JSON.stringify({ error: 'OpenAI error', details: errTxt }) };
-    }
-
-    const data = await resp.json();
-    const reply = data?.choices?.[0]?.message?.content || 'Nu am un răspuns momentan.';
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reply }),
-    };
-  } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
-  }
-}
+  return json({ ok: true, echo: message.slice(0, 500), ctx: !!context }, { headers });
+};
