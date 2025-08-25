@@ -1,9 +1,14 @@
 {
   "name": "vreauajutor.ro",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo \"Static site\" && exit 0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
-    "twilio": "^4.21.0"
+    "twilio": "^5.4.4"
   }
 }
