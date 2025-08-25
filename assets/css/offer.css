@@ -1,103 +1,235 @@
-/* === Variabile locale paginii (nu ating restul site-ului) === */
-.offer{
-  --va-bg:#f6f7f9; --va-card:#ffffff; --va-text:#0f172a; --va-muted:#64748b;
-  --va-primary:#0f62fe; --va-primary-100:#eef4ff; --va-border:#e6e8ec;
-  --va-radius:14px; --va-shadow:0 10px 28px rgba(16,24,40,.08);
-  --va-softshadow:0 5px 16px rgba(16,24,40,.06);
-  --va-danger:#b00020; --va-success:#1ea759; --va-warn:#b08900;
+/* ===========================
+   VreauAjutor.ro — offer.css
+   Stiluri SCOPED pe pagina "Oferă servicii"
+   (nu afectează alte pagini)
+   =========================== */
+
+/* Layout de bază */
+.offer .wrap {
+  max-width: 1180px;
+  margin: 2rem auto;
+  background: #ffffff;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid #e6e8ec;
+  box-shadow: 0 10px 28px rgba(16,24,40,.08);
 }
 
-/* Layout local */
-.offer .wrap{ max-width:1180px; margin:2rem auto; background:var(--va-card); padding:22px; border-radius:var(--va-radius); border:1px solid var(--va-border); box-shadow:var(--va-shadow) }
-.offer h1{ margin:0 0 10px; font-size:clamp(24px,3vw,32px); letter-spacing:-.02em }
-.offer .subtitle{ color:var(--va-muted); margin-bottom:18px }
+.offer h1 { margin: 0 0 10px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; }
+.offer .subtitle { color: #64748b; margin-bottom: 18px; }
 
-.offer label{display:block;margin:.6rem 0 .35rem;font-weight:600}
-.offer input,.offer select,.offer textarea{ width:100%; padding:12px; border:1px solid #dfe3ea; border-radius:12px; background:#fff; transition:border-color .18s, box-shadow .18s }
-.offer input:focus,.offer select:focus,.offer textarea:focus{ outline:none; border-color:var(--va-primary); box-shadow:0 0 0 4px rgba(15,98,254,.08) }
-.offer button{ padding:12px 18px; border:0; border-radius:12px; background:var(--va-primary); color:#fff; cursor:pointer; font-weight:700; box-shadow:var(--va-softshadow); transition:filter .15s, transform .05s }
-.offer button:hover{ filter:brightness(1.02) } 
-.offer button:active{ transform:translateY(1px) }
-.offer button[disabled]{opacity:.55;cursor:not-allowed}
-.offer .btn-outline{ background:#fff; color:#111; border:1px solid #dfe3ea }
-.offer .btn-chip{ background:#fff; color:#111; border:1px solid #dfe3ea; padding:10px 12px; border-radius:999px; font-size:12px }
-.offer .msg{ margin-top:12px }
-
-.offer .grid-3{ display:grid; grid-template-columns:340px 1fr 1.3fr; gap:16px; align-items:start; margin-top:10px }
-.offer .card{ background:#fff; border:1px solid var(--va-border); border-radius:16px; box-shadow:var(--va-softshadow); padding:14px }
-.offer .row{ display:flex; gap:10px; align-items:center }
-.offer .grow{ flex:1 }
-.offer .otp-wrap{ display:flex; gap:8px; align-items:center; margin-top:6px }
-.offer .code6{ width:140px; text-align:center; letter-spacing:.2em }
-.offer .status-dot{ width:10px; height:10px; border-radius:50% }
-.offer .st-red{background:#e5484d}.offer .st-green{background:#2fb344}.offer .st-amber{background:#f59f00}
-.offer .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px }
-.offer #submitBtn{ background:#8592a3 }
-
-@media (max-width:1080px){
-  .offer .grid-3{ grid-template-columns:1fr }
+/* Grid principal: 3 coloane (detalii – subcategorii – copii) */
+.offer .grid-3 {
+  display: grid;
+  grid-template-columns: 340px 1fr 1.3fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 10px;
 }
 
-/* ===== Subcategorii / Chips ===== */
-.offer #subcats{ display:flex; flex-direction:column; gap:8px; margin-top:6px; max-height:70vh; overflow:auto }
-.offer .chip{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  border:1px solid #e5e7eb; padding:10px 12px; border-radius:12px; background:#fff; color:#111827; cursor:pointer; font-size:14px; font-weight:600;
-  transition: border-color .18s, background .18s, box-shadow .18s; box-shadow: 0 1px 0 rgba(0,0,0,.02);
-}
-.offer .chip:hover{ background:#f9fbff; border-color:#cfe0ff; box-shadow: 0 4px 12px rgba(16,24,40,.08) }
-.offer .chip.blue{ background:var(--va-primary-100); color:#173bce; border-color:#b8ccff }
-.offer .chip .badge{ background:#eef2ff; color:#173bce; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:800; min-width:20px; text-align:center }
-
-/* ===== Copii ===== */
-.offer .child-title{ display:flex; align-items:center; justify-content:space-between; padding:8px 0 12px; border-bottom:1px solid #eef0f3; font-weight:700; font-size:14px }
-.offer .child-title .tools{ display:flex; gap:8px; align-items:center }
-.offer .child-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; padding-top:10px }
-.offer .child-item{
-  display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; font-size:14px;
-  transition: border-color .18s, box-shadow .18s, background .18s; box-shadow: 0 1px 0 rgba(0,0,0,.02); cursor:pointer;
-}
-.offer .child-item:hover{ border-color:#cfe0ff; background:#fafcff; box-shadow: 0 6px 16px rgba(16,24,40,.06); }
-.offer .child-item input{ margin:0; width:18px; height:18px; accent-color: var(--va-primary); }
-.offer .child-item.on{ background:#f4f7ff; border-color:#99b7ff; box-shadow: 0 8px 20px rgba(23, 59, 206, .10); font-weight:700; }
-
-/* Hints */
-.offer .hint-danger{ color: var(--va-danger); font-weight:700; }
-.offer .hint-ok{ color: var(--va-success); font-weight:700; }
-.offer .hint-warn{ color: var(--va-warn); font-weight:700; }
-
-/* ===== Ce aveai tu deja (păstrat și compatibil) ===== */
-.offer .offer-container { max-width: 980px; margin: 24px auto; padding: 16px; }
-.offer header.page { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.offer header.page h1 { font-size: 24px; margin: 0; }
-
-.offer .offer-card {
-  background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+.offer .card {
+  background: #fff;
+  border: 1px solid #e6e8ec;
+  border-radius: 16px;
+  box-shadow: 0 5px 16px rgba(16,24,40,.06);
+  padding: 14px;
 }
 
-.offer .offer-grid { display: grid; gap: 14px; }
-.offer .offer-grid-2 { grid-template-columns: 1fr 1fr; }
-@media (max-width: 720px) { .offer .offer-grid-2 { grid-template-columns: 1fr; } }
+/* Form controls */
+.offer label { display: block; margin: .6rem 0 .35rem; font-weight: 600; }
 
-.offer .offer-row { display: flex; gap: 10px; align-items: center; }
-.offer .offer-row > * { flex: 1; }
-.offer .offer-hint { color: #666; font-size: 13px; margin-top: 4px; }
-
-/* Badge chips secundar (dacă îl folosești) */
-.offer .service-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-.offer .service-chip { padding: 6px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; color: #1f2937; transition: all .2s ease; }
-.offer .service-chip:hover { border-color: #bbb; background: #f7f7f7; }
-.offer .service-chip.active { background: #eef5ff; border-color: #93c5fd; }
-
-/* Icone în input (verde la valid, roșu la invalid) – opționale */
-.offer input.valid{
-  border-color:#059669;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px;
+.offer input,
+.offer select,
+.offer textarea,
+.offer button {
+  width: 100%;
+  border-radius: 12px;
+  font-size: 16px;
 }
-.offer input.invalid{
-  border-color:#dc2626;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 6l12 12M18 6L6 18' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px;
+
+.offer input,
+.offer select,
+.offer textarea {
+  padding: 12px;
+  border: 1px solid #dfe3ea;
+  background: #fff;
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.offer input:focus,
+.offer select:focus,
+.offer textarea:focus {
+  outline: none;
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 4px rgba(15,98,254,.08);
+}
+
+.offer button {
+  padding: 12px 18px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+  background: #0f62fe;
+  color: #fff;
+  box-shadow: 0 5px 16px rgba(16,24,40,.06);
+  transition: filter .15s, transform .05s;
+}
+
+.offer button:hover { filter: brightness(1.02); }
+.offer button:active { transform: translateY(1px); }
+.offer button[disabled] { opacity: .55; cursor: not-allowed; }
+
+.offer .btn-outline {
+  background: #fff;
+  color: #111;
+  border: 1px solid #dfe3ea;
+}
+
+.offer .btn-chip {
+  background: #fff;
+  color: #111;
+  border: 1px solid #dfe3ea;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* Grupări utile */
+.offer .row { display: flex; gap: 10px; align-items: center; }
+.offer .grow { flex: 1; }
+.offer .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+.offer .msg { margin-top: 12px; }
+
+/* Status / hint-uri */
+.offer .hint-danger { color: #b00020; font-weight: 700; }
+.offer .hint-ok     { color: #1ea759; font-weight: 700; }
+.offer .hint-warn   { color: #b08900; font-weight: 700; }
+
+/* OTP bloc */
+.offer .otp-wrap { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.offer .code6 { width: 140px; text-align: center; letter-spacing: .2em; }
+.offer .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+.offer .st-red { background: #e5484d; }
+.offer .st-green { background: #2fb344; }
+.offer .st-amber { background: #f59f00; }
+
+/* Butonul Trimite este gri până e validat tot */
+.offer #submitBtn { background: #8592a3; }
+
+/* =======================
+   Subcategorii (chip-uri)
+   ======================= */
+
+.offer #subcats { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; max-height: 70vh; overflow: auto; }
+
+.offer #subcats .chip {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid #e5e7eb; padding: 10px 12px; border-radius: 12px;
+  background: #fff; color: #111827; cursor: pointer; font-size: 14px; font-weight: 600;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  transition: background .18s, border-color .18s, box-shadow .18s;
+}
+
+.offer #subcats .chip:hover {
+  background: #f9fbff;
+  border-color: #cfe0ff;
+  box-shadow: 0 4px 12px rgba(16,24,40,.08);
+}
+
+.offer #subcats .chip .badge {
+  background: #eef2ff; color: #173bce;
+  border-radius: 999px; padding: 2px 8px;
+  font-size: 12px; font-weight: 800; min-width: 20px; text-align: center;
+}
+
+/* Chip selectat (are >=1 copil bifat) */
+.offer #subcats .chip.blue {
+  background: #eef5ff !important;
+  border-color: #93c5fd !important;
+  color: #173bce !important;
+}
+
+/* ==========================
+   Copii (sub-subcategorii)
+   ========================== */
+
+.offer .child-title {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0 12px; border-bottom: 1px solid #eef0f3;
+  font-weight: 700; font-size: 14px;
+}
+
+.offer .child-title .tools { display: flex; gap: 8px; align-items: center; }
+
+.offer .child-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.offer .child-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px;
+  background: #fff; font-size: 14px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  transition: background .18s, border-color .18s, box-shadow .18s;
+  cursor: pointer;
+}
+
+.offer .child-item:hover {
+  border-color: #cfe0ff; background: #fafcff; box-shadow: 0 6px 16px rgba(16,24,40,.06);
+}
+
+.offer .child-item input { margin: 0; width: 18px; height: 18px; accent-color: #0f62fe; }
+
+.offer .child-item.on {
+  background: #f4f7ff;
+  border-color: #99b7ff;
+  box-shadow: 0 8px 20px rgba(23, 59, 206, .10);
+  font-weight: 700;
+}
+
+/* ==========================
+   Valid/invalid icons input
+   ========================== */
+
+.offer input.valid {
+  border-color: #059669;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px 20px;
+  padding-right: 36px;
+}
+
+.offer input.invalid {
+  border-color: #dc2626;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 6l12 12M18 6L6 18' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px 20px;
+  padding-right: 36px;
+}
+
+/* Stare text pentru telefon (dacă vrei textual, opțional) */
+.offer #phoneStatus { font-weight: 600; }
+.offer #phoneStatus.pending  { color: #d97706; }
+.offer #phoneStatus.verified { color: #059669; }
+.offer #phoneStatus.error    { color: #dc2626; }
+
+/* ==========================
+   Responsive
+   ========================== */
+
+@media (max-width: 1080px) {
+  .offer .grid-3 { grid-template-columns: 1fr; }
+  .offer #subcats { max-height: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offer .child-item,
+  .offer #subcats .chip {
+    transition: none !important;
+  }
 }
