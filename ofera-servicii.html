@@ -27,13 +27,14 @@
         </div>
 
         <div>
-          <label for="phone">Telefon (cu verificare SMS)</label>
-          <div class="offer-row">
-            <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
-            <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
-          </div>
-          <div class="offer-hint">Primești un cod prin SMS. Introdu-l când ți se cere.</div>
-        </div>
+  <label for="phone">Telefon (cu verificare SMS)</label>
+  <div class="offer-row">
+    <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
+    <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
+  </div>
+  <div id="phoneStatus" class="offer-hint">Neconfirmat</div>
+</div>
+
       </div>
 
       <!-- 2) Alegerea serviciului (dropdown populat din /api/categories) -->
