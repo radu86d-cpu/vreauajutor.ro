@@ -1,0 +1,33 @@
+/* Totul este SCOPED: nu atinge pagina principală */
+.offer .offer-container { max-width: 980px; margin: 24px auto; padding: 16px; }
+.offer header.page { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.offer header.page h1 { font-size: 24px; margin: 0; }
+
+.offer .offer-card {
+  background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+
+.offer .offer-grid { display: grid; gap: 14px; }
+.offer .offer-grid-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 720px) { .offer .offer-grid-2 { grid-template-columns: 1fr; } }
+
+.offer label { font-weight: 600; display: block; margin-bottom: 6px; }
+.offer input, .offer select, .offer textarea, .offer button {
+  width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px;
+}
+.offer textarea { min-height: 120px; resize: vertical; }
+.offer button { cursor: pointer; }
+.offer button[disabled] { opacity: .6; cursor: not-allowed; }
+.offer .offer-row { display: flex; gap: 10px; align-items: center; }
+.offer .offer-row > * { flex: 1; }
+.offer .offer-hint { color: #666; font-size: 13px; margin-top: 4px; }
+
+/* Chips */
+.offer .service-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.offer .service-chip {
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid #e5e7eb; background: #fff; color: #1f2937;
+  transition: all .2s ease;
+}
+.offer .service-chip:hover { border-color: #bbb; background: #f7f7f7; }
