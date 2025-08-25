@@ -7,14 +7,14 @@
 
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css"/>
-  <!-- CSS izolat pentru pagina aceasta -->
+  <!-- CSS scoped pentru pagina aceasta -->
   <link rel="stylesheet" href="./offer.css"/>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="offer">
-  <!-- Wrapper pentru stiluri scoped (opțional, pe lângă body.offer) -->
+<body>
+  <!-- Wrapper pentru stiluri scoped: tot conținutul paginii stă în .offer -->
   <div class="offer">
     <main class="wrap">
       <h1>Înscriere furnizor</h1>
@@ -111,7 +111,7 @@
         </section>
       </form>
     </main>
-  </div>
+  </div> <!-- end .offer -->
 
   <!-- ======================== Helpers liste (services/judete/orase) ======================== -->
   <script>
@@ -140,17 +140,23 @@
         fillSelect(selJ, judete,  'Alege județul');
         fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
 
+        // NU mai resetăm selecțiile la schimbarea județ/oras
         selJ.addEventListener('change', async (ev)=>{
-          const judet=ev.target.value; fillSelect(selO,[], 'Alege orașul'); selO.disabled=true;
-          if (!judet) { updateSubmitState(); return; }
-          const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
-          const { orase=[] } = await rr.json();
-          fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
+          const judet=ev.target.value;
+          fillSelect(selO, [], 'Alege orașul'); selO.disabled=true;
+          if (judet) {
+            const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
+            const { orase=[] } = await rr.json();
+            fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
+          }
           updateSubmitState();
-          if (selServ.value) loadSubcatsForSignup();
+          // taxonomia rămâne neschimbată
         });
-        selO.addEventListener('change', ()=>{ updateSubmitState(); if (selServ.value) loadSubcatsForSignup(); });
-        selServ.addEventListener('change', ()=>{ loadSubcatsForSignup(); updateSubmitState(); });
+
+        selO.addEventListener('change', ()=>{ updateSubmitState(); });
+
+        // Reset DOAR când se schimbă serviciul
+        selServ.addEventListener('change', ()=>{ resetForServiceChange(); loadSubcatsForSignup(); updateSubmitState(); });
 
         if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
       } catch(e){ console.error(e); }
@@ -240,9 +246,7 @@
       const meta = __subMeta.get(subId);
       if (!meta) return;
       const size = (__sel.bySub.get(subId)?.size || 0);
-      const on = size > 0;
-      meta.btn.classList.toggle('blue', on);
-      meta.btn.classList.toggle('active', on); // alias suplimentar
+      meta.btn.classList.toggle('blue', size > 0);         // albastru dacă are copii
       if (meta.badge) meta.badge.textContent = String(size);
     }
 
@@ -270,11 +274,14 @@
         const btn = document.createElement('button');
         btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
         const title = document.createElement('span'); title.textContent=name;
-        const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
+        const badge = document.createElement('span'); badge.className='badge';
+        badge.textContent = String(__sel.bySub.get(id)?.size || 0);
         btn.appendChild(title); btn.appendChild(badge);
 
         __subMeta.set(id,{btn,name,badge});
-        updateChipVisuals(id); // init vizual
+        // albastru dacă există selecții pentru subId
+        if ((__sel.bySub.get(id)?.size || 0) > 0) btn.classList.add('blue');
+
         btn.addEventListener('click', ()=>toggleChildGroup(id));
         container.appendChild(btn);
       });
@@ -365,69 +372,57 @@
       resyncGroupCheckboxes(subId);
     }
 
+    // Fără filtrare pe judet/oras (furnizorul vede toți copiii posibili)
     async function loadChildren(subId){
       if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
       const meta = __subMeta.get(subId) || {};
-      const judet = document.getElementById('reg_judet')?.value || '';
-      const oras  = document.getElementById('reg_oras')?.value || '';
       const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
-      const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam)
-                + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-                + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+
+      const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam);
+
       const { children=[] } = await ajx(url);
       __cacheChildren.set(subId, children);
       return children;
     }
 
+    // Încarcă subcategoriile DOAR după serviciu (fără judet/oras)
     async function loadSubcatsForSignup(){
       const service = document.getElementById('service_name')?.value || '';
-      const judet   = document.getElementById('reg_judet')?.value || '';
-      const oras    = document.getElementById('reg_oras')?.value || '';
       const cont    = document.getElementById('subcats');
       const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
 
-      document.getElementById('subcat').value='';
-      document.getElementById('subcat_name').value='';
-      document.getElementById('subsub').value='';
-      __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-      childW.hidden=true; childC.innerHTML='';
-
-      if (!service){ cont.innerHTML=''; updateSubmitState(); return; }
+      if (!service){
+        cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
+        updateSubmitState(); return;
+      }
 
       const url = '/.netlify/functions/taxonomy?mode=subcategories'
-                + '&service=' + encodeURIComponent(service)
-                + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-                + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
+                + '&service=' + encodeURIComponent(service);
 
       try{
         const { subcategories=[] } = await ajx(url);
-        if (!subcategories.length){ cont.innerHTML=''; updateSubmitState(); return; }
+        if (!subcategories.length){
+          cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
+          updateSubmitState(); return;
+        }
         renderChips(cont, subcategories);
       }catch(e){ console.error(e); cont.innerHTML=''; }
       updateSubmitState();
     }
 
-    // --- Butoane utilitare ---
-    document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
+    // Reset DOAR când se schimbă serviciul
+    function resetForServiceChange(){
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
-      __sel.bySub.clear();
-      document.getElementById('children').innerHTML='';
-      document.getElementById('child-wrap').hidden=true;
-      updateSubmitState();
-    });
-
-    document.getElementById('children-collapse-all')?.addEventListener('click', ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = true); });
-    document.getElementById('children-expand-all')?.addEventListener('click',  ()=>{ document.querySelectorAll('#children .child-group').forEach(g=> g.hidden = false); });
-
-    document.getElementById('subcat-toggle')?.addEventListener('click', ()=>{
-      const sc = document.getElementById('subcats');
-      const hidden = sc.style.display === 'none';
-      sc.style.display = hidden ? '' : 'none';
-      document.getElementById('subcat-toggle').textContent = hidden ? 'Restrânge' : 'Extinde';
-    });
+      __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
+      const childW  = document.getElementById('child-wrap');
+      const childC  = document.getElementById('children');
+      childW.hidden = true; childC.innerHTML = '';
+      const cont = document.getElementById('subcats');
+      cont.innerHTML = '';
+    }
 
     // --- OTP + gating buton Trimite ---
     window.__otp = { phoneVerified:false, emailVerified:false };
@@ -569,7 +564,7 @@
       document.getElementById('reg_oras').addEventListener(evt, updateSubmitState);
     });
 
-    // init OTP
+    // init OTP buttons
     resetOtpUI();
   </script>
 </body>
