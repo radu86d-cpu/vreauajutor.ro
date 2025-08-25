@@ -7,13 +7,14 @@
 
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css"/>
-  <!-- CSS dedicat paginii Oferă servicii -->
+  <!-- CSS izolat pentru pagina aceasta (îl trimiți după) -->
   <link rel="stylesheet" href="./offer.css"/>
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
-  <!-- TOT conținutul paginii e izolat sub .offer -->
+  <!-- Wrapper pentru stiluri scoped: tot conținutul paginii stă în .offer -->
   <div class="offer">
     <main class="wrap">
       <h1>Înscriere furnizor</h1>
@@ -21,7 +22,7 @@
 
       <form id="f" novalidate>
         <section class="grid-3">
-          <!-- 1) Detalii -->
+          <!-- 1) Detalii furnizor -->
           <div class="card">
             <h3 style="margin:4px 0 10px;">Detalii furnizor</h3>
 
@@ -89,6 +90,7 @@
               </div>
             </div>
             <div id="subcats"></div>
+            <!-- hidden pentru backend -->
             <input type="hidden" id="subcat">
             <input type="hidden" id="subcat_name">
             <input type="hidden" id="subsub">
@@ -109,9 +111,9 @@
         </section>
       </form>
     </main>
-  </div>
+  </div> <!-- end .offer -->
 
-  <!-- Helpers liste -->
+  <!-- ======================== Helpers liste (services/judete/orase) ======================== -->
   <script>
     function fillSelect(sel, arr, firstLabel) {
       sel.innerHTML = '';
@@ -155,7 +157,7 @@
     });
   </script>
 
-  <!-- Supabase + submit -->
+  <!-- ======================== Supabase + Submit înscriere ======================== -->
   <script>
   (async () => {
     const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
@@ -221,16 +223,26 @@
   })();
   </script>
 
-  <!-- Subcategorii/Copii + OTP -->
+  <!-- ======================== Taxonomy (subcategorii & copii) + OTP ======================== -->
   <script>
-    const __sel = { bySub: new Map() };
-    const __subMeta = new Map();
-    const __cacheChildren = new Map();
+    // --- State central ---
+    const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
+    const __subMeta = new Map();          // subId -> {btn, name, badge}
+    const __cacheChildren = new Map();    // subId -> children[]
 
+    // --- Utils ---
     async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
     function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
-    function setChipColor(btn, on){ if(btn) btn.classList.toggle('blue', !!on); }
+
+    // toggling vizual pe chip + badge într-un singur loc
+    function updateChipVisuals(subId){
+      const meta = __subMeta.get(subId);
+      if (!meta) return;
+      const size = (__sel.bySub.get(subId)?.size || 0);
+      meta.btn.classList.toggle('blue', size > 0);         // albastru dacă are copii
+      if (meta.badge) meta.badge.textContent = String(size);
+    }
 
     function syncHiddenFromState(){
       const ids=[], names=[];
@@ -260,17 +272,10 @@
         btn.appendChild(title); btn.appendChild(badge);
 
         __subMeta.set(id,{btn,name,badge});
-        setChipColor(btn, (__sel.bySub.get(id)?.size||0)>0);
+        updateChipVisuals(id); // init vizual
         btn.addEventListener('click', ()=>toggleChildGroup(id));
         container.appendChild(btn);
       });
-    }
-
-    function updateChipBadge(subId){
-      const meta = __subMeta.get(subId);
-      if (!meta) return;
-      const set = __sel.bySub.get(subId) || new Set();
-      meta.badge.textContent = String(set.size || 0);
     }
 
     function resyncGroupCheckboxes(subId){
@@ -285,21 +290,11 @@
       updateSubmitState();
     }
 
-    function updateChipVisuals(subId){
-  const meta = __subMeta.get(subId);
-  if (!meta) return;
-  const size = (__sel.bySub.get(subId)?.size || 0);
-  meta.btn.classList.toggle('blue', size > 0);   // toggle albastru
-  if (meta.badge) meta.badge.textContent = String(size); // actualizează badge
-}
-
-
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
       const container = document.getElementById('children');
       const groupId = childGroupId(subId);
       let group = document.getElementById(groupId);
-      const chip  = (__subMeta.get(subId)||{}).btn;
 
       const isOpen = !!group && !group.hidden;
       if (isOpen){ group.hidden = true; return; }
@@ -343,16 +338,15 @@
 
             lab.classList.toggle('on', cb.checked);
 
-// reflectă vizual chip-ul + badge
-updateChipVisuals(subId);
+            // reflectă chip-ul + badge
+            updateChipVisuals(subId);
 
-// sincronizează câmpurile ascunse
-syncHiddenFromState();
+            // sincronizează hidden fields
+            syncHiddenFromState();
 
-if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-  document.getElementById('min1-hint').style.display = 'none';
-}
-
+            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+              document.getElementById('min1-hint').style.display = 'none';
+            }
           });
 
           lab.appendChild(cb);
@@ -412,6 +406,7 @@ if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
       updateSubmitState();
     }
 
+    // --- Butoane utilitare ---
     document.getElementById('subcat-reset')?.addEventListener('click', ()=>{
       document.getElementById('subcat').value='';
       document.getElementById('subcat_name').value='';
@@ -432,7 +427,7 @@ if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
       document.getElementById('subcat-toggle').textContent = hidden ? 'Restrânge' : 'Extinde';
     });
 
-    // ===== OTP + gating buton Trimite =====
+    // --- OTP + gating buton Trimite ---
     window.__otp = { phoneVerified:false, emailVerified:false };
 
     const el = {
@@ -522,7 +517,7 @@ if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
       try{
         el.emlSend.disabled=true;
         setEmlState('Trimit...', 'warn');
-        await fetch('/.netlify/functions/otp_start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:'email',to:(el.email.value||'').trim()})});
+        await startOtp('email', (el.email.value||'').trim());
         setEmlState('Trimis. Verifică email.', 'warn');
         el.emlCode.disabled=false; el.emlVerify.disabled=false; el.emlCode.focus();
       }catch(e){ setEmlState('Eroare trimitere', 'err'); }
@@ -549,8 +544,8 @@ if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
       finally{ el.emlVerify.disabled=false; updateSubmitState(); }
     });
 
+    // gating buton Trimite
     function hasAnyKid(){ return Array.from(__sel.bySub.values()).some(s=>s.size>0); }
-
     function updateSubmitState(){
       const okCompany = (el.company.value||'').trim().length>1;
       const okService = !!el.service.value;
@@ -572,6 +567,7 @@ if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
       document.getElementById('reg_oras').addEventListener(evt, updateSubmitState);
     });
 
+    // init OTP buttons
     resetOtpUI();
   </script>
 </body>
