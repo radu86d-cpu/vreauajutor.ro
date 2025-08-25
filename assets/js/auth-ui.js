@@ -9,7 +9,10 @@ let phoneVerified = false;
 let otpToken = null;
 
 /* === Helpers === */
-function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").trim()); }
+// TLD minim 2 caractere, doar litere; restul părților: clasica validare pragmatică.
+function validEmail(v) {
+  return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test((v || "").trim());
+}
 
 function markValid(el, isValid) {
   if (!el) return;
