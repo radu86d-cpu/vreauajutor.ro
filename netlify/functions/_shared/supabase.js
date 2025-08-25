@@ -2,10 +2,10 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * ENV obligatorii în Netlify -> Site settings -> Environment:
+ * ENV în Netlify -> Site settings -> Environment:
  *  - SUPABASE_URL
  *  - SUPABASE_ANON_KEY
- *  - (opțional) SUPABASE_SERVICE_ROLE_KEY  — NU o folosi în frontend!
+ *  - (opțional) SUPABASE_SERVICE_ROLE_KEY
  */
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -15,7 +15,7 @@ if (!SUPABASE_URL) throw new Error("Missing SUPABASE_URL");
 if (!SUPABASE_ANON_KEY) console.warn("WARN: Missing SUPABASE_ANON_KEY");
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn("WARN: Missing SUPABASE_SERVICE_ROLE_KEY (optional)");
 
-// Cliente reutilizabile
+// clienți reutilizabili
 export const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
@@ -26,34 +26,21 @@ export const sbAdmin = SUPABASE_SERVICE_ROLE_KEY
     })
   : null;
 
-/**
- * Extrage tokenul de Auth din request (Bearer header sau cookies comune).
- */
+// extrage tokenul de auth din request (Authorization sau cookie)
 export function getAuthTokenFromRequest(req) {
-  // 1) Authorization: Bearer <jwt>
   const auth = req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
   if (m?.[1]) return m[1];
 
-  // 2) Cookie: sb-access-token / supabase-auth-token / etc.
   const cookie = req.headers.get("Cookie") || "";
-  // încercăm câteva chei frecvente
-  const tryKeys = [
-    "sb-access-token",
-    "sb:token",
-    "supabase-auth-token",
-  ];
+  const tryKeys = ["sb-access-token", "sb:token", "supabase-auth-token"];
   for (const k of tryKeys) {
     const v = getCookie(cookie, k);
     if (v) {
-      // uneori supabase-auth-token e un JSON stringificat cu { currentSession: { access_token } }
       try {
         if (v.startsWith("%7B") || v.startsWith("{")) {
           const obj = JSON.parse(decodeURIComponent(v));
-          const tok =
-            obj?.currentSession?.access_token ||
-            obj?.access_token ||
-            obj?.token;
+          const tok = obj?.currentSession?.access_token || obj?.access_token || obj?.token;
           if (tok) return tok;
         }
       } catch { /* ignore */ }
@@ -71,9 +58,9 @@ function getCookie(cookieHeader, name) {
 
 /**
  * supabaseFromRequest(req, { asAdmin })
- * - Dacă ai `Authorization: Bearer <jwt>` în request, întoarce un client cu acel JWT atașat.
- * - Altfel întoarce clientul anonim.
- * - Dacă setăm `{ asAdmin:true }` și există SERVICE_ROLE, întoarce clientul admin (atenție: folosește-l DOAR pentru operații server-side sigure).
+ *  - Dacă există Bearer token -> client cu token
+ *  - Altfel -> client anonim
+ *  - asAdmin:true -> client service-role (doar server-side)
  */
 export function supabaseFromRequest(req, { asAdmin = false } = {}) {
   if (asAdmin && sbAdmin) return sbAdmin;
