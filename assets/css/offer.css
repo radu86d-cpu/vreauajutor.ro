@@ -57,4 +57,9 @@
   padding-right: 36px;
 }
 
+.offer .service-chip.active {
+  background: #eef5ff;
+  border-color: #93c5fd;
+}
+
 
