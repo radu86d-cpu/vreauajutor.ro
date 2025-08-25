@@ -68,31 +68,45 @@
 
   <!-- Scripturi -->
   <script type="module">
-    import { initServiceSelect, initServiceButtons } from "./assets/js/categories-ui.js";
-    import "./assets/js/auth-ui.js";
+  import { initServiceSelect, initServiceButtons } from "./assets/js/categories-ui.js";
+  import "./assets/js/auth-ui.js";
 
-    await initServiceSelect("#serviceSelect");
-    await initServiceButtons("#serviceList");
+  await initServiceSelect("#serviceSelect");
+  await initServiceButtons("#serviceList");
 
-    document.getElementById("serviceList").addEventListener("click", (e) => {
-      const btn = e.target.closest(".service-chip");
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const select = document.getElementById("serviceSelect");
-      if (id && select) select.value = id;
-    });
+  document.getElementById("serviceList").addEventListener("click", (e) => {
+    const btn = e.target.closest(".service-chip");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const select = document.getElementById("serviceSelect");
+    if (id && select) select.value = id;
+  });
 
-    document.getElementById("btnSubmit").addEventListener("click", async () => {
-      const email = document.getElementById("email").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const serviceId = document.getElementById("serviceSelect").value;
-      const descriere = document.getElementById("descriere").value.trim();
+  document.getElementById("btnSubmit").addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const serviceId = document.getElementById("serviceSelect").value;
+    const descriere = document.getElementById("descriere").value.trim();
+    const otpToken = window.__getOtpToken ? window.__getOtpToken() : null;
 
-      if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
+    if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
+    if (!otpToken) { alert("Verifică telefonul înainte de trimitere."); return; }
 
-      alert("Demo: formularul ar trimite aceste date:\n" +
-        JSON.stringify({ email, phone, serviceId, descriere }, null, 2));
-    });
-  </script>
+    const r = await fetch("/api/create-offer", {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ email, phone, serviceId, descriere, otpToken })
+    }).then(r=>r.json()).catch(()=>({}));
+
+    if (r?.ok) {
+      alert("Gata! Oferta a fost salvată. ID: " + r.id);
+      // opțional: redirect
+      // location.href = "/multumim.html";
+    } else {
+      alert(r?.error || "Eroare la trimitere");
+    }
+  });
+</script>
+
 </body>
 </html>
