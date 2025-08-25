@@ -7,7 +7,7 @@
 
   <!-- Stiluri globale site -->
   <link rel="stylesheet" href="./style.css" />
-  <!-- Stiluri scoped pentru această pagină -->
+  <!-- Stiluri izolate pentru această pagină -->
   <link rel="stylesheet" href="./assets/css/offer.css" />
 </head>
 <body class="offer">
@@ -27,33 +27,35 @@
         </div>
 
         <div>
-  <label for="phone">Telefon (cu verificare SMS)</label>
-  <div class="offer-row">
-    <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
-    <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
-  </div>
-  <div id="phoneStatus" class="offer-hint">Neconfirmat</div>
-</div>
-
+          <label for="phone">Telefon (cu verificare SMS)</label>
+          <div class="offer-row">
+            <input id="phone" type="tel" placeholder="+40 7xx xxx xxx" required />
+            <button type="button" id="btnSendOtp" style="max-width:180px;">Verifică telefon</button>
+          </div>
+          <div id="phoneStatus" class="offer-hint">Neconfirmat</div>
+        </div>
       </div>
 
-      <!-- 2) Alegerea serviciului (dropdown populat din /api/categories) -->
+      <!-- 2) Categoria + Subcategorii + Copii -->
       <div>
         <label for="serviceSelect">Categoria / Serviciul oferit</label>
         <select id="serviceSelect">
           <option value="">Se încarcă...</option>
         </select>
-        <div class="offer-hint">Lista se încarcă din baza de date (Supabase) prin endpointul /api/categories.</div>
+        <div class="offer-hint">Lista se încarcă din baza de date (Supabase) prin /api/categories.</div>
       </div>
 
-      <!-- (Opțional) listă de butoane „chips” -->
       <div>
-        <label>Servicii populare</label>
-        <div id="serviceList" class="service-list"></div>
-        <div class="offer-hint">Click pe un serviciu ca să-l preselectezi în dropdown.</div>
+        <label>Subcategorii</label>
+        <div id="subcats" class="service-list"></div>
       </div>
 
-      <!-- 3) Descriere și detalii -->
+      <div>
+        <label>Copii</label>
+        <div id="children" class="service-list"></div>
+      </div>
+
+      <!-- 3) Descriere -->
       <div>
         <label for="descriere">Descrierea serviciului</label>
         <textarea id="descriere" placeholder="Spune pe scurt ce oferi, experiență, program, prețuri orientative etc."></textarea>
@@ -69,45 +71,88 @@
 
   <!-- Scripturi -->
   <script type="module">
-  import { initServiceSelect, initServiceButtons } from "./assets/js/categories-ui.js";
-  import "./assets/js/auth-ui.js";
+    import { initServiceSelect, renderSubcategories, renderChildren } from "./assets/js/categories-ui.js";
+    import "./assets/js/auth-ui.js";
 
-  await initServiceSelect("#serviceSelect");
-  await initServiceButtons("#serviceList");
+    // State simplu pentru selecții
+    let selectedSubcatId = null;
+    let selectedChildId = null;
 
-  document.getElementById("serviceList").addEventListener("click", (e) => {
-    const btn = e.target.closest(".service-chip");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const select = document.getElementById("serviceSelect");
-    if (id && select) select.value = id;
-  });
+    // 1) Populate servicii
+    await initServiceSelect("#serviceSelect");
 
-  document.getElementById("btnSubmit").addEventListener("click", async () => {
-    const email = document.getElementById("email").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const serviceId = document.getElementById("serviceSelect").value;
-    const descriere = document.getElementById("descriere").value.trim();
-    const otpToken = window.__getOtpToken ? window.__getOtpToken() : null;
+    // 2) Când se schimbă serviciul → golim selectările, încărcăm subcategoriile
+    const serviceSelect = document.querySelector("#serviceSelect");
+    serviceSelect.addEventListener("change", async () => {
+      selectedSubcatId = null;
+      selectedChildId = null;
+      await renderSubcategories("#subcats", serviceSelect.value);
+      document.querySelector("#children").innerHTML = "";
+      wireSubcatClicks();
+      wireChildClicks();
+    });
 
-    if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
-    if (!otpToken) { alert("Verifică telefonul înainte de trimitere."); return; }
-
-    const r = await fetch("/api/create-offer", {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ email, phone, serviceId, descriere, otpToken })
-    }).then(r=>r.json()).catch(()=>({}));
-
-    if (r?.ok) {
-      alert("Gata! Oferta a fost salvată. ID: " + r.id);
-      // opțional: redirect
-      // location.href = "/multumim.html";
-    } else {
-      alert(r?.error || "Eroare la trimitere");
+    // 3) După render, legăm handler-e pe chips
+    function wireSubcatClicks() {
+      const box = document.querySelector("#subcats");
+      if (!box) return;
+      box.addEventListener("click", async (e) => {
+        const btn = e.target.closest(".service-chip");
+        if (!btn) return;
+        selectedSubcatId = btn.dataset.id || null;
+        selectedChildId = null;
+        // marchează activul
+        box.querySelectorAll(".service-chip").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        // încarcă nivelul 3
+        await renderChildren("#children", selectedSubcatId);
+      }, { once: false });
     }
-  });
-</script>
 
+    function wireChildClicks() {
+      const box = document.querySelector("#children");
+      if (!box) return;
+      box.addEventListener("click", (e) => {
+        const btn = e.target.closest(".service-chip");
+        if (!btn) return;
+        selectedChildId = btn.dataset.id || null;
+        box.querySelectorAll(".service-chip").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      }, { once: false });
+    }
+
+    // apelăm o dată ca să prindă listener-ele inițiale (se vor reatașa după fiecare render)
+    wireSubcatClicks();
+    wireChildClicks();
+
+    // 4) Submit → trimitem la create-offer
+    document.getElementById("btnSubmit").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const serviceId = document.getElementById("serviceSelect").value;
+      const descriere = document.getElementById("descriere").value.trim();
+      const otpToken = window.__getOtpToken ? window.__getOtpToken() : null;
+
+      if (!serviceId) { alert("Te rugăm să alegi un serviciu."); return; }
+      if (!selectedSubcatId) { alert("Alege o subcategorie."); return; }
+      if (!otpToken) { alert("Verifică telefonul înainte de trimitere."); return; }
+
+      const payload = { email, phone, serviceId, subcatId: selectedSubcatId, childId: selectedChildId, descriere, otpToken };
+
+      const r = await fetch("/api/create-offer", {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      }).then(r=>r.json()).catch(()=>({}));
+
+      if (r?.ok) {
+        alert("Gata! Oferta a fost salvată. ID: " + r.id);
+        // opțional: reset
+        // location.href = "/multumim.html";
+      } else {
+        alert(r?.error || "Eroare la trimitere");
+      }
+    });
+  </script>
 </body>
 </html>
