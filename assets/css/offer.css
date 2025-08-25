@@ -31,3 +31,11 @@
   transition: all .2s ease;
 }
 .offer .service-chip:hover { border-color: #bbb; background: #f7f7f7; }
+
+#phoneStatus {
+  font-weight: 600;
+}
+#phoneStatus.pending { color: #d97706; }   /* portocaliu - cod trimis */
+#phoneStatus.verified { color: #059669; }  /* verde - ok */
+#phoneStatus.error { color: #dc2626; }     /* roșu - greșit */
+
