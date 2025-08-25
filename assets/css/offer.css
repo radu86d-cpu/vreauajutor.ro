@@ -32,20 +32,29 @@
 }
 .offer .service-chip:hover { border-color: #bbb; background: #f7f7f7; }
 
-#phoneStatus {
-  font-weight: 600;
-}
-#phoneStatus.pending { color: #d97706; }   /* portocaliu - cod trimis */
-#phoneStatus.verified { color: #059669; }  /* verde - ok */
-#phoneStatus.error { color: #dc2626; }     /* roșu - greșit */
+/* Stare text pentru telefon */
+#phoneStatus { font-weight: 600; }
+#phoneStatus.pending  { color: #d97706; }  /* portocaliu */
+#phoneStatus.verified { color: #059669; }  /* verde */
+#phoneStatus.error    { color: #dc2626; }  /* roșu */
 
-/* Icon verde pentru input valid */
-input.valid {
-  border-color: #059669; /* verde */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23059669' stroke-width='3' viewBox='0 0 24 24'%3E%3Cpath d='M5 13l4 4L19 7'/ %3E%3C/svg%3E");
+/* Icone în input (verde la valid, roșu la invalid) */
+.offer input.valid {
+  border-color: #059669;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 20px 20px;
-  padding-right: 36px; /* spațiu pentru icon */
+  padding-right: 36px;
 }
+
+.offer input.invalid {
+  border-color: #dc2626;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 6l12 12M18 6L6 18' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 20px 20px;
+  padding-right: 36px;
+}
+
 
