@@ -351,26 +351,29 @@ function applyBlueFromState(){
           cb.checked = selectedSet.has(String(cb.value));
           if (cb.checked) lab.classList.add('on');
 
-          cb.addEventListener('change', ()=>{
-            let set = __sel.bySub.get(subId);
-            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
+     cb.addEventListener('change', ()=>{
+  let set = __sel.bySub.get(subId);
+  if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
 
-            const val = String(cb.value);
-            if (cb.checked) set.add(val); else set.delete(val);
-            if (set.size === 0) __sel.bySub.delete(subId);
+  const val = String(cb.value);
+  if (cb.checked) set.add(val); else set.delete(val);
+  if (set.size === 0) __sel.bySub.delete(subId);
 
-            lab.classList.toggle('on', cb.checked);
+  lab.classList.toggle('on', cb.checked);
 
-            // reflectă chip-ul + badge
-            updateChipVisuals(subId);
+  // reflectă chip-ul + badge (menține linia asta)
+  updateChipVisuals(subId);
 
-            // sincronizează hidden fields
-            syncHiddenFromState();
+  // sincronizează hidden fields
+  syncHiddenFromState();
 
-            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-              document.getElementById('min1-hint').style.display = 'none';
-            }
-          });
+  // 🔵 ADĂUGĂ linia asta ca să forțezi culoarea pe toate chip-urile
+  applyBlueFromState();
+
+  if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+    document.getElementById('min1-hint').style.display = 'none';
+  }
+});
 
           lab.appendChild(cb);
           lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
