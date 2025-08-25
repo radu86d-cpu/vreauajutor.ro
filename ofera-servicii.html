@@ -242,13 +242,27 @@
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
 
     // toggling vizual pe chip + badge într-un singur loc
-    function updateChipVisuals(subId){
-      const meta = __subMeta.get(subId);
-      if (!meta) return;
-      const size = (__sel.bySub.get(subId)?.size || 0);
-      meta.btn.classList.toggle('blue', size > 0);         // albastru dacă are copii
-      if (meta.badge) meta.badge.textContent = String(size);
-    }
+    <script>
+// ... păstrează codul existent de sus
+
+// setează vizualul pt un singur subId
+function updateChipVisuals(subId){
+  const meta = __subMeta.get(subId);
+  if (!meta) return;
+  const size = (__sel.bySub.get(subId)?.size || 0);
+  meta.btn.classList.toggle('blue', size > 0);
+  if (meta.badge) meta.badge.textContent = String(size);
+}
+
+// reface vizualul pentru TOATE chip-urile din listă
+function applyBlueFromState(){
+  for (const [subId, meta] of __subMeta.entries()){
+    const size = (__sel.bySub.get(subId)?.size || 0);
+    meta.btn.classList.toggle('blue', size > 0);
+    if (meta.badge) meta.badge.textContent = String(size);
+  }
+}
+</script>
 
     function syncHiddenFromState(){
       const ids=[], names=[];
