@@ -1,48 +1,217 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ro">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Oferă servicii – VreauAjutor.ro</title>
-<link rel="stylesheet" href="style.css">
-<style>
-  .wrap{max-width:800px;margin:40px auto;background:#fff;border:1px solid #eee;border-radius:16px;padding:20px}
-  .muted{color:#555}
-  .grid{display:grid;gap:10px}
-  .agree{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .btn{padding:10px 16px;border:0;border-radius:10px;background:#0f62fe;color:#fff;cursor:pointer}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-</style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Oferă servicii – Autentificare/Înregistrare</title>
+  <style>
+    :root{--text:#0f172a;--muted:#64748b;--card:#fff;--border:#e5e7eb;--primary:#0f62fe;--shadow:0 18px 48px rgba(16,24,40,.12)}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f5f6f8;color:var(--text)}
+    .wrap{min-height:100svh;display:grid;place-items:center;padding:24px}
+    .card{width:min(560px,92vw);background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+    .head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .title{font-weight:800;font-size:20px;letter-spacing:-.01em}
+    .body{padding:18px}
+
+    /* OAuth */
+    .oauth{display:flex;flex-direction:column;gap:10px}
+    .btn{display:flex;align-items:center;gap:10px;width:100%;padding:12px;border:1px solid var(--border);background:#fff;border-radius:12px;cursor:pointer;font-weight:700}
+    .btn:hover{background:#f9fafb}
+    .btn img{width:18px;height:18px}
+
+    .divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:12px 0}
+    .divider::before,.divider::after{content:"";flex:1;height:1px;background:#e6e8ec}
+
+    /* Tabs */
+    .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:12px}
+    .tab{flex:1;padding:10px;border:0;background:#fff;cursor:pointer;font-weight:800}
+    .tab[aria-selected="true"]{color:var(--primary);border-bottom:2px solid var(--primary)}
+
+    /* Forms */
+    .form{display:none}
+    .form.active{display:block}
+    .field{display:flex;flex-direction:column;margin-bottom:10px}
+    .field label{font-weight:700;margin-bottom:6px}
+    .input{display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+    .input input{border:0;outline:none;padding:10px;flex:1;font-size:14px}
+    .toggle{border-left:1px solid var(--border);background:#fff;width:42px;display:grid;place-items:center;cursor:pointer}
+
+    .actions{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+    .small{font-size:12px;color:var(--muted)}
+    .link{background:none;border:0;color:var(--primary);cursor:pointer}
+
+    .submit{width:100%;padding:12px;border:0;border-radius:12px;background:var(--primary);color:#fff;cursor:pointer;font-weight:800}
+    .submit[disabled]{opacity:.6;cursor:not-allowed}
+
+    .error{margin-top:10px;color:#b00020;font-weight:700;font-size:13px}
+    .ok{margin-top:10px;color:#15803d;font-weight:700;font-size:13px}
+  </style>
 </head>
 <body>
   <main class="wrap">
-    <h1>Alătură-te ca furnizor</h1>
-    <p class="muted">Listează-ți afacerea și primește cereri direct de la clienți din zona ta.</p>
+    <section class="card" role="dialog" aria-modal="true">
+      <header class="head"><div class="title">Autentificare / Înregistrare</div></header>
+      <div class="body">
+        <div class="oauth">
+          <button class="btn" id="btnGoogle"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt=""/> Continuă cu Google</button>
+          <button class="btn" id="btnFacebook"><img src="https://www.svgrepo.com/show/494265/facebook-round.svg" alt=""/> Continuă cu Facebook</button>
+          <button class="btn" id="btnApple"><img src="https://www.svgrepo.com/show/349442/apple.svg" alt=""/> Continuă cu Apple</button>
+        </div>
+        <div class="divider">sau</div>
 
-    <div class="grid">
-      <ul>
-        <li>Apari în căutări pe județ/oraș + serviciu</li>
-        <li>Poți adăuga produse/servicii cu preț</li>
-        <li>Controlezi datele de contact și descrierea</li>
-      </ul>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab-signin" aria-controls="panel-signin" aria-selected="true">Intră în cont</button>
+          <button class="tab" role="tab" id="tab-signup" aria-controls="panel-signup" aria-selected="false">Creează un cont</button>
+        </div>
 
-      <label class="agree">
-        <input id="agree" type="checkbox">
-        <span>Sunt de acord cu <a href="termeni.html" target="_blank">Termenii și Condițiile</a>.</span>
-      </label>
+        <!-- Sign In -->
+        <form id="panel-signin" class="form active" autocomplete="on">
+          <div class="field">
+            <label for="si-email">Adresa de e-mail</label>
+            <div class="input"><input id="si-email" type="email" inputmode="email" autocomplete="email" required/></div>
+          </div>
+          <div class="field">
+            <label for="si-pass">Parolă</label>
+            <div class="input"><input id="si-pass" type="password" autocomplete="current-password" required/><button type="button" class="toggle" data-toggle="#si-pass">👁</button></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="link" id="btnForgot">Ai uitat parola?</button>
+            <span class="small">Continuând, ești de acord cu <a class="link" href="/termeni.html">Termenii</a>.</span>
+          </div>
+          <button class="submit" id="btnSignIn">Intră în cont</button>
+          <div id="si-msg" class="error" hidden></div>
+        </form>
 
-      <button id="start" class="btn" disabled>Începe înscrierea</button>
-    </div>
+        <!-- Sign Up -->
+        <form id="panel-signup" class="form" autocomplete="on">
+          <div class="field">
+            <label for="su-email">Adresa de e-mail</label>
+            <div class="input"><input id="su-email" type="email" inputmode="email" autocomplete="email" required/></div>
+          </div>
+          <div class="field">
+            <label for="su-pass">Parolă</label>
+            <div class="input"><input id="su-pass" type="password" autocomplete="new-password" required/><button type="button" class="toggle" data-toggle="#su-pass">👁</button></div>
+          </div>
+          <div class="small" style="margin:-6px 0 8px">Parola minim 8 caractere.</div>
+          <button class="submit" id="btnSignUp">Creează cont</button>
+          <div id="su-msg" class="ok" hidden></div>
+        </form>
+      </div>
+    </section>
   </main>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    document.getElementById('agree').addEventListener('change', (e)=>{
-      document.getElementById('start').disabled = !e.target.checked;
+  (function(){
+    // Tabs
+    const tabSignIn = document.getElementById('tab-signin');
+    const tabSignUp = document.getElementById('tab-signup');
+    const pnlSignIn = document.getElementById('panel-signin');
+    const pnlSignUp = document.getElementById('panel-signup');
+    function selectTab(which){
+      const isIn = which==='in';
+      tabSignIn.setAttribute('aria-selected', isIn);
+      tabSignUp.setAttribute('aria-selected', !isIn);
+      pnlSignIn.classList.toggle('active', isIn);
+      pnlSignUp.classList.toggle('active', !isIn);
+    }
+    tabSignIn.addEventListener('click', ()=>selectTab('in'));
+    tabSignUp.addEventListener('click', ()=>selectTab('up'));
+
+    // Password toggles
+    document.querySelectorAll('.toggle').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const input = document.querySelector(btn.getAttribute('data-toggle'));
+        if (!input) return; input.type = input.type==='password' ? 'text' : 'password';
+      })
     });
-    document.getElementById('start').addEventListener('click', ()=>{
-      // mergem la formularul tău existent
-      location.href = 'inscriere.html';
+
+    // Supabase client
+    let supa = null;
+    async function getSupa(){
+      if (supa) return supa;
+      const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+      const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+      supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return supa;
+    }
+
+    function setBusy(on){
+      document.querySelectorAll('.btn, .submit, .link').forEach(el=> el.disabled = !!on);
+    }
+    function showMsg(elId, text, ok){
+      const el = document.getElementById(elId); if (!el) return;
+      el.textContent = text || ''; el.hidden = !text; el.className = ok ? 'ok' : 'error';
+    }
+
+    // Redirect target (allow /ofera-servicii?next=/inscriere.html)
+    function nextUrl(){
+      const u = new URL(location.href);
+      return u.searchParams.get('next') || '/inscriere.html';
+    }
+
+    // On load: if logged in, go to form
+    (async ()=>{
+      const sb = await getSupa();
+      const { data:{ session } } = await sb.auth.getSession();
+      if (session){ location.href = nextUrl(); }
+    })();
+
+    // OAuth
+    async function oauth(provider){
+      setBusy(true);
+      const sb = await getSupa();
+      const { error } = await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: location.origin + nextUrl(), queryParams:{ prompt:'consent' } } });
+      if (error){ setBusy(false); showMsg('si-msg', error.message, false); }
+    }
+    document.getElementById('btnGoogle').addEventListener('click', ()=>oauth('google'));
+    document.getElementById('btnFacebook').addEventListener('click', ()=>oauth('facebook'));
+    document.getElementById('btnApple').addEventListener('click', ()=>oauth('apple'));
+
+    // Email: sign in
+    document.getElementById('panel-signin').addEventListener('submit', async (ev)=>{
+      ev.preventDefault(); setBusy(true); showMsg('si-msg','',false);
+      const email = document.getElementById('si-email').value.trim();
+      const pass  = document.getElementById('si-pass').value;
+      try{
+        const sb = await getSupa();
+        const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+        location.href = nextUrl();
+      }catch(e){ showMsg('si-msg', e.message || 'Eroare autentificare', false); }
+      finally{ setBusy(false); }
     });
+
+    // Email: sign up
+    document.getElementById('panel-signup').addEventListener('submit', async (ev)=>{
+      ev.preventDefault(); setBusy(true); showMsg('su-msg','',true); showMsg('si-msg','',false);
+      const email = document.getElementById('su-email').value.trim();
+      const pass  = document.getElementById('su-pass').value;
+      try{
+        const sb = await getSupa();
+        const { error } = await sb.auth.signUp({ email, password: pass, options:{ emailRedirectTo: location.origin + nextUrl() } });
+        if (error) throw error;
+        showMsg('su-msg','Cont creat! Verifică emailul pentru confirmare. După confirmare vei fi redirecționat.', true);
+        selectTab('in');
+      }catch(e){ showMsg('su-msg', e.message || 'Eroare înregistrare', false); }
+      finally{ setBusy(false); }
+    });
+
+    // Forgot password
+    document.getElementById('btnForgot').addEventListener('click', async ()=>{
+      const email = document.getElementById('si-email').value.trim();
+      if (!email){ showMsg('si-msg','Introdu adresa de email pentru resetare.', false); return; }
+      setBusy(true); showMsg('si-msg','',false);
+      try{
+        const sb = await getSupa();
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + nextUrl() });
+        if (error) throw error;
+        showMsg('si-msg','Ți-am trimis un email de resetare a parolei.', true);
+      }catch(e){ showMsg('si-msg', e.message || 'Eroare resetare parolă', false); }
+      finally{ setBusy(false); }
+    });
+  })();
   </script>
 </body>
 </html>
