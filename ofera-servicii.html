@@ -4,47 +4,70 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Oferă servicii – Autentificare/Înregistrare</title>
+  <!-- Preconnects (Supabase origin set dinamic în JS) -->
   <link id="preconnect-supabase" rel="preconnect" href="" crossorigin>
-  <link rel="preconnect" href="https://cdn.simpleicons.org">
-  <link rel="preconnect" href="https://www.gstatic.com">
+  <link rel="preconnect" href="https://www.gstatic.com"/>
+  <link rel="preconnect" href="https://cdn.simpleicons.org"/>
   <style>
     :root{
-      --bg:#f4f7fb; --ink:#0f172a; --muted:#64748b; --card:#ffffff; --border:#e6ebf2;
-      --primary:#0f62fe; --accent:#6a5cff; --accent-2:#7dd3fc; --ok:#16a34a; --err:#b00020;
-      --shadow:0 30px 70px rgba(17,24,39,.18), 0 2px 10px rgba(17,24,39,.06);
+      /* Design tokens */
+      --bg: #f5f7fc;
+      --ink: #0f172a;
+      --muted: #667085;
+      --card: #ffffff;
+      --border: #e6ebf2;
+      --primary: #0f62fe;
+      --accent: #6a5cff;
+      --accent-2: #7dd3fc;
+      --ok: #16a34a;
+      --err: #b00020;
+      --focus: 0 0 0 4px rgba(15,98,254,.18);
+      --shadow: 0 24px 64px rgba(17,24,39,.14), 0 2px 10px rgba(17,24,39,.06);
+      --radius: 22px;
     }
-    body{margin:0; font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink);
-      background:
-        radial-gradient(1200px 500px at 20% -10%, rgba(125,211,252,.22), transparent 60%),
-        radial-gradient(900px 500px at 120% 10%, rgba(106,92,255,.14), transparent 60%),
-        repeating-linear-gradient(45deg, #f7f9fd 0 18px, #f2f5fb 18px 36px);
+
+    /* Background: radial lights + subtle pattern */
+    body{margin:0; font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink); background:
+      radial-gradient(1400px 600px at -10% -20%, rgba(125,211,252,.25), transparent 60%),
+      radial-gradient(1000px 600px at 110% 0%, rgba(106,92,255,.18), transparent 60%),
+      repeating-linear-gradient(45deg, #f8fafc 0 18px, #f3f6fb 18px 36px);
       min-height:100svh; display:grid; place-items:center; padding:28px;
     }
-    .card{width:min(600px,92vw); background:var(--card); border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow); overflow:hidden; position:relative}
-    .card::before{content:""; position:absolute; inset:0 0 0 auto; width:6px; background:linear-gradient(180deg,var(--primary),var(--accent));}
-    .head{display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border);}
-    .brand{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--primary),var(--accent)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
-    .title{font-weight:900; letter-spacing:-.02em; font-size:18px}
-    .body{padding:16px;}
 
+    .card{width:min(640px,92vw); background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; position:relative}
+    .card::before{content:""; position:absolute; inset:0 0 0 auto; width:6px; background:linear-gradient(180deg,var(--primary),var(--accent));}
+
+    .head{display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border)}
+    .brand{width:36px; height:36px; border-radius:12px; display:grid; place-items:center; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--primary),var(--accent)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.42)}
+    .title{font-weight:900; letter-spacing:-.02em; font-size:18px}
+
+    .body{padding:16px}
+
+    /* Provider buttons */
     .oauth{display:flex; flex-direction:column; gap:10px}
-    .btn{--g:linear-gradient(135deg,var(--accent-2),var(--accent)); border:2px solid transparent; background:linear-gradient(#fff,#fff) padding-box, var(--g) border-box; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; width:100%; font-weight:800; cursor:pointer; transition:transform .06s ease, filter .2s ease; color:#0f1c2e}
+    .btn{--g:linear-gradient(135deg,var(--accent-2),var(--accent)); border:2px solid transparent; background:
+      linear-gradient(#fff,#fff) padding-box,
+      var(--g) border-box; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px; width:100%; font-weight:800; cursor:pointer; transition:transform .06s ease, filter .2s ease; color:#0f1c2e}
     .btn:hover{filter:brightness(1.02)}
     .btn:active{transform:translateY(1px)}
-    .btn img{width:20px; height:20px; display:block}
+    .btn:focus-visible{outline:none; box-shadow:var(--focus)}
+    .btn .ico{width:20px; height:20px; display:block}
 
     .divider{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px; margin:14px 0}
     .divider::before,.divider::after{content:""; flex:1; height:1px; background:var(--border)}
 
+    /* Segmented tabs */
     .seg{background:#f2f5fb; border:1px solid var(--border); border-radius:999px; padding:4px; display:flex; gap:6px; margin-bottom:12px}
     .seg button{flex:1; border:0; background:transparent; border-radius:999px; padding:8px 10px; font-weight:800; cursor:pointer; color:#334155}
     .seg button[aria-selected="true"]{background:#fff; color:var(--primary); box-shadow:0 2px 10px rgba(15,98,254,.15)}
+    .seg button:focus-visible{outline:none; box-shadow:var(--focus)}
 
+    /* Forms */
     .form{display:none}
     .form.active{display:block}
     .field{position:relative; margin:12px 0}
     .field input{width:100%; padding:14px 14px 12px; border:1px solid var(--border); background:#fff; border-radius:12px; font-size:14px; outline:none; transition:box-shadow .15s, border-color .15s}
-    .field input:focus{border-color:var(--primary); box-shadow:0 0 0 4px rgba(15,98,254,.08)}
+    .field input:focus{border-color:var(--primary); box-shadow:var(--focus)}
     .field label{position:absolute; left:12px; top:10px; padding:0 6px; background:#fff; color:#475569; font-size:12px; transform:translateY(-50%)}
 
     .toggle{position:absolute; right:10px; top:50%; transform:translateY(-50%); width:38px; height:34px; display:grid; place-items:center; border:1px solid var(--border); background:#fff; border-radius:10px; cursor:pointer}
@@ -52,13 +75,17 @@
     .actions{display:flex; align-items:center; justify-content:space-between; margin:10px 0}
     .small{font-size:12px; color:var(--muted)}
     .link{background:none; border:0; color:var(--primary); cursor:pointer; font-weight:700}
+    .link:focus-visible{outline:none; box-shadow:var(--focus)}
 
     .submit{width:100%; padding:12px; border:0; border-radius:14px; background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff; cursor:pointer; font-weight:900; letter-spacing:.2px; box-shadow:0 10px 26px rgba(15,98,254,.25)}
     .submit[disabled]{opacity:.6; cursor:not-allowed; box-shadow:none}
+    .submit:focus-visible{outline:none; box-shadow:var(--focus)}
 
     .msg{margin-top:10px; font-weight:700; font-size:13px}
     .msg.ok{color:var(--ok)}
     .msg.err{color:var(--err)}
+
+    .notice{margin-top:10px; color:#475569; font-size:12px}
 
     /* Overlay loader */
     .va-overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);display:none;place-items:center;z-index:9999}
@@ -66,20 +93,41 @@
     .spinner{width:38px;height:38px;border:3px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite}
     @keyframes sp{to{transform:rotate(360deg)}}
 
-    @media (max-width:520px){ .card{border-radius:18px} .head{padding:14px} .body{padding:14px} }
+    /* Motion reduced */
+    @media (prefers-reduced-motion: reduce){
+      .btn,.submit{transition:none}
+      .spinner{animation:none}
+    }
+
+    @media (max-width:560px){
+      .card{border-radius:18px}
+      .head{padding:14px}
+      .body{padding:14px}
+    }
   </style>
 </head>
 <body>
   <section class="card" role="dialog" aria-modal="true">
     <header class="head">
+      <!-- Înlocuiește "VA" cu logo-ul tău dacă dorești -->
       <div class="brand" aria-hidden="true">VA</div>
       <div class="title">Autentificare / Înregistrare</div>
     </header>
     <div class="body">
       <div class="oauth">
-        <button class="btn" id="btnFacebook"><img class="ico" src="https://cdn.simpleicons.org/facebook/1877F2" alt="" aria-hidden="true"/> Continuă cu Facebook</button>
-        <button class="btn" id="btnApple"><img class="ico" src="https://cdn.simpleicons.org/apple/000000" alt="" aria-hidden="true"/> Continuă cu Apple</button>
-        <button class="btn" id="btnGoogle"><img class="ico" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true"/> Continuă cu Google</button>
+        <button class="btn" id="btnFacebook">
+          <img class="ico" src="https://cdn.simpleicons.org/facebook/1877F2" alt="" aria-hidden="true"/>
+          Continuă cu Facebook
+        </button>
+        <button class="btn" id="btnApple">
+          <img class="ico" src="https://cdn.simpleicons.org/apple/000000" alt="" aria-hidden="true"/>
+          Continuă cu Apple
+        </button>
+        <button class="btn" id="btnGoogle">
+          <!-- Google G (gstatic official works best; păstrăm pentru fidelitate) -->
+          <img class="ico" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true"/>
+          Continuă cu Google
+        </button>
       </div>
 
       <div class="divider">sau</div>
@@ -127,15 +175,19 @@
         <button class="submit" id="btnSignUp">Creează cont</button>
         <div id="su-msg" class="msg ok" role="status" aria-live="polite" hidden></div>
       </form>
+
+      <p class="notice">Ne conectăm prin Supabase. Logarea cu providerii externi respectă politicile lor.
+        Dacă te întorci fără să fii autentificat, verifică permisiunile sau încearcă dintr-un browser complet (Chrome/Safari).</p>
     </div>
   </section>
 
+  <!-- Overlay global loader -->
   <div class="va-overlay" id="overlay"><div class="spinner"></div></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     (function(){
-      // In-app browser warning (FB/IG)
+      // In-app browser warning (Facebook/Instagram etc.)
       (function(){
         const isInApp = /FBAN|FBAV|Instagram|Line/i.test(navigator.userAgent);
         if(!isInApp) return;
