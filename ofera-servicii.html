@@ -287,6 +287,16 @@
       updateSubmitState();
     }
 
+    function updateChipVisuals(subId){
+  const meta = __subMeta.get(subId);
+  if (!meta) return;
+  const size = (__sel.bySub.get(subId)?.size || 0);
+  // toggle culoarea chip-ului
+  meta.btn.classList.toggle('blue', size > 0);
+  // badge
+  if (meta.badge) meta.badge.textContent = String(size);
+}
+
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
       const container = document.getElementById('children');
