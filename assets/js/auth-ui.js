@@ -8,36 +8,26 @@ const statusEl = document.querySelector("#phoneStatus");
 let phoneVerified = false;
 let otpToken = null;
 
-// === Helpers ===
-function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+/* === Helpers === */
+function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || "").trim()); }
+
+function markValid(el, isValid) {
+  if (!el) return;
+  el.classList.toggle("valid", !!isValid);
+  el.classList.toggle("invalid", !isValid && (el.value || "").trim().length > 0);
+}
 
 function refreshSubmitState() {
   const emailOk = validEmail(emailInput?.value || "");
   if (submitBtn) submitBtn.disabled = !(emailOk && phoneVerified);
-
-  // marchează email valid/invalid vizual
-  if (emailInput) {
-    if (emailOk) {
-      emailInput.classList.add("valid");
-      emailInput.classList.remove("invalid");
-    } else {
-      emailInput.classList.remove("valid");
-    }
-  }
+  markValid(emailInput, emailOk);
 }
 
 function normalizePhone(raw) {
   let v = (raw || "").trim();
   if (!v) return v;
-
-  // dacă începe cu 0 (ex. 07...), îl transformăm în +40...
-  if (/^0\d{8,}$/.test(v)) {
-    v = "+40" + v.substring(1);
-  }
-  // dacă nu începe cu +, prefixăm +
-  if (!v.startsWith("+")) {
-    v = "+" + v;
-  }
+  if (/^0\d{8,}$/.test(v)) v = "+40" + v.slice(1);
+  if (!v.startsWith("+")) v = "+" + v;
   return v;
 }
 
@@ -47,9 +37,23 @@ function setStatus(msg, cls) {
   statusEl.className = "offer-hint " + (cls || "");
 }
 
-// === Events ===
+/* === Email live validate === */
 emailInput?.addEventListener("input", refreshSubmitState);
+emailInput?.addEventListener("blur", refreshSubmitState);
 
+/* === Dacă utilizatorul schimbă telefonul după verificare -> resetăm === */
+phoneInput?.addEventListener("input", () => {
+  if (phoneVerified) {
+    phoneVerified = false;
+    otpToken = null;
+    localStorage.removeItem("_va_otp");
+    setStatus("Neconfirmat", "");
+    markValid(phoneInput, false);
+    refreshSubmitState();
+  }
+});
+
+/* === OTP flow === */
 otpBtn?.addEventListener("click", async () => {
   let phone = normalizePhone(phoneInput?.value || "");
   if (!phone) { alert("Introdu numărul de telefon"); return; }
@@ -61,12 +65,12 @@ otpBtn?.addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ phone })
-    }).then(r=>r.json());
+    }).then(r => r.json());
 
-    if (!r?.ok) { 
+    if (!r?.ok) {
       setStatus("Eroare la trimiterea SMS-ului", "error");
-      alert(r?.error || "Eroare la trimiterea codului"); 
-      return; 
+      alert(r?.error || "Eroare la trimiterea codului");
+      return;
     }
 
     const code = prompt("Introdu codul primit prin SMS:");
@@ -76,7 +80,7 @@ otpBtn?.addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ phone, code })
-    }).then(r=>r.json());
+    }).then(r => r.json());
 
     phoneVerified = !!v?.ok;
     otpToken = v?.otpToken || null;
@@ -84,10 +88,10 @@ otpBtn?.addEventListener("click", async () => {
 
     if (phoneVerified) {
       setStatus("✅ Telefon verificat", "verified");
-      phoneInput.classList.add("valid");
+      markValid(phoneInput, true);
     } else {
       setStatus("Cod invalid sau expirat", "error");
-      phoneInput.classList.remove("valid");
+      markValid(phoneInput, false);
       alert("Cod invalid");
     }
 
@@ -98,8 +102,8 @@ otpBtn?.addEventListener("click", async () => {
   }
 });
 
-// === Expose token ===
+/* === Expose token pentru submit === */
 window.__getOtpToken = () => otpToken || localStorage.getItem("_va_otp") || null;
 
-// inițial, butonul e dezactivat
+/* Init */
 refreshSubmitState();
