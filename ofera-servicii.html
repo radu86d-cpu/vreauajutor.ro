@@ -280,26 +280,25 @@ function applyBlueFromState(){
     }
 
     function renderChips(container, items){
-      container.innerHTML=''; __subMeta.clear();
-      items.forEach(it=>{
-        const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-        const name = it.name ?? it.subcat_name ?? '';
+  container.innerHTML=''; __subMeta.clear();
+  items.forEach(it=>{
+    const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
+    const name = it.name ?? it.subcat_name ?? '';
 
-        const btn = document.createElement('button');
-        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
-        const title = document.createElement('span'); title.textContent=name;
-        const badge = document.createElement('span'); badge.className='badge';
-        badge.textContent = String(__sel.bySub.get(id)?.size || 0);
-        btn.appendChild(title); btn.appendChild(badge);
+    const btn = document.createElement('button');
+    btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
+    const title = document.createElement('span'); title.textContent=name;
+    const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
+    btn.appendChild(title); btn.appendChild(badge);
 
-        __subMeta.set(id,{btn,name,badge});
-        // albastru dacă există selecții pentru subId
-        if ((__sel.bySub.get(id)?.size || 0) > 0) btn.classList.add('blue');
+    __subMeta.set(id,{btn,name,badge});
+    btn.addEventListener('click', ()=>toggleChildGroup(id));
+    container.appendChild(btn);
+  });
 
-        btn.addEventListener('click', ()=>toggleChildGroup(id));
-        container.appendChild(btn);
-      });
-    }
+  // 🔵 ADĂUGĂ asta la final, ca să coloreze corect pe baza selecțiilor existente
+  applyBlueFromState();
+}
 
     function resyncGroupCheckboxes(subId){
       const group = document.getElementById(childGroupId(subId));
