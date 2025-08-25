@@ -1,29 +1,38 @@
-import { cors, json, bad, method, rateLimit } from "./_shared/utils.js";
+// netlify/functions/otp_start.js
+import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
 import twilio from "twilio";
 
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const VERIFY_SID = process.env.TWILIO_VERIFY_SID;
+const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID } = process.env;
+if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
+  console.warn("WARN: Twilio env vars missing (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_VERIFY_SID)");
+}
+
+const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 export default async (req) => {
+  const opt = handleOptions(req); if (opt) return opt;
+
   const m = method(req, ["POST"]);
-  const headers = cors(req);
-  if (m === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
 
-  // mic rate‑limit (protejează endpointul de spam)
-  if (!rateLimit(req, { windowSec: 60, max: 5 })) return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
+  if (!rateLimit(req, { windowSec: 60, max: 5 })) {
+    return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
+  }
 
-  let body = {};
-  try { body = await req.json(); } catch { /* ignore */ }
+  const body = await bodyJSON(req);
   const phone = (body.phone || "").trim();
+  const channel = (body.channel || "sms").toLowerCase(); // sms / call
 
-  // validare minimă pentru număr internațional
-  if (!/^\+?[1-9]\d{6,15}$/.test(phone)) return bad("Număr de telefon invalid.");
+  if (!phone) return bad("Lipsește numărul de telefon.");
 
   try {
-    await client.verify.v2.services(VERIFY_SID).verifications.create({ to: phone, channel: "sms" });
-    return json({ ok: true }, { headers });
+    const resp = await client.verify.v2
+      .services(TWILIO_VERIFY_SID)
+      .verifications
+      .create({ to: phone, channel });
+
+    return json({ ok: true, status: resp.status }); // "pending"
   } catch (e) {
-    console.error("otp_start", e?.message || e);
-    return bad("Nu am putut trimite codul acum. Încearcă mai târziu.", 500);
+    return bad(e?.message || "Eroare Twilio", 500);
   }
 };
