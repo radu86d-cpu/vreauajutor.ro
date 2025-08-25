@@ -150,7 +150,6 @@
             fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
           }
           updateSubmitState();
-          // taxonomia rămâne neschimbată
         });
 
         selO.addEventListener('change', ()=>{ updateSubmitState(); });
@@ -241,28 +240,23 @@
     function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
 
-    // toggling vizual pe chip + badge într-un singur loc
-    <script>
-// ... păstrează codul existent de sus
+    // setează vizualul pt un singur subId
+    function updateChipVisuals(subId){
+      const meta = __subMeta.get(subId);
+      if (!meta) return;
+      const size = (__sel.bySub.get(subId)?.size || 0);
+      meta.btn.classList.toggle('blue', size > 0);
+      if (meta.badge) meta.badge.textContent = String(size);
+    }
 
-// setează vizualul pt un singur subId
-function updateChipVisuals(subId){
-  const meta = __subMeta.get(subId);
-  if (!meta) return;
-  const size = (__sel.bySub.get(subId)?.size || 0);
-  meta.btn.classList.toggle('blue', size > 0);
-  if (meta.badge) meta.badge.textContent = String(size);
-}
-
-// reface vizualul pentru TOATE chip-urile din listă
-function applyBlueFromState(){
-  for (const [subId, meta] of __subMeta.entries()){
-    const size = (__sel.bySub.get(subId)?.size || 0);
-    meta.btn.classList.toggle('blue', size > 0);
-    if (meta.badge) meta.badge.textContent = String(size);
-  }
-}
-</script>
+    // reface vizualul pentru TOATE chip-urile
+    function applyBlueFromState(){
+      for (const [subId, meta] of __subMeta.entries()){
+        const size = (__sel.bySub.get(subId)?.size || 0);
+        meta.btn.classList.toggle('blue', size > 0);
+        if (meta.badge) meta.badge.textContent = String(size);
+      }
+    }
 
     function syncHiddenFromState(){
       const ids=[], names=[];
@@ -280,38 +274,38 @@ function applyBlueFromState(){
     }
 
     function renderChips(container, items){
-  container.innerHTML=''; __subMeta.clear();
-  items.forEach(it=>{
-    const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-    const name = it.name ?? it.subcat_name ?? '';
+      container.innerHTML=''; __subMeta.clear();
+      items.forEach(it=>{
+        const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
+        const name = it.name ?? it.subcat_name ?? '';
 
-    const btn = document.createElement('button');
-    btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
-    const title = document.createElement('span'); title.textContent=name;
-    const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
-    btn.appendChild(title); btn.appendChild(badge);
+        const btn = document.createElement('button');
+        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
+        const title = document.createElement('span'); title.textContent=name;
+        const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
+        btn.appendChild(title); btn.appendChild(badge);
 
-    __subMeta.set(id,{btn,name,badge});
-    btn.addEventListener('click', ()=>toggleChildGroup(id));
-    container.appendChild(btn);
-  });
+        __subMeta.set(id,{btn,name,badge});
+        btn.addEventListener('click', ()=>toggleChildGroup(id));
+        container.appendChild(btn);
+      });
 
-  // 🔵 ADĂUGĂ asta la final, ca să coloreze corect pe baza selecțiilor existente
-  applyBlueFromState();
-}
+      // colorează corect pe baza selecțiilor existente
+      applyBlueFromState();
+    }
 
     function resyncGroupCheckboxes(subId){
-  const group = document.getElementById(childGroupId(subId));
-  if (!group) return;
-  const set = __sel.bySub.get(subId) || new Set();
-  group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-    cb.checked = set.has(String(cb.value));
-    cb.closest('.child-item')?.classList.toggle('on', cb.checked);
-  });
-  updateChipVisuals(subId);
-  applyBlueFromState(); // 🔵 adăugat
-  updateSubmitState();
-}
+      const group = document.getElementById(childGroupId(subId));
+      if (!group) return;
+      const set = __sel.bySub.get(subId) || new Set();
+      group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+        cb.checked = set.has(String(cb.value));
+        cb.closest('.child-item')?.classList.toggle('on', cb.checked);
+      });
+      updateChipVisuals(subId);
+      applyBlueFromState();
+      updateSubmitState();
+    }
 
     async function toggleChildGroup(subId){
       ensureChildWrapVisible();
@@ -351,29 +345,27 @@ function applyBlueFromState(){
           cb.checked = selectedSet.has(String(cb.value));
           if (cb.checked) lab.classList.add('on');
 
-     cb.addEventListener('change', ()=>{
-  let set = __sel.bySub.get(subId);
-  if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
+          cb.addEventListener('change', ()=>{
+            let set = __sel.bySub.get(subId);
+            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
 
-  const val = String(cb.value);
-  if (cb.checked) set.add(val); else set.delete(val);
-  if (set.size === 0) __sel.bySub.delete(subId);
+            const val = String(cb.value);
+            if (cb.checked) set.add(val); else set.delete(val);
+            if (set.size === 0) __sel.bySub.delete(subId);
 
-  lab.classList.toggle('on', cb.checked);
+            lab.classList.toggle('on', cb.checked);
 
-  // reflectă chip-ul + badge (menține linia asta)
-  updateChipVisuals(subId);
+            // reflectă chip-ul + badge
+            updateChipVisuals(subId);
+            // sincronizează hidden fields
+            syncHiddenFromState();
+            // forțează culoarea pe toate chip-urile
+            applyBlueFromState();
 
-  // sincronizează hidden fields
-  syncHiddenFromState();
-
-  // 🔵 ADĂUGĂ linia asta ca să forțezi culoarea pe toate chip-urile
-  applyBlueFromState();
-
-  if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-    document.getElementById('min1-hint').style.display = 'none';
-  }
-});
+            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+              document.getElementById('min1-hint').style.display = 'none';
+            }
+          });
 
           lab.appendChild(cb);
           lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
@@ -394,9 +386,7 @@ function applyBlueFromState(){
       if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
       const meta = __subMeta.get(subId) || {};
       const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
-
       const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam);
-
       const { children=[] } = await ajx(url);
       __cacheChildren.set(subId, children);
       return children;
