@@ -1,4 +1,3 @@
-// netlify/functions/otp_verify.js
 import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
 import twilio from "twilio";
 import { signOtpToken } from "./_shared/tokens.js";
@@ -31,7 +30,7 @@ export default async (req) => {
     const approved = resp.status === "approved";
     if (!approved) return json({ ok: false, status: resp.status });
 
-    // token OTP scurt‑viață, semnat pe server (valabil 15 min)
+    // token OTP scurt-viață, semnat pe server (valabil 15 min)
     const otpToken = signOtpToken({ kind: "otp", phone });
     return json({ ok: true, status: resp.status, otpToken });
   } catch (e) {
