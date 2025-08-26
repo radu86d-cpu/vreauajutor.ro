@@ -1,159 +1,172 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Înscriere • VreauAjutor.ro</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Înregistrare • VreauAjutor.ro</title>
 
-  <link rel="stylesheet" href="./style.css"/>
+  <!-- Global (dacă ai) -->
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- Auth CSS (opțional extern: /assets/css/auth.css) -->
+  <link rel="stylesheet" href="./assets/css/auth.css" />
+
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #f9fafb;
-      margin: 0;
-      padding: 0;
-    }
-    .auth-container {
-      max-width: 420px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 10px 28px rgba(16,24,40,.1);
-      padding: 24px;
-    }
-    .tabs {
-      display: flex;
-      border-bottom: 2px solid #eee;
-      margin-bottom: 20px;
-    }
-    .tabs button {
-      flex: 1;
-      padding: 12px;
-      background: none;
-      border: none;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: 0.2s;
-    }
-    .tabs button.active {
-      border-color: #0f62fe;
-      color: #0f62fe;
-    }
-    .social-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .social-buttons button {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      background: #fff;
-      font-size: 15px;
-      cursor: pointer;
-    }
-    .divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 20px 0;
-      color: #aaa;
-      font-size: 14px;
-    }
-    .divider::before, .divider::after {
-      content: "";
-      flex: 1;
-      border-bottom: 1px solid #ddd;
-    }
-    .divider:not(:empty)::before { margin-right: .75em; }
-    .divider:not(:empty)::after { margin-left: .75em; }
+  /* Dacă nu vrei fișier separat, poți păstra stilul acesta inline */
+  :root{
+    --bg:#f6f7f9; --card:#fff; --text:#0f172a; --muted:#64748b;
+    --primary:#0f62fe; --primary-100:#eef4ff; --border:#e6e8ec;
+    --radius:14px; --shadow:0 12px 30px rgba(16,24,40,.10);
+  }
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f2f5f9 0%,#fff 100%);color:var(--text)}
+  .auth-wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+  h1{margin:0 0 6px;font-size:clamp(22px,3vw,28px)}
+  .subtitle{color:var(--muted);margin-bottom:14px}
 
-    form { display: flex; flex-direction: column; gap: 14px; }
-    input[type="email"], input[type="password"] {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    input:focus {
-      border-color: #0f62fe;
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(15,98,254,.15);
-    }
-    .terms {
-      font-size: 13px;
-      color: #555;
-      line-height: 1.4;
-    }
-    .terms a { color: #0f62fe; text-decoration: none; }
-    .terms a:hover { text-decoration: underline; }
+  .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+       padding:12px 14px;border-radius:12px;border:1px solid #dfe3ea;background:#fff;cursor:pointer;font-weight:700}
+  .btn:hover{background:#f8faff;border-color:#cfe0ff}
+  .btn svg{width:20px;height:20px}
+  .btn-primary{background:var(--primary);color:#fff;border:0}
+  .btn-primary:hover{filter:brightness(1.02)}
+  .row{display:flex;gap:10px}
+  .or{display:flex;align-items:center;gap:10px;color:#94a3b8;font-weight:700;margin:14px 0}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:#e5e7eb}
 
-    .submit-btn {
-      width: 100%;
-      background: #0f62fe;
-      border: none;
-      padding: 14px;
-      border-radius: 8px;
-      color: white;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    .submit-btn:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
+  label{display:block;font-weight:600;margin:.6rem 0 .35rem}
+  input[type="email"],input[type="password"]{
+    width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px;transition:border-color .18s,box-shadow .18s;background:#fff
+  }
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(15,98,254,.08)}
+  .hint{font-size:13px;color:#64748b}
+  .rules{margin:10px 0 6px;color:#334155;font-size:14px}
+  .rules li{margin:.2rem 0}
+  .agree{display:flex;gap:10px;align-items:flex-start;margin:12px 0}
+  .agree input{margin-top:3px}
+  .error{color:#dc2626;font-weight:700;margin:.5rem 0}
+  .success{color:#16a34a;font-weight:700;margin:.5rem 0}
+  .foot{margin-top:10px;font-size:13px;color:#94a3b8;text-align:center}
+  a{color:#0f62fe;text-decoration:none}
+  a:hover{text-decoration:underline}
   </style>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div class="auth-container">
-    <!-- Tabs sus -->
-    <div class="tabs">
-      <button id="tab-login">Autentificare</button>
-      <button id="tab-register" class="active">Înregistrare</button>
-    </div>
+  <main class="auth-wrap">
+    <section class="card" role="dialog" aria-labelledby="title">
+      <h1 id="title">Creează un cont</h1>
+      <p class="subtitle">Alege o opțiune rapidă sau înscrie-te cu email și parolă.</p>
 
-    <!-- Butoane sociale -->
-    <div class="social-buttons">
-      <button><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg" width="20"> Continuă cu Facebook</button>
-      <button><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/apple.svg" width="20"> Continuă cu Apple</button>
-      <button><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg" width="20"> Continuă cu Google</button>
-    </div>
-
-    <div class="divider">SAU</div>
-
-    <!-- Formular înscriere -->
-    <form>
-      <input type="email" placeholder="Adresa ta de e-mail" required>
-      <input type="password" placeholder="Parolă" required>
-      <div class="terms">
-        În momentul în care apeși pe „Creează cont”, accepți 
-        <a href="#">Termenii și condițiile</a> și <a href="#">Politica de confidențialitate</a>.
+      <!-- Social OAuth -->
+      <div class="stack">
+        <button id="btnFb" class="btn" type="button" aria-label="Continuă cu Facebook">
+          <!-- F -->
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/></svg>
+          Continuă cu Facebook
+        </button>
+        <div class="row" style="margin-top:10px">
+          <button id="btnApple" class="btn" type="button" aria-label="Continuă cu Apple" style="flex:1">
+            <!--  -->
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/></svg>
+            Apple
+          </button>
+          <button id="btnGoogle" class="btn" type="button" aria-label="Continuă cu Google" style="flex:1">
+            <!-- G -->
+            <svg viewBox="0 0 24 24" fill="none"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/></svg>
+            Google
+          </button>
+        </div>
       </div>
-      <label style="font-size:13px;">
-        <input type="checkbox" required> Sunt de acord cu primirea de informări prin email / SMS.
-      </label>
-      <button type="submit" class="submit-btn">Creează un cont</button>
-    </form>
-  </div>
+
+      <div class="or">SAU</div>
+
+      <!-- Email + parolă -->
+      <form id="form" novalidate>
+        <label for="email">Adresa ta de e-mail</label>
+        <input id="email" type="email" autocomplete="email" required placeholder="ex. nume@domeniu.ro" />
+
+        <label for="pass">Parolă</label>
+        <input id="pass" type="password" autocomplete="new-password" required placeholder="Minim 9 caractere" />
+
+        <ul class="rules">
+          <li>9 sau mai multe caractere</li>
+          <li>Cel puțin o literă mare și una mică</li>
+          <li>Cel puțin o cifră</li>
+        </ul>
+
+        <label class="agree">
+          <input id="agree" type="checkbox" />
+          <span>Sunt de acord cu <a href="/termeni.html" target="_blank" rel="noopener">Termenii și condițiile</a> și <a href="/confidentialitate.html" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
+        </label>
+
+        <button id="createBtn" class="btn btn-primary" type="submit">Creează un cont</button>
+        <div id="msg" role="status" aria-live="polite" style="min-height:20px;margin-top:8px"></div>
+      </form>
+
+      <p class="foot">Ai deja cont? <a href="/autentificare.html">Autentifică-te</a></p>
+    </section>
+  </main>
 
   <script>
-    const tabLogin = document.getElementById('tab-login');
-    const tabRegister = document.getElementById('tab-register');
+    // 1) ENV din Netlify Function (exact ca pe celelalte pagini)
+    let supa;
+    (async () => {
+      try{
+        const envRes = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+        supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }catch(e){
+        console.error('ENV load failed', e);
+        document.getElementById('msg').textContent = 'Eroare inițializare. Reîncearcă.';
+      }
+    })();
 
-    tabLogin.addEventListener('click', ()=> {
-      window.location.href = '/login.html'; // faci altă pagină pt login dacă vrei
-    });
-    tabRegister.addEventListener('click', ()=> {
-      window.location.href = '/inscriere.html';
+    // 2) Helpers
+    const msg = (t,ok=false)=> {
+      const el=document.getElementById('msg');
+      el.textContent=t||'';
+      el.className= ok? 'success':'error';
+    };
+    const validPass = (p)=> /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||'');
+
+    // 3) Social OAuth
+    async function startOAuth(provider){
+      if (!supa) return;
+      try{
+        const { data, error } = await supa.auth.signInWithOAuth({
+          provider, options: { redirectTo: location.origin + '/ofera-servicii.html' }
+        });
+        if (error) throw error;
+      }catch(e){ msg(e.message || 'Nu am putut porni autentificarea.'); }
+    }
+    document.getElementById('btnGoogle').onclick = ()=> startOAuth('google');
+    document.getElementById('btnApple').onclick  = ()=> startOAuth('apple');
+    document.getElementById('btnFb').onclick     = ()=> startOAuth('facebook');
+
+    // 4) Email + parolă
+    document.getElementById('form').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      if (!supa) return;
+
+      const email = (document.getElementById('email').value||'').trim();
+      const pass  = document.getElementById('pass').value||'';
+      const okA   = document.getElementById('agree').checked;
+
+      if (!email){ msg('Completează adresa de email.'); return; }
+      if (!validPass(pass)){ msg('Parola nu respectă regulile.'); return; }
+      if (!okA){ msg('Trebuie să accepți termenii.'); return; }
+
+      msg('Trimit...', true);
+      try{
+        const { data, error } = await supa.auth.signUp({ email, password: pass,
+          options:{ emailRedirectTo: location.origin + '/ofera-servicii.html' }
+        });
+        if (error) throw error;
+        msg('Ți-am trimis un email de confirmare. Verifică inbox-ul.', true);
+      }catch(e){ msg(e.message || 'Eroare la creare cont.'); }
     });
   </script>
 </body>
