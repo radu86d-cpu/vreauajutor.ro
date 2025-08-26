@@ -1,4 +1,3 @@
-// netlify/functions/otp_start.js
 import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
 import twilio from "twilio";
 
