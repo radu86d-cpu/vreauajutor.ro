@@ -1,9 +1,7 @@
-// /netlify/functions/register_provider.js
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  // SERVICE ROLE KEY — numai pe server!
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -28,14 +26,13 @@ exports.handler = async (event) => {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 
-  // CORS preflight
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
   if (event.httpMethod !== 'POST')   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Use POST' }) };
 
   try {
     const body = JSON.parse(event.body || '{}');
 
-    // ------------------ Validări minime ------------------
+    // validări minime
     const required = ['company_name', 'service_name', 'judet', 'oras'];
     for (const k of required) {
       if (!body[k] || String(body[k]).trim() === '') {
@@ -43,7 +40,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // autentificare (token din Authorization: Bearer <jwt>)
+    // auth
     const auth = event.headers.authorization || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) {
@@ -55,8 +52,7 @@ exports.handler = async (event) => {
     }
     const user = userData.user;
 
-    // ------------------ Găsește service_id după service_name ------------------
-    // întâi încercăm egalitate directă (exact cum e în DB)
+    // găsește service_id după service_name
     let serviceId = null;
 
     // 1) match exact
@@ -70,7 +66,7 @@ exports.handler = async (event) => {
       if (svc1?.id) serviceId = svc1.id;
     }
 
-    // 2) fallback: potrivire fără diacritice + case-insensitive
+    // 2) fallback: fără diacritice / case-insensitive
     if (!serviceId) {
       const { data: allS, error: e2 } = await supabase
         .from('services')
@@ -86,9 +82,9 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Serviciu inexistent' }) };
     }
 
-    // ------------------ Inserare provider ------------------
+    // inserare provider
     const insert = {
-      user_id:     user.id,
+      user_id:      user.id,
       company_name: (body.company_name || '').trim(),
       description:  (body.description || '').trim() || null,
       service_id:   serviceId,
@@ -107,7 +103,6 @@ exports.handler = async (event) => {
 
     if (insErr) {
       if (insErr.code === '23505') {
-        // unicitate pe company_name
         return { statusCode: 409, headers, body: JSON.stringify({ error: 'Compania există deja.' }) };
       }
       throw insErr;
@@ -117,13 +112,8 @@ exports.handler = async (event) => {
     const providerId = provider?.id;
     if (!providerId) throw new Error('Insert provider fără id.');
 
-        // ------------------ Subcategorie / Sub-subcategorie ------------------
-    // Acceptăm:
-    //  - body.subcat  : id numeric (părinte)
-    //  - body.subsub  : id numeric (primul copil, compat)
-    //  - body.subsubs : listă de id-uri (copiii bifați)
+    // Subcategorie / copii
     const toLink = new Set();
-
     const addIfNum = (v) => {
       const s = String(v ?? '');
       if (/^\d+$/.test(s)) toLink.add(parseInt(s, 10));
@@ -135,7 +125,6 @@ exports.handler = async (event) => {
     if (Array.isArray(body.subsubs)) {
       body.subsubs.forEach(addIfNum);
     } else if (typeof body.subsubs === 'string' && body.subsubs.trim()) {
-      // suport și pentru "1,2,3"
       body.subsubs.split(',').forEach(addIfNum);
     }
 
