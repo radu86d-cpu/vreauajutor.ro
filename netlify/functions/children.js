@@ -1,4 +1,3 @@
-// netlify/functions/children.js
 import { json, bad, method, handleOptions } from "./_shared/utils.js";
 import { createClient } from "@supabase/supabase-js";
 
