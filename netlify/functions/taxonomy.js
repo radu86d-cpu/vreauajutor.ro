@@ -1,4 +1,3 @@
-// /netlify/functions/taxonomy.js  (CommonJS)
 const { createClient } = require('@supabase/supabase-js');
 
 const strip = (s='') => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -32,7 +31,6 @@ exports.handler = async (event) => {
     const jud  = (qs.judet || '').trim();
     const ora  = (qs.oras  || '').trim();
 
-    // ------- helpers pentru filtrări în JS (scăpăm de diacritice) -------
     const J = norm(jud), O = norm(ora);
     const areaOK = (p) => {
       if (J && norm(p.judet) !== J) return false;
@@ -40,8 +38,7 @@ exports.handler = async (event) => {
       return true;
     };
 
-    // ===================== MODE: categories ======================
-    // dă înapoi categoriile disponibile în zona (jud/ora) din providers activi
+    // === categories
     if (mode === 'categories') {
       const { data: prov, error: e1 } = await db
         .from('providers')
@@ -69,13 +66,11 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ services }) };
     }
 
-        // ===================== MODE: subcategories ======================
-    // q: service (numele categoriei), opțional judet/oras; întoarce subcategoriile de nivel 1 + count
+    // === subcategories
     if (mode === 'subcategories') {
       const svcNameQ = (qs.service || '').trim();
       if (!svcNameQ) return { statusCode: 400, headers, body: JSON.stringify({ subcategories: [] }) };
 
-      // 1) găsește service_id prin potrivire fără diacritice
       const { data: allS, error: eS } = await db.from('services').select('id,name');
       if (eS) throw eS;
       const target = norm(svcNameQ);
@@ -85,7 +80,6 @@ exports.handler = async (event) => {
       let subcategories = [];
 
       if (svc?.id) {
-        // 2) încearcă din tabela normalizată `subcategories`
         const { data: subs, error: eSub } = await db
           .from('subcategories')
           .select('id, name, parent_id, service_id')
@@ -94,15 +88,11 @@ exports.handler = async (event) => {
 
         const top = (subs || []).filter(s => !s.parent_id);
 
-        // copii pentru fiecare top
         const childrenByParent = {};
         (subs || []).forEach(s => {
-          if (s.parent_id) {
-            (childrenByParent[s.parent_id] ||= []).push(s.id);
-          }
+          if (s.parent_id) (childrenByParent[s.parent_id] ||= []).push(s.id);
         });
 
-        // providers activi din zonă și din service
         const { data: prov, error: eP } = await db
           .from('providers')
           .select('id, is_active, judet, oras, service_id');
@@ -111,7 +101,6 @@ exports.handler = async (event) => {
         const act = (prov || []).filter(p => p.is_active && p.service_id === svc.id && areaOK(p));
         const pids = act.map(p => p.id);
 
-        // legăturile provider_subcategories
         let links = [];
         if (pids.length) {
           const { data: linkRows, error: eL } = await db
@@ -122,7 +111,6 @@ exports.handler = async (event) => {
           links = linkRows || [];
         }
 
-        // map provider -> set(subcatIds)
         const setMap = new Map();
         for (const row of links) {
           if (!setMap.has(row.provider_id)) setMap.set(row.provider_id, new Set());
@@ -144,10 +132,9 @@ exports.handler = async (event) => {
         subcategories.sort((a,b)=> a.name.localeCompare(b.name));
       }
 
-      // 3) FALLBACK pe taxonomy_flat dacă nu am găsit nimic în `subcategories`
+      // Fallback pe taxonomy_flat
       if (!subcategories.length) {
         let serviceId = svc?.id;
-        // dacă nu am văzut id-ul mai sus, mai încerc o dată pe toate serviciile (matching fără diacritice)
         if (!serviceId) {
           const normName = (s) => s?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
           const wanted = normName(svcNameQ);
@@ -189,12 +176,10 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ subcategories }) };
     }
 
-       // ===================== MODE: children ======================
-    // q: subcat (poate fi ID numeric SAU nume din fallback), opțional jud/oras; întoarce copiii + count
+    // === children
     if (mode === 'children') {
       const raw = (qs.subcat || '').trim();
 
-      // 1) dacă e numeric → fluxul normalizat
       if (/^\d+$/.test(raw)) {
         const parentId = parseInt(raw, 10);
         const { data: parent, error: ePar } = await db
@@ -247,7 +232,7 @@ exports.handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ children }) };
       }
 
-      // 2) FALLBACK: dacă `subcat` e numele subcategoriei → citim din `taxonomy_flat`
+      // fallback pe taxonomy_flat după nume
       const subcatName = raw;
       if (!subcatName) return { statusCode: 200, headers, body: JSON.stringify({ children: [] }) };
 
@@ -269,7 +254,6 @@ exports.handler = async (event) => {
 
       return { statusCode: 200, headers, body: JSON.stringify({ children }) };
     }
-
 
     return { statusCode: 400, headers, body: JSON.stringify({ error:'Unknown mode' }) };
   } catch (e) {
