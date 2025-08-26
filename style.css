@@ -1,7 +1,5 @@
 /* ======= STIL GENERAL ======= */
-/* Reset util pentru layout mai stabil */
 *, *::before, *::after { box-sizing: border-box; }
-
 body{
   margin:0;
   font-family:'Inter',sans-serif;
@@ -81,14 +79,13 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   padding:30px;
   border-radius:12px;
   width:90%;
-  max-width:400px;
+  max-width:420px;
   position:relative;
   box-shadow:0 4px 20px rgba(0,0,0,.3);
   max-height: calc(100vh - 120px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
-
 .close{position:absolute;right:16px;top:10px;font-size:24px;cursor:pointer;color:#999;}
 
 .tab-buttons{display:flex;justify-content:space-around;margin-bottom:20px;}
@@ -103,7 +100,6 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   font-weight:bold;cursor:pointer;
 }
 .tab-content button:hover{background:#005f99;}
-/* Ascunde panoul inactiv (bazat pe aria-hidden) */
 .tab-content[aria-hidden="true"] { display: none !important; }
 
 /* ======= SECȚIUNE SERVICII ======= */
@@ -146,21 +142,8 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   }
 }
 
-/* ===== Diverse ===== */
+/* Diverse */
 .cta-suppliers{font-weight:600;}
-
-/* Google Sign-In (alb, modern) */
-.google-btn{
-  background:#fff !important;color:#1f1f1f !important;border:1px solid #dadce0 !important;
-  box-shadow:0 1px 1px rgba(0,0,0,.06);
-  display:flex;align-items:center;justify-content:center;gap:.5rem;font-weight:600;
-}
-.google-btn:hover{background:#fff !important;box-shadow:0 2px 6px rgba(0,0,0,.08);}
-.google-btn:active{background:#fff !important;}
-.google-btn .google-icon{display:inline-flex;width:18px;height:18px;line-height:0;}
-button.google-btn:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
-
-/* Butoane autentificare + link furnizori */
 .auth-buttons{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
 .auth-buttons .link-suppliers{color:#fff;text-decoration:underline;font-size:13px;opacity:.9;}
 .auth-buttons .link-suppliers:hover{opacity:1;}
@@ -220,23 +203,32 @@ nav a:focus-visible,
 /* === FIX: vizibilitate text pentru chip-urile de taxonomie === */
 #subcats button,
 #subcats .chip {
-  color: #1f2937; /* slate-800 */
+  color: #1f2937;
   background: #fff;
-  border: 1px solid #e5e7eb; /* gray-200 */
+  border: 1px solid #e5e7eb;
 }
 #subcats button.active,
 #subcats .chip.active {
   background: #eef5ff;
-  border-color: #93c5fd; /* blue-300 */
-  color: #111827; /* gray-900 */
+  border-color: #93c5fd;
+  color: #111827;
 }
 #subcats button[disabled],
-#children label[aria-disabled="true"] {
-  opacity: .6;
-}
-/* Dacă ai avut skeleton pe chip-uri, nu mai face textul transparent după ce s-au încărcat */
+#children label[aria-disabled="true"] { opacity: .6; }
 #subcats .skeleton,
 #children .skeleton {
   color: inherit !important;
   -webkit-text-fill-color: inherit !important;
 }
+
+/* ===== OAUTH – stil comun (Facebook / Apple / Google) ===== */
+.oauth-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.oauth-btn{
+  background:#fff;color:#1f1f1f;border:1px solid #dadce0;
+  display:flex;align-items:center;justify-content:center;gap:.5rem;
+  padding:10px;border-radius:10px;font-weight:700;cursor:pointer;
+  box-shadow:0 1px 1px rgba(0,0,0,.06)
+}
+.oauth-btn:hover{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.oauth-btn .ico{display:inline-flex;width:18px;height:18px;line-height:0}
+.oauth-btn:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
