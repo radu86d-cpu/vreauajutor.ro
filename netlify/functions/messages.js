@@ -28,7 +28,6 @@ export default async (req) => {
     return json({ ok: true, items: data }, { headers });
   }
 
-  // POST
   if (!rateLimit(req, { windowSec: 10, max: 8 })) return bad("Prea des", 429);
 
   let body = {};
