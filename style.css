@@ -1,18 +1,38 @@
 /* ======= STIL GENERAL ======= */
 *, *::before, *::after { box-sizing: border-box; }
+:root{
+  --va-primary:#004080;
+  --va-primary-600:#0066cc;
+  --va-accent:#007acc;
+  --va-bg:#f8f8f8;
+  --va-text:#333;
+  --va-card:#fff;
+  --va-border:#e5e7eb;
+  --va-focus:#1a73e8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --va-bg:#0f172a;
+    --va-text:#e5e7eb;
+    --va-card:#0b1220;
+    --va-border:#1f2937;
+  }
+}
+html{ color-scheme: light dark; }
 body{
   margin:0;
-  font-family:'Inter',sans-serif;
-  background:#f8f8f8;
-  color:#333;
+  font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--va-bg);
+  color:var(--va-text);
 }
+img{max-width:100%;height:auto;}
 
 /* ======= HEADER ======= */
 header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:#004080;
+  background:var(--va-primary);
   padding:10px 30px;
   color:#fff;
   flex-wrap:wrap;
@@ -26,39 +46,43 @@ nav a{
   text-decoration:none;
   font-weight:bold;
   padding:5px 10px;
-  transition:background .3s;
+  border-radius:5px;
+  transition:background .2s ease;
 }
-nav a:hover{background:#0066cc;border-radius:5px;}
+nav a:hover{background:var(--va-primary-600);}
+nav a:focus-visible{outline:2px solid #fff; outline-offset:2px;}
 
 /* ======= SLIDER + SELECTOR ======= */
 .sectiune-slider-selector{
   display:flex;justify-content:center;align-items:flex-start;flex-wrap:nowrap;
-  gap:30px;margin:40px auto;max-width:1200px;
+  gap:30px;margin:40px auto;max-width:1200px;padding:0 12px;
 }
 .slider-modern{flex:0 0 70%;border-radius:16px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.2);}
 .slider-container{position:relative;width:100%;overflow:hidden;}
 .slides{display:flex;transition:transform .5s ease;width:100%;will-change:transform;}
 .slides>*{min-width:100%;flex-shrink:0;}
-.slides img{display:block;width:100%;height:auto;border-radius:16px;}
+.slides img{display:block;width:100%;height:auto;}
 .prev,.next{
   position:absolute;top:50%;transform:translateY(-50%);
   background:rgba(0,0,0,.4);color:#fff;font-size:24px;border:none;padding:10px;
   cursor:pointer;z-index:1;border-radius:50%;
 }
 .prev{left:10px;} .next{right:10px;}
+.prev:focus-visible,.next:focus-visible{outline:2px solid var(--va-focus);outline-offset:2px;}
 
 .selector-zona{
-  flex:0 0 28%;background:#f9f9f9;border-radius:16px;padding:20px;
-  box-shadow:0 2px 8px rgba(0,0,0,.1);
+  flex:0 0 28%;background:var(--va-card);border-radius:16px;padding:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);border:1px solid var(--va-border);
 }
 .selector-zona h3{font-size:18px;margin-bottom:15px;text-align:center;}
 .selector-zona label,
 .selector-zona select,
 .selector-zona button{width:100%;margin-bottom:12px;font-size:14px;}
 .selector-zona select,
-.selector-zona button{padding:8px;border-radius:8px;border:1px solid #ccc;}
-.selector-zona button{background:#007acc;color:#fff;border:none;cursor:pointer;}
+.selector-zona button{padding:8px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#111;}
+.selector-zona button{background:var(--va-accent);color:#fff;border:none;cursor:pointer;}
 .selector-zona button:hover{background:#005f99;}
+.selector-zona button:disabled{opacity:.6;cursor:not-allowed;}
 
 @media (max-width:768px){
   .sectiune-slider-selector{flex-direction:column;align-items:center;}
@@ -68,13 +92,20 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   .prev, .next { padding: 6px; font-size: 20px; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .slides { transition: none !important; }
+  .serviciu-box:hover { transform: none !important; }
+}
+
 /* ==== MODAL AUTENTIFICARE ==== */
 .modal{
-  display:none;position:fixed;z-index:999;left:0;top:0;width:100%;height:100%;
+  display:none;position:fixed;z-index:999;inset:0;
   background-color:rgba(0,0,0,.5);
+  -webkit-backdrop-filter:saturate(180%) blur(2px);
+  backdrop-filter:saturate(180%) blur(2px);
 }
 .modal-content{
-  background:#fff;
+  background:var(--va-card);
   margin:80px auto;
   padding:30px;
   border-radius:12px;
@@ -85,38 +116,43 @@ nav a:hover{background:#0066cc;border-radius:5px;}
   max-height: calc(100vh - 120px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  border:1px solid var(--va-border);
 }
-.close{position:absolute;right:16px;top:10px;font-size:24px;cursor:pointer;color:#999;}
+.close{position:absolute;right:16px;top:10px;font-size:24px;cursor:pointer;color:#999;background:none;border:0;}
+.close:focus-visible{outline:2px solid var(--va-focus);outline-offset:2px;}
 
-.tab-buttons{display:flex;justify-content:space-around;margin-bottom:20px;}
-.tab-buttons button{padding:10px;width:50%;border:none;background:#eee;cursor:pointer;font-weight:bold;}
-.tab-buttons .active{background:#007acc;color:#fff;}
+.tab-buttons{display:flex;justify-content:space-around;margin-bottom:20px;gap:8px}
+.tab-buttons button{padding:10px;width:50%;border:1px solid var(--va-border);background:#eee;cursor:pointer;font-weight:bold;border-radius:8px;}
+.tab-buttons .active{background:var(--va-accent);color:#fff;border-color:transparent;}
 
 .tab-content input,.tab-content select{
-  width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;
+  width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#111;
 }
 .tab-content button{
-  width:100%;padding:10px;background:#007acc;color:#fff;border:none;border-radius:8px;
+  width:100%;padding:10px;background:var(--va-accent);color:#fff;border:none;border-radius:8px;
   font-weight:bold;cursor:pointer;
 }
 .tab-content button:hover{background:#005f99;}
+.tab-content button:disabled{opacity:.6;cursor:not-allowed;}
 .tab-content[aria-hidden="true"] { display: none !important; }
 
 /* ======= SECȚIUNE SERVICII ======= */
 .servicii-populare{background:#f4f8fc;padding:40px 0;text-align:center;}
+@media (prefers-color-scheme: dark){ .servicii-populare{background:#0b1220;} }
 .servicii-container{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin-top:20px;}
 .serviciu-box{
-  background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.1);
-  overflow:hidden;width:200px;transition:transform .3s,box-shadow .3s;
+  background:var(--va-card);border:1px solid var(--va-border);
+  border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.08);
+  overflow:hidden;width:200px;transition:transform .2s ease,box-shadow .2s ease;
 }
-.serviciu-box:hover{transform:scale(1.05);box-shadow:0 8px 20px rgba(0,0,0,.2);}
-.serviciu-box img{display:block;width:100%;height:140px;object-fit:cover;border-bottom:1px solid #eee;}
-.serviciu-box p{margin:10px;font-size:14px;color:#333;}
+.serviciu-box:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.15);}
+.serviciu-box img{display:block;width:100%;height:140px;object-fit:cover;border-bottom:1px solid var(--va-border);}
+.serviciu-box p{margin:10px;font-size:14px;}
 
 /* --- AjutorBot (widget) --- */
 #ajb-widget{
   position:fixed;right:16px;bottom:16px;width:320px;
-  box-shadow:0 8px 24px rgba(0,0,0,.15);border-radius:12px;background:#fff;border:1px solid #eee;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);border-radius:12px;background:var(--va-card);border:1px solid var(--va-border);
   display:flex;flex-direction:column;max-height:80vh;padding-bottom:env(safe-area-inset-bottom);z-index:998;
 }
 #ajb-widget .ajb-body{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;}
@@ -125,15 +161,16 @@ nav a:hover{background:#0066cc;border-radius:5px;}
 #ajb-messages{
   overflow-wrap:anywhere;flex:1 1 auto;min-height:140px;overflow-y:auto;
   -webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
-  border:1px solid #eee;padding:8px;border-radius:8px;background:#fff;
+  border:1px solid var(--va-border);padding:8px;border-radius:8px;background:var(--va-card);
 }
 #ajb-widget .ajb-header{
   padding:10px 12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;
-  background:#fff;border-bottom:1px solid #eee;
+  background:var(--va-card);border-bottom:1px solid var(--va-border);
 }
 #ajb-widget .ajb-input{display:flex;gap:8px;margin-top:8px;}
-#ajb-widget .ajb-input input{flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;}
-#ajb-widget .ajb-input button{padding:8px 12px;border:0;border-radius:8px;cursor:pointer;background:#004080;color:#fff;}
+#ajb-widget .ajb-input input{flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#111;}
+#ajb-widget .ajb-input button{padding:8px 12px;border:0;border-radius:8px;cursor:pointer;background:var(--va-primary);color:#fff;}
+#ajb-widget .ajb-input button:disabled{opacity:.6;cursor:not-allowed;}
 
 @media (max-width:600px){
   #ajb-widget{
@@ -149,17 +186,17 @@ nav a:hover{background:#0066cc;border-radius:5px;}
 .auth-buttons .link-suppliers:hover{opacity:1;}
 
 /* Banda căutare din hero */
-.hero-search-band{background:#004080;padding:16px 0;}
-.hero-search{max-width:640px;margin:0 auto;display:flex;gap:8px;}
-.hero-search input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc;}
-.hero-search input:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
-.hero-search button{padding:10px 16px;border-radius:8px;border:0;background:#fff;color:#004080;font-weight:600;cursor:pointer;transition:filter .15s ease;}
+.hero-search-band{background:var(--va-primary);padding:16px 0;}
+.hero-search{max-width:640px;margin:0 auto;display:flex;gap:8px;padding:0 12px;}
+.hero-search input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#111;}
+.hero-search input:focus-visible{outline:2px solid var(--va-focus);outline-offset:2px;}
+.hero-search button{padding:10px 16px;border-radius:8px;border:0;background:#fff;color:var(--va-primary);font-weight:600;cursor:pointer;transition:filter .15s ease;}
 .hero-search button:hover{filter:brightness(.95);}
 .link-suppliers{display:inline-block;margin-left:12px;color:#ffeb3b;text-decoration:underline;}
 .link-suppliers:hover{opacity:.9;}
 @media (max-width:600px){.hero-search{flex-direction:column;}}
 
-/* Focus vizibil */
+/* Focus vizibil – elemente cheie */
 nav a:focus-visible,
 .prev:focus-visible,
 .next:focus-visible,
@@ -168,8 +205,9 @@ nav a:focus-visible,
 .tab-buttons button:focus-visible,
 .tab-content button:focus-visible,
 .selector-zona button:focus-visible,
+.selector-zona select:focus-visible,
 #authModal .close:focus-visible{
-  outline:2px solid #1a73e8;outline-offset:2px;
+  outline:2px solid var(--va-focus);outline-offset:2px;
 }
 
 /* doar pentru cititoare de ecran */
@@ -181,54 +219,76 @@ nav a:focus-visible,
 /* ===== Căutare avansată ===== */
 .advanced-toggle{
   width:100%;padding:8px;border-radius:8px;border:1px solid #ccc;background:#fff;
-  color:#004080;font-weight:600;cursor:pointer;
+  color:var(--va-primary);font-weight:600;cursor:pointer;
 }
 .advanced-toggle:hover{filter:brightness(.98);}
+.advanced-toggle:disabled{opacity:.6;cursor:not-allowed;}
 .advanced-panel{
-  margin-top:10px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px;
+  margin-top:10px;padding:12px;background:var(--va-card);border:1px solid var(--va-border);border-radius:8px;
 }
 .advanced-panel label{display:block;font-size:13px;margin-top:8px;}
 .advanced-panel input,.advanced-panel select{
-  width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-top:4px;
+  width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;margin-top:4px;background:#fff;color:#111;
 }
 .advanced-panel .chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;}
 .advanced-panel input:focus-visible,.advanced-panel select:focus-visible,
-.advanced-toggle:focus-visible{outline:2px solid #1a73e8;outline-offset:2px;}
+.advanced-toggle:focus-visible{outline:2px solid var(--va-focus);outline-offset:2px;}
 
-@media (prefers-reduced-motion: reduce) {
-  .slides { transition: none !important; }
-  .serviciu-box:hover { transform: none !important; }
+/* === Taxonomie: chip-uri + badge + copii (fallback comun) === */
+.chip,
+#subcats .chip,
+#subcats button{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:999px;border:1px solid var(--va-border);
+  background:#fff;color:#1f2937;cursor:pointer;user-select:none;
+  transition:background .15s ease,border-color .15s ease,transform .05s ease;
 }
-
-/* === FIX: vizibilitate text pentru chip-urile de taxonomie === */
-#subcats button,
-#subcats .chip {
-  color: #1f2937;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+.chip:hover,
+#subcats .chip:hover,
+#subcats button:hover{ background:#f9fafb; }
+.chip:active,
+#subcats .chip:active,
+#subcats button:active{ transform:translateY(1px); }
+.chip.active,
+#subcats .chip.active,
+#subcats button.active{
+  background:#eef5ff;border-color:#93c5fd;color:#111827;
 }
-#subcats button.active,
-#subcats .chip.active {
-  background: #eef5ff;
-  border-color: #93c5fd;
-  color: #111827;
+.badge{
+  display:inline-flex;min-width:18px;height:18px;padding:0 6px;
+  align-items:center;justify-content:center;border-radius:999px;
+  background:#eef2ff;color:#334155;font-size:12px;border:1px solid #e5e7eb;
 }
 #subcats button[disabled],
-#children label[aria-disabled="true"] { opacity: .6; }
+#children label[aria-disabled="true"] { opacity:.6; cursor:not-allowed; }
 #subcats .skeleton,
 #children .skeleton {
   color: inherit !important;
   -webkit-text-fill-color: inherit !important;
 }
 
-/* ===== OAUTH – stil comun (Facebook / Apple / Google) ===== */
-.oauth-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-.oauth-btn{
-  background:#fff;color:#1f1f1f;border:1px solid #dadce0;
-  display:flex;align-items:center;justify-content:center;gap:.5rem;
-  padding:10px;border-radius:10px;font-weight:700;cursor:pointer;
-  box-shadow:0 1px 1px rgba(0,0,0,.06)
+/* Children (checkbox list) */
+.child-item{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 10px;border:1px solid var(--va-border);border-radius:10px;margin:4px 6px 0 0;background:#fff;cursor:pointer;
 }
-.oauth-btn:hover{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08)}
-.oauth-btn .ico{display:inline-flex;width:18px;height:18px;line-height:0}
-.oauth-btn:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
+.child-item.on{ background:#f0f9ff; border-color:#93c5fd; }
+.child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:8px;}
+.child-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.child-title .tools{display:flex;gap:8px;align-items:center;}
+
+/* Status dot (OTP state) */
+.status-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:middle;}
+.st-green{background:#16a34a;}
+.st-amber{background:#f59e0b;}
+.st-red{background:#dc2626;}
+.hint-warn{color:#b45309;font-size:12px;margin-left:6px;}
+.hint-danger{color:#dc2626;font-size:12px;}
+.hint-ok{color:#16a34a;font-size:12px;}
+
+/* Mesaje generice */
+.msg{margin-top:8px;font-size:14px}
+
+/* ===== Extra mic polish ===== */
+button, [role="button"]{ -webkit-tap-highlight-color: transparent; }
+```0
