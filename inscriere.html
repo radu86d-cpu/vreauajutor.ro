@@ -30,6 +30,7 @@
   .btn svg{width:20px;height:20px}
   .btn-primary{background:var(--primary);color:#fff;border:0}
   .btn-primary:hover{filter:brightness(1.02)}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
   .row{display:flex;gap:10px}
   .or{display:flex;align-items:center;gap:10px;color:#94a3b8;font-weight:700;margin:14px 0}
   .or::before,.or::after{content:"";flex:1;height:1px;background:#e5e7eb}
@@ -106,67 +107,95 @@
     </section>
   </main>
 
+  <!-- Supabase lib -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    // 1) Ia cheile din funcția Netlify (nu expune chei în client)
-    let supa;
-    (async () => {
-      try{
-        const envRes = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-        supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      }catch(e){
+    // ==== ENV + client Supabase (sigur, reutilizabil) ====
+    window.supa = window.supa || null;
+    window.supabaseReady = window.supabaseReady || (async function loadEnvAndInit() {
+      try {
+        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        if (!res.ok) { console.error('ENV endpoint failed', res.status); return false; }
+        const env = await res.json().catch(()=> ({}));
+        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) { console.error('ENV invalid', env); return false; }
+        window.supa = window.supa || supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+        return true;
+      } catch (e) {
         console.error('ENV load failed', e);
-        document.getElementById('msg').textContent = 'Eroare inițializare. Reîncearcă.';
+        return false;
       }
     })();
 
-    // 2) Helpers UI
-    const msg = (t,ok=false)=> {
-      const el=document.getElementById('msg');
-      el.textContent=t||'';
-      el.className= ok? 'success':'error';
-    };
+    // ==== Redirect helper (folosit și de index/ofera-servicii) ====
+    function rememberRedirect(to) {
+      try { localStorage.setItem('__va_after_login_redirect', to); } catch {}
+    }
+
+    // ==== UI helpers ====
+    function setMsg(t, ok=false){
+      const el = document.getElementById('msg');
+      el.textContent = t || '';
+      el.className = ok ? 'success' : 'error';
+    }
     const validPass = (p)=> /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||'');
 
-    // 3) Social OAuth – toate redirecționează înapoi în /auth-callback.html
+    // ==== Social OAuth (redirect prin auth-callback) ====
     async function startOAuth(provider){
-      if (!supa) { msg('Auth indisponibil'); return; }
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) { setMsg('Auth indisponibil'); return; }
       try{
-        const { error } = await supa.auth.signInWithOAuth({
+        rememberRedirect('/ofera-servicii.html'); // după login, du-l la ofertare
+        const { error } = await window.supa.auth.signInWithOAuth({
           provider,
           options: { redirectTo: location.origin + '/auth-callback.html' }
         });
         if (error) throw error;
-        // Supabase va redirecționa; nu facem nimic aici
-      }catch(e){ msg(e.message || 'Nu am putut porni autentificarea.'); }
+        // redirecția se face de Supabase
+      }catch(e){ setMsg(e.message || 'Nu am putut porni autentificarea.'); }
     }
     document.getElementById('btnGoogle').onclick = ()=> startOAuth('google');
     document.getElementById('btnApple').onclick  = ()=> startOAuth('apple');
     document.getElementById('btnFb').onclick     = ()=> startOAuth('facebook');
 
-    // 4) Email + parolă – redirect de confirmare tot către /auth-callback.html
+    // ==== Email + parolă ====
     document.getElementById('form').addEventListener('submit', async (ev)=>{
       ev.preventDefault();
-      if (!supa) return;
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) { setMsg('Auth indisponibil'); return; }
 
       const email = (document.getElementById('email').value||'').trim();
       const pass  = document.getElementById('pass').value||'';
       const okA   = document.getElementById('agree').checked;
 
-      if (!email){ msg('Completează adresa de email.'); return; }
-      if (!validPass(pass)){ msg('Parola nu respectă regulile.'); return; }
-      if (!okA){ msg('Trebuie să accepți termenii.'); return; }
+      if (!email){ setMsg('Completează adresa de email.'); return; }
+      if (!validPass(pass)){ setMsg('Parola nu respectă regulile.'); return; }
+      if (!okA){ setMsg('Trebuie să accepți termenii.'); return; }
 
-      msg('Trimit...', true);
+      const btn = document.getElementById('createBtn');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Se trimite…';
+      setMsg('Trimit…', true);
+
       try{
-        const { error } = await supa.auth.signUp({
+        rememberRedirect('/ofera-servicii.html');
+        const { error } = await window.supa.auth.signUp({
           email,
           password: pass,
           options:{ emailRedirectTo: location.origin + '/auth-callback.html' }
         });
         if (error) throw error;
-        msg('Ți-am trimis un email de confirmare. Verifică inbox-ul.', true);
-      }catch(e){ msg(e.message || 'Eroare la creare cont.'); }
+        setMsg('Ți-am trimis un email de confirmare. Verifică inbox-ul.', true);
+      }catch(e){
+        setMsg(e.message || 'Eroare la creare cont.');
+      }finally{
+        btn.disabled = false; btn.textContent = orig;
+      }
+    });
+
+    // Enter pe parolă => submit
+    document.getElementById('pass').addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') document.getElementById('createBtn').click();
     });
   </script>
 </body>
