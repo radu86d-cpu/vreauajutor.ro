@@ -25,8 +25,32 @@
     document.addEventListener('DOMContentLoaded', () => { if (window.AOS) AOS.init(); });
   </script>
 
-  <!-- Supabase -->
+  <!-- Supabase lib -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Loader ENV + client Supabase (sigur) -->
+  <script>
+    window.supa = null;
+    window.supabaseReady = (async function loadEnvAndInit() {
+      try {
+        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        if (!res.ok) {
+          console.error('ENV endpoint failed', res.status);
+          return false;
+        }
+        const env = await res.json().catch(() => ({}));
+        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+          console.error('ENV invalid', env);
+          return false;
+        }
+        window.supa = supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+        return true;
+      } catch (e) {
+        console.error('ENV load failed', e);
+        return false;
+      }
+    })();
+  </script>
 </head>
 
 <body>
@@ -295,7 +319,14 @@
 
   <!-- Helpers pentru AJAX simplu -->
   <script>
-    async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function ajx(url){
+      const r = await fetch(url);
+      if(!r.ok){
+        const t = await r.text().catch(()=> '');
+        throw new Error(`HTTP ${r.status} ${t}`);
+      }
+      return r.json().catch(()=> { throw new Error('Răspuns invalid (nu e JSON)'); });
+    }
   </script>
 
   <!-- Selectoare dependente (judet/oras/serviciu) + căutare -->
@@ -505,9 +536,6 @@
 
   <!-- ================== AUTH INIT + GATING „Oferă servicii” ================== -->
   <script>
-    // global
-    window.supa = null;
-
     function rememberRedirect(to) {
       try { localStorage.setItem('__va_after_login_redirect', to); } catch {}
     }
@@ -520,61 +548,66 @@
     }
 
     (async () => {
-      // 1) ENV din Netlify
-      try {
-        const r = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
-        window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } catch(e) {
-        console.error('ENV load failed', e);
+      // Așteaptă inițializarea sigură
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) {
+        console.warn('Supabase nu este gata; gating by modal.');
       }
 
-      // 2) Header: „Salut, email” + Ieșire
+      // 1) Header: „Salut, email” + Ieșire
       try {
-        const { data:{ user } } = await window.supa.auth.getUser();
-        if (user) {
-          const box = document.querySelector('.auth-buttons');
-          if (box) {
-            document.getElementById('btnLogin')?.remove();
-            document.getElementById('btnRegister')?.remove();
+        if (window.supa) {
+          const { data:{ user } } = await window.supa.auth.getUser();
+          if (user) {
+            const box = document.querySelector('.auth-buttons');
+            if (box) {
+              document.getElementById('btnLogin')?.remove();
+              document.getElementById('btnRegister')?.remove();
 
-            const hi = document.createElement('div');
-            hi.style.fontSize = '13px'; hi.style.opacity = '.9';
-            hi.textContent = `Salut, ${user.email}`;
+              const hi = document.createElement('div');
+              hi.style.fontSize = '13px'; hi.style.opacity = '.9';
+              hi.textContent = `Salut, ${user.email}`;
 
-            const out = document.createElement('button');
-            out.textContent = 'Ieșire';
-            out.style.padding = '6px 10px';
-            out.onclick = async () => { await window.supa.auth.signOut(); location.reload(); };
+              const out = document.createElement('button');
+              out.textContent = 'Ieșire';
+              out.style.padding = '6px 10px';
+              out.onclick = async () => { await window.supa.auth.signOut(); location.reload(); };
 
-            box.append(hi, out);
+              box.append(hi, out);
+            }
           }
         }
       } catch(e){ console.warn(e); }
 
-      // 3) Interceptează link-urile protejate (ofera-servicii)
+      // 2) Interceptează link-urile protejate (ofera-servicii)
       document.querySelectorAll('a.requires-auth,[data-requires-auth="true"]').forEach(a=>{
         a.addEventListener('click', async (ev)=>{
+          const href = a.getAttribute('href') || '/ofera-servicii.html';
           try {
+            const okReady = await window.supabaseReady;
+            if (!okReady || !window.supa) {
+              ev.preventDefault();
+              rememberRedirect(href);
+              openRegister();
+              return;
+            }
             const { data:{ session } } = await window.supa.auth.getSession();
             if (!session?.access_token) {
               ev.preventDefault();
-              rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
-              openRegister(); // sau openLogin(); alegem Register ca default
+              rememberRedirect(href);
+              openRegister(); // sau openLogin()
             }
           } catch(e) {
-            // dacă supa nu e gata, tot protejez: deschid modalul
             ev.preventDefault();
-            rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
+            rememberRedirect(href);
             openRegister();
           }
         });
       });
 
-      // 4) Dacă venim dintr-un flux de login care a setat redirect-ul
+      // 3) Dacă venim dintr-un flux de login care a setat redirect-ul
       const pending = consumeRedirect();
-      if (pending) {
-        // dacă deja suntem logați, du-ne acum
+      if (pending && window.supa) {
         try {
           const { data:{ session } } = await window.supa.auth.getSession();
           if (session?.access_token) location.replace(pending);
@@ -597,14 +630,13 @@
 
     // Social OAuth: mereu cu redirect către ofera-servicii.html
     async function startOAuth(provider){
-      if (!window.supa) return;
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) { alert('Serviciul de autentificare nu este disponibil momentan.'); return; }
       try{
         rememberRedirect('/ofera-servicii.html');
         await window.supa.auth.signInWithOAuth({
           provider,
           options: { redirectTo: window.location.origin + '/auth-callback.html' }
-          // Notă: auth-callback.html va face exchange și apoi te întoarce pe /
-          // iar în onload mai sus te ducem înapoi către redirectul reținut
         });
       }catch(e){ toastMsg(e.message || 'Nu am putut porni autentificarea.'); }
     }
@@ -618,11 +650,13 @@
 
     // Înregistrare cu email/parolă -> după confirmarea emailului redirect spre ofera-servicii.html
     async function inregistrare(){
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) { alert('Auth indisponibil'); return; }
+
       const email = document.getElementById('register_email')?.value?.trim();
       const pass  = document.getElementById('register_password')?.value||'';
       const okA   = document.getElementById('register_agree')?.checked;
 
-      if (!window.supa) return alert('Auth indisponibil');
       if (!email) return alert('Completează email-ul');
       if (!validPass(pass)) return alert('Parola nu respectă regulile (min 9 caractere, literă mare, literă mică, cifră).');
       if (!okA) return alert('Trebuie să accepți termenii.');
@@ -641,9 +675,11 @@
 
     // Autentificare cu email/parolă -> redirect imediat către ofera-servicii.html
     async function autentificare(){
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) { alert('Auth indisponibil'); return; }
+
       const email = document.getElementById('login_email')?.value?.trim();
       const pass  = document.getElementById('login_password')?.value||'';
-      if (!window.supa) return alert('Auth indisponibil');
       if (!email || !pass) return alert('Completează email + parolă');
 
       try{
@@ -695,7 +731,7 @@
           body: JSON.stringify({ message: txt })
         });
         if (!r.ok) throw new Error('Request failed: ' + r.status + ' ' + r.statusText);
-        const data = await r.json();
+        const data = await r.json().catch(()=> ({}));
         ajbAppend('AjutorBot', data.reply ?? 'Răspuns gol de la server.');
       }catch(e){
         console.error(e);
@@ -706,4 +742,3 @@
   </script>
 </body>
 </html>
-```0
