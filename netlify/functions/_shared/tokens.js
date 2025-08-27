@@ -6,126 +6,82 @@ if (!SECRET) {
   console.warn("WARN: Missing OTP_SESSION_SECRET (required for OTP session tokens)");
 }
 
-/* ---------- base64url helpers ---------- */
-function toBase64Url(buf) {
-  return Buffer.from(buf)
+/**
+ * b64url: codifică un string/binare în Base64 URL-safe (fără =,+,/)
+ */
+function b64url(input) {
+  return Buffer.from(input)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/g, "");
 }
 
-function fromBase64Url(str = "") {
-  // transformăm în base64 clasic + padding
-  let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = b64.length % 4;
-  if (pad) b64 += "=".repeat(4 - pad);
-  return Buffer.from(b64, "base64");
-}
-
+/**
+ * b64urlJSON: stringify → base64url
+ */
 function b64urlJSON(obj) {
-  return toBase64Url(JSON.stringify(obj));
+  return b64url(JSON.stringify(obj));
 }
-
-function hmacSha256(data, key) {
-  return crypto.createHmac("sha256", key).update(data).digest();
-}
-
-function timingSafeEq(a, b) {
-  try {
-    const A = Buffer.isBuffer(a) ? a : Buffer.from(String(a));
-    const B = Buffer.isBuffer(b) ? b : Buffer.from(String(b));
-    // dacă lungimile diferă, evităm leak de timing setând comparația pe buffers egale ca lungime
-    if (A.length !== B.length) {
-      // comparație dummy ca să nu scurtcircuităm instant
-      const dummyA = crypto.randomBytes(32);
-      const dummyB = crypto.randomBytes(32);
-      crypto.timingSafeEqual(dummyA, dummyB);
-      return false;
-    }
-    return crypto.timingSafeEqual(A, B);
-  } catch {
-    return false;
-  }
-}
-
-/* ---------- Public API ---------- */
 
 /**
- * Creează un "OTP session token" (structură asemănătoare JWT, HS256)
- * payload: obiect mic, ex: { phone:"+407...", kind:"otp" }
- * ttlSec: expirare în secunde (default 15 minute)
+ * Generează un token OTP semnat HMAC-SHA256.
+ *
+ * @param {Object} payload - Date utile (ex: { phone:"+407...", kind:"otp" })
+ * @param {number} ttlSec  - Valabilitate în secunde (default: 15 min)
+ * @returns {string} token (structură p.b.s — header.body.signature)
  */
 export function signOtpToken(payload, ttlSec = 15 * 60) {
-  if (!SECRET) {
-    throw new Error("OTP_SESSION_SECRET is required to sign tokens");
-  }
+  if (!SECRET) throw new Error("OTP_SESSION_SECRET not set");
+
   const now = Math.floor(Date.now() / 1000);
   const body = {
     ...payload,
     iat: now,
-    exp: now + Math.max(1, Number(ttlSec) | 0),
+    exp: now + ttlSec,
     v: 1,
-    jti: toBase64Url(crypto.randomBytes(12)), // nonce scurt
   };
 
-  const header = { alg: "HS256", typ: "OTP" };
-  const p = b64urlJSON(header);
-  const b = b64urlJSON(body);
-  const data = `${p}.${b}`;
-  const sig = toBase64Url(hmacSha256(data, SECRET));
+  const header = b64urlJSON({ alg: "HS256", typ: "OTP" });
+  const bodyStr = b64urlJSON(body);
+  const data = `${header}.${bodyStr}`;
+
+  const sig = crypto
+    .createHmac("sha256", SECRET)
+    .update(data)
+    .digest("base64url");
+
   return `${data}.${sig}`;
 }
 
 /**
- * Verifică tokenul:
- *  - semnătură HS256
- *  - exp (expirat?)
- * Returnează { ok:boolean, body?, error?, ttl_left? }
+ * Verifică un token OTP semnat.
+ *
+ * @param {string} token
+ * @returns {object} { ok:boolean, body?, error? }
  */
 export function verifyOtpToken(token) {
   try {
-    if (!token || typeof token !== "string") {
-      return { ok: false, error: "Missing token" };
-    }
     const parts = token.split(".");
     if (parts.length !== 3) return { ok: false, error: "Malformed token" };
 
-    const [p, b, s] = parts;
-    const data = `${p}.${b}`;
+    const [headerB64, bodyB64, sig] = parts;
+    const data = `${headerB64}.${bodyB64}`;
 
-    // recompute sign
-    const expectedSigB64url = toBase64Url(hmacSha256(data, SECRET || ""));
-    if (!timingSafeEq(expectedSigB64url, s)) {
-      return { ok: false, error: "Invalid signature" };
-    }
+    const expected = crypto
+      .createHmac("sha256", SECRET)
+      .update(data)
+      .digest("base64url");
 
-    // decode & parse
-    let header, body;
-    try {
-      header = JSON.parse(fromBase64Url(p).toString("utf8"));
-      body = JSON.parse(fromBase64Url(b).toString("utf8"));
-    } catch {
-      return { ok: false, error: "Invalid token payload" };
-    }
+    if (expected !== sig) return { ok: false, error: "Invalid signature" };
 
-    // validări de bază
-    if (header?.alg !== "HS256" || header?.typ !== "OTP") {
-      return { ok: false, error: "Invalid header" };
-    }
-    if (!body || typeof body !== "object") {
-      return { ok: false, error: "Invalid body" };
-    }
-
+    const body = JSON.parse(Buffer.from(bodyB64, "base64").toString("utf8"));
     const now = Math.floor(Date.now() / 1000);
-    if (typeof body.exp === "number" && now > body.exp) {
-      return { ok: false, error: "Expired token" };
-    }
 
-    const ttl_left = typeof body.exp === "number" ? Math.max(0, body.exp - now) : undefined;
+    if (body.exp && now > body.exp) return { ok: false, error: "Expired token" };
 
-    return { ok: true, body, ttl_left };
-  } catch {
-    return { ok: false, error: "Token error" };
+    return { ok: true, body };
+  } catch (e) {
+    return { ok: false, error: "Token error: " + e.message };
   }
 }
