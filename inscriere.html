@@ -7,48 +7,31 @@
 
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css" />
-
-  <!-- Auth CSS (dacă îl ai) -->
+  <!-- CSS autenticare (opțional, dar recomandat) -->
   <link rel="stylesheet" href="./assets/css/auth.css" />
 
   <style>
-  /* Stiluri rapide pentru card-ul de înscriere (pot coexista cu assets/css/auth.css) */
-  :root{
-    --bg:#f6f7f9; --card:#fff; --text:#0f172a; --muted:#64748b;
-    --primary:#0f62fe; --primary-100:#eef4ff; --border:#e6e8ec;
-    --radius:14px; --shadow:0 12px 30px rgba(16,24,40,.10);
-  }
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#f2f5f9 0%,#fff 100%);color:var(--text)}
-  .auth-wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
-  .card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:22px}
-  h1{margin:0 0 6px;font-size:clamp(22px,3vw,28px)}
-  .subtitle{color:var(--muted);margin-bottom:14px}
-
-  .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
-       padding:12px 14px;border-radius:12px;border:1px solid #dfe3ea;background:#fff;cursor:pointer;font-weight:700}
-  .btn:hover{background:#f8faff;border-color:#cfe0ff}
-  .btn svg{width:20px;height:20px}
-  .btn-primary{background:var(--primary);color:#fff;border:0}
-  .btn-primary:hover{filter:brightness(1.02)}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-  .row{display:flex;gap:10px}
-  .or{display:flex;align-items:center;gap:10px;color:#94a3b8;font-weight:700;margin:14px 0}
-  .or::before,.or::after{content:"";flex:1;height:1px;background:#e5e7eb}
-
-  label{display:block;font-weight:600;margin:.6rem 0 .35rem}
-  input[type="email"],input[type="password"]{
-    width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px;transition:border-color .18s,box-shadow .18s;background:#fff
-  }
-  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(15,98,254,.08)}
-  .rules{margin:10px 0 6px;color:#334155;font-size:14px}
-  .rules li{margin:.2rem 0}
-  .agree{display:flex;gap:10px;align-items:flex-start;margin:12px 0}
-  .agree input{margin-top:3px}
-  .error{color:#dc2626;font-weight:700;margin:.5rem 0}
-  .success{color:#16a34a;font-weight:700;margin:.5rem 0}
-  .foot{margin-top:10px;font-size:13px;color:#94a3b8;text-align:center}
-  a{color:#0f62fe;text-decoration:none}
-  a:hover{text-decoration:underline}
+    /* Mic hardening vizual în caz că auth.css nu se încarcă */
+    .auth-wrap{min-height:100dvh;display:grid;place-items:center;padding:24px;background:linear-gradient(180deg,#f2f5f9 0%,#fff 100%)}
+    .card{width:100%;max-width:520px;background:#fff;border:1px solid #e6e8ec;border-radius:18px;box-shadow:0 24px 60px rgba(16,24,40,.10);padding:22px}
+    .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid #dfe3ea;background:#fff;cursor:pointer;font-weight:700}
+    .btn-primary{background:#0f62fe;color:#fff;border:0}
+    .row{display:flex;gap:10px}
+    .or{display:flex;align-items:center;gap:10px;color:#94a3b8;font-weight:700;margin:14px 0}
+    .or::before,.or::after{content:"";flex:1;height:1px;background:#e5e7eb}
+    label{display:block;font-weight:600;margin:.6rem 0 .35rem}
+    input[type="email"],input[type="password"]{width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px;background:#fff}
+    input:focus{outline:none;border-color:#0f62fe;box-shadow:0 0 0 4px rgba(15,98,254,.10)}
+    .rules{margin:10px 0 6px;color:#334155;font-size:14px}
+    .rules li{margin:.2rem 0}
+    .agree{display:flex;gap:10px;align-items:flex-start;margin:12px 0}
+    .agree input{margin-top:3px}
+    .error{color:#dc2626;font-weight:700;margin:.5rem 0}
+    .success{color:#16a34a;font-weight:700;margin:.5rem 0}
+    .foot{margin-top:10px;font-size:13px;color:#94a3b8;text-align:center}
+    a{color:#0f62fe;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
   </style>
 
   <!-- Supabase -->
@@ -60,20 +43,26 @@
       <h1 id="title">Creează un cont</h1>
       <p class="subtitle">Alege o opțiune rapidă sau înscrie-te cu email și parolă.</p>
 
-      <!-- Social OAuth -->
-      <div class="stack">
-        <button id="btnFb" class="btn" type="button" aria-label="Continuă cu Facebook">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/></svg>
-          Continuă cu Facebook
+      <!-- OAuth -->
+      <div class="oauth-row">
+        <button id="btnGoogle" class="btn" type="button" aria-label="Continuă cu Google">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" width="18" height="18" aria-hidden="true">
+            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/>
+          </svg>
+          Continuă cu Google
         </button>
         <div class="row" style="margin-top:10px">
           <button id="btnApple" class="btn" type="button" aria-label="Continuă cu Apple" style="flex:1">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+              <path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/>
+            </svg>
             Apple
           </button>
-          <button id="btnGoogle" class="btn" type="button" aria-label="Continuă cu Google" style="flex:1">
-            <svg viewBox="0 0 24 24" fill="none"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/></svg>
-            Google
+          <button id="btnFb" class="btn" type="button" aria-label="Continuă cu Facebook" style="flex:1">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+              <path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/>
+            </svg>
+            Facebook
           </button>
         </div>
       </div>
@@ -88,7 +77,7 @@
         <label for="pass">Parolă</label>
         <input id="pass" type="password" autocomplete="new-password" required placeholder="Minim 9 caractere" />
 
-        <ul class="rules">
+        <ul class="rules" aria-live="polite">
           <li>9 sau mai multe caractere</li>
           <li>Cel puțin o literă mare și una mică</li>
           <li>Cel puțin o cifră</li>
@@ -107,62 +96,59 @@
     </section>
   </main>
 
-  <!-- Supabase lib -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script>
-    // ==== ENV + client Supabase (sigur, reutilizabil) ====
-    window.supa = window.supa || null;
-    window.supabaseReady = window.supabaseReady || (async function loadEnvAndInit() {
+    // ===== 1) Inițializează Supabase din funcția serverless (nu expune cheile în cod) =====
+    let supa = null;
+
+    (async () => {
       try {
-        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        if (!res.ok) { console.error('ENV endpoint failed', res.status); return false; }
-        const env = await res.json().catch(()=> ({}));
-        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) { console.error('ENV invalid', env); return false; }
-        window.supa = window.supa || supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-        return true;
+        const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        const env = await r.json();
+        if (!env?.SUPABASE_URL || !env?.SUPABASE_ANON_KEY) {
+          throw new Error(env?.error || 'Lipsesc variabilele Supabase');
+        }
+        supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
       } catch (e) {
         console.error('ENV load failed', e);
-        return false;
+        setMsg('Eroare inițializare. Reîncearcă.', false);
+        document.getElementById('createBtn').disabled = true;
+        document.getElementById('btnGoogle').disabled = true;
+        document.getElementById('btnApple').disabled = true;
+        document.getElementById('btnFb').disabled = true;
       }
     })();
 
-    // ==== Redirect helper (folosit și de index/ofera-servicii) ====
-    function rememberRedirect(to) {
-      try { localStorage.setItem('__va_after_login_redirect', to); } catch {}
-    }
-
-    // ==== UI helpers ====
-    function setMsg(t, ok=false){
+    // ===== 2) Helpers UI =====
+    function setMsg(t, ok = false){
       const el = document.getElementById('msg');
       el.textContent = t || '';
       el.className = ok ? 'success' : 'error';
     }
     const validPass = (p)=> /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||'');
 
-    // ==== Social OAuth (redirect prin auth-callback) ====
+    // ===== 3) OAuth (Google/Apple/Facebook) =====
     async function startOAuth(provider){
-      const ok = await window.supabaseReady;
-      if (!ok || !window.supa) { setMsg('Auth indisponibil'); return; }
+      if (!supa) { setMsg('Auth indisponibil. Reîncearcă.', false); return; }
       try{
-        rememberRedirect('/ofera-servicii.html'); // după login, du-l la ofertare
-        const { error } = await window.supa.auth.signInWithOAuth({
+        const { error } = await supa.auth.signInWithOAuth({
           provider,
-          options: { redirectTo: location.origin + '/auth-callback.html' }
+          options: {
+            redirectTo: location.origin + '/auth-callback.html',
+            queryParams: { prompt: 'consent' }
+          }
         });
         if (error) throw error;
-        // redirecția se face de Supabase
-      }catch(e){ setMsg(e.message || 'Nu am putut porni autentificarea.'); }
+        // browserul va redirecționa → nimic de făcut
+      }catch(e){ setMsg(e.message || 'Nu am putut porni autentificarea.', false); }
     }
     document.getElementById('btnGoogle').onclick = ()=> startOAuth('google');
     document.getElementById('btnApple').onclick  = ()=> startOAuth('apple');
     document.getElementById('btnFb').onclick     = ()=> startOAuth('facebook');
 
-    // ==== Email + parolă ====
+    // ===== 4) Înregistrare email + parolă =====
     document.getElementById('form').addEventListener('submit', async (ev)=>{
       ev.preventDefault();
-      const ok = await window.supabaseReady;
-      if (!ok || !window.supa) { setMsg('Auth indisponibil'); return; }
+      if (!supa) return;
 
       const email = (document.getElementById('email').value||'').trim();
       const pass  = document.getElementById('pass').value||'';
@@ -172,14 +158,12 @@
       if (!validPass(pass)){ setMsg('Parola nu respectă regulile.'); return; }
       if (!okA){ setMsg('Trebuie să accepți termenii.'); return; }
 
+      setMsg('Trimit...', true);
       const btn = document.getElementById('createBtn');
-      const orig = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Se trimite…';
-      setMsg('Trimit…', true);
+      btn.disabled = true;
 
       try{
-        rememberRedirect('/ofera-servicii.html');
-        const { error } = await window.supa.auth.signUp({
+        const { error } = await supa.auth.signUp({
           email,
           password: pass,
           options:{ emailRedirectTo: location.origin + '/auth-callback.html' }
@@ -189,13 +173,8 @@
       }catch(e){
         setMsg(e.message || 'Eroare la creare cont.');
       }finally{
-        btn.disabled = false; btn.textContent = orig;
+        btn.disabled = false;
       }
-    });
-
-    // Enter pe parolă => submit
-    document.getElementById('pass').addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter') document.getElementById('createBtn').click();
     });
   </script>
 </body>
