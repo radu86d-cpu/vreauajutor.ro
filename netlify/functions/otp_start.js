@@ -1,44 +1,90 @@
 // netlify/functions/otp_start.js
-import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
-import twilio from "twilio";
+// Pornește trimiterea unui cod OTP via Twilio Verify (SMS sau call)
 
+const twilio = require("twilio");
+
+// === ENV necesare ===
 const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID } = process.env;
-if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
-  console.warn("WARN: Twilio env vars missing (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_VERIFY_SID)");
+
+const baseHeaders = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "no-store",
+};
+
+// mic rate-limit în memorie per IP
+const RL = global.__OTP_RL__ || new Map();
+global.__OTP_RL__ = RL;
+function rateLimit(ip, windowMs = 60_000, max = 5) {
+  const now = Date.now();
+  const bucket = RL.get(ip) || [];
+  const fresh = bucket.filter((t) => now - t < windowMs);
+  fresh.push(now);
+  RL.set(ip, fresh);
+  return fresh.length <= max;
 }
 
-const client = (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
+// validare E.164 simplă (acceptăm și numere +407..., etc.)
+function isE164(v = "") {
+  return /^\+?[1-9]\d{7,14}$/.test(String(v).trim());
+}
 
-function isEmail(v=""){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-function isE164(v=""){ return /^\+?[1-9]\d{7,14}$/.test(v); } // validare simplă E.164
-
-export default async (req) => {
-  const opt = handleOptions(req); if (opt) return opt;
-  const m = method(req, ["POST"]); if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
-  if (!rateLimit(req, { windowSec: 60, max: 5 })) return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
-  if (!client || !TWILIO_VERIFY_SID) return bad("Twilio Verify nu este configurat pe server.", 500);
-
-  const { channel = "sms", to } = await bodyJSON(req);
-  if (!to) return bad("Lipsește destinatarul (to).");
-
-  // Validare în funcție de canal
-  if (channel === "sms" || channel === "call") {
-    if (!isE164(to)) return bad("Telefon invalid. Folosește format E.164 (ex: +407... ).");
-  } else if (channel === "email") {
-    if (!isEmail(to)) return bad("Email invalid.");
-  } else {
-    return bad("Canal invalid. Folosește 'sms', 'call' sau 'email'.");
+exports.handler = async (event) => {
+  // CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: baseHeaders };
   }
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: baseHeaders, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  }
+
+  // verifică env
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
+    return {
+      statusCode: 500,
+      headers: baseHeaders,
+      body: JSON.stringify({ error: "Twilio env missing (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_VERIFY_SID)" }),
+    };
+  }
+
+  // rate-limit per IP
+  const ip = (event.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  if (!rateLimit(ip, 60_000, 5)) {
+    return { statusCode: 429, headers: baseHeaders, body: JSON.stringify({ error: "Prea multe încercări. Reîncearcă peste 1 minut." }) };
+  }
+
+  // body
+  let body = {};
+  try { body = JSON.parse(event.body || "{}"); } catch {}
+  const channel = String(body.channel || "sms").toLowerCase(); // "sms" | "call" (opțional)
+  const phone   = String(body.phone || body.to || "").trim();
+
+  if (!phone) {
+    return { statusCode: 400, headers: baseHeaders, body: JSON.stringify({ error: "Lipsește numărul de telefon." }) };
+  }
+  if (!isE164(phone)) {
+    return { statusCode: 400, headers: baseHeaders, body: JSON.stringify({ error: "Telefon invalid. Folosește formatul internațional (ex: +407...)." }) };
+  }
+  if (!["sms", "call"].includes(channel)) {
+    return { statusCode: 400, headers: baseHeaders, body: JSON.stringify({ error: "Canal invalid. Folosește 'sms' sau 'call'." }) };
+  }
+
+  // Twilio client
+  const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
   try {
     const resp = await client.verify.v2
       .services(TWILIO_VERIFY_SID)
       .verifications
-      .create({ to, channel });
+      .create({ to: phone, channel });
 
     // status tipic: "pending"
-    return json({ ok: true, status: resp.status });
+    return { statusCode: 200, headers: baseHeaders, body: JSON.stringify({ ok: true, status: resp.status }) };
   } catch (e) {
-    return bad(e?.message || "Eroare Twilio", 500);
+    // răspuns clar, fără a expune detalii sensibile
+    const msg = e?.message || "Eroare Twilio";
+    return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error: msg }) };
   }
 };
