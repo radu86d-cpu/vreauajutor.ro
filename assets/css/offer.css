@@ -175,3 +175,32 @@
 @media (prefers-reduced-motion:reduce){
   .offer *{transition:none!important}
 }
+
+/* === Cascader 2 coloane (Subcategorii -> Copii) === */
+.offer .cascader{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.offer .pane{
+  background:#fff;border:1px solid #e6e8ec;border-radius:14px;
+  box-shadow:0 6px 20px rgba(16,24,40,.06);display:flex;flex-direction:column;
+  min-height:280px;
+}
+.offer .pane-title{
+  padding:10px 12px;border-bottom:1px solid #eff2f6;font-weight:800;color:#111827;font-size:14px
+}
+.offer .pane-body{
+  padding:10px;overflow:auto;max-height:60vh;
+}
+
+/* butoanele/“chips” existente arată bine deja; doar mic tuning la layout în coloană */
+.offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:0;max-height:none;overflow:visible}
+.offer #children{display:flex;flex-direction:column;gap:8px}
+.offer #subcats .chip,
+.offer .child-item{width:100%}
+
+/* pe ecrane mici, trece pe 1 coloană */
+@media (max-width:900px){
+  .offer .cascader{grid-template-columns:1fr}
+}
