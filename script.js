@@ -4,8 +4,9 @@
   // ============================================================
   let slideIndex = 0;
   const slides = document.getElementById('slides');
-  const totalSlides = slides ? slides.children.length : 0;
   const container = document.querySelector('.slider-container');
+
+  const getTotalSlides = () => (slides ? slides.children.length : 0);
 
   const showSlide = (i) => {
     if (slides) slides.style.transform = `translateX(-${i * 100}%)`;
@@ -13,8 +14,9 @@
 
   // expune funcția pentru butoanele HTML (prev/next)
   window.moveSlide = function (direction) {
-    if (!totalSlides) return;
-    slideIndex = (slideIndex + direction + totalSlides) % totalSlides;
+    const total = getTotalSlides();
+    if (!total) return;
+    slideIndex = (slideIndex + direction + total) % total;
     showSlide(slideIndex);
   };
 
@@ -23,7 +25,8 @@
   let autoplay = null;
   const start = () => {
     if (prefersReducedMotion.matches) return;
-    if (totalSlides > 0 && !autoplay) {
+    const total = getTotalSlides();
+    if (total > 0 && !autoplay) {
       autoplay = setInterval(() => window.moveSlide(1), 5000);
     }
   };
@@ -32,8 +35,11 @@
   };
 
   const initSlider = () => {
-    if (totalSlides > 0) showSlide(0);
-    start();
+    if (getTotalSlides() > 0) {
+      slideIndex = 0;
+      showSlide(0);
+      start();
+    }
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initSlider);
@@ -75,7 +81,7 @@
   let focusTrapHandler = null;
 
   function trapFocus(e) {
-    if (e.key !== 'Tab' || !modal) return;
+    if (e.key !== 'Tab' || !modal || modal.style.display !== 'block') return;
     const focusables = modal.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
@@ -105,7 +111,7 @@
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
-    document.removeEventListener('keydown', focusTrapHandler);
+    if (focusTrapHandler) document.removeEventListener('keydown', focusTrapHandler);
     focusTrapHandler = null;
     lastFocused?.focus?.();
     start(); // pornește la loc sliderul după închiderea modalului
@@ -136,7 +142,7 @@
 
   // Închidere cu Escape sau click pe overlay
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape' && modal?.style.display === 'block') closeModal();
   });
   modal?.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
@@ -144,16 +150,11 @@
 
   // ============================================================
   //  GARD AUTENTIFICARE pentru „Oferă servicii”
-  //  - Interceptează click-ul pe orice link către ofera-servicii.html
-  //  - Dacă nu e logat → deschide modal login/register
-  //  - Dacă e logat → lasă navigarea normal
   // ============================================================
 
-  // mic helper pentru ENV Supabase
+  // helper ENV Supabase (folosește instanța globală dacă există)
   async function getSupa() {
-    // Dacă index.html a inițializat deja window.supa, folosește-l
     if (window.supa && typeof window.supa.auth?.getSession === 'function') return window.supa;
-
     try {
       const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
       const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
@@ -176,41 +177,42 @@
     }
   }
 
+  // mic helper: memorează redirectul dorit după login
+  function rememberRedirect(to) {
+    try { localStorage.setItem('__va_after_login_redirect', to); } catch {}
+  }
+
   // Interceptează toate click-urile pe <a> către ofera-servicii.html
   function interceptOfferLinks() {
     document.addEventListener('click', async (e) => {
       const a = e.target.closest('a');
       if (!a) return;
 
-      // Only guard links that navigate to ofera-servicii.html (relative or absolute)
       const href = a.getAttribute('href') || '';
       if (!href) return;
 
-      // Normalize check (works for "ofera-servicii.html", "/ofera-servicii.html", full URL)
       let goesToOffer = false;
+      let destHref = href;
       try {
-        // try absolute URL resolution
         const url = new URL(href, location.href);
+        destHref = url.href;
         goesToOffer = /\/ofera-servicii\.html(?:$|\?)/i.test(url.pathname);
       } catch {
-        // fallback: string contains
         goesToOffer = href.includes('ofera-servicii.html');
       }
-
       if (!goesToOffer) return;
 
-      // If already explicitly marked to skip guard (e.g., data-skip-auth="true"), let it pass
+      // Skip explicit
       if (a.hasAttribute('data-skip-auth')) return;
 
-      // Check auth status
       const ok = await isAuthenticated();
       if (!ok) {
         e.preventDefault();
         e.stopPropagation();
-        // Deschide modalul pe tabul REGISTER, ca pe fluxul OLX
+        rememberRedirect(destHref);
         window.openRegister?.();
       }
-      // dacă e logat -> nu intervenim, navigarea merge normal
+      // dacă e logat → nu intervenim
     });
   }
 
