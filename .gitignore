@@ -1,8 +1,8 @@
-# Nu urca server local sau dependențe
+# --- Server / local ---
 server/
 node_modules/
 
-# Secrete / fișiere env
+# --- Secrete / fișiere env ---
 .env
 .env.*
 *.env
@@ -14,19 +14,20 @@ secrets.*
 *.pfx
 *.keystore
 
-# Baze de date / exporturi
+# --- Baze de date / exporturi ---
 *.db
 *.sqlite
 dump.sql
 *.bak
 
-# Fișiere de sistem / editor
+# --- Fișiere sistem / editor ---
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+*.log
 
-# Artefacte de build
+# --- Artefacte build / cache ---
 dist/
 build/
 .cache/
@@ -36,14 +37,7 @@ build/
 .netlify/
 .next/
 
-# Loguri
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Test coverage
+# --- Alte foldere temporare ---
 coverage/
-
-# Arhive / exporturi locale
-*.zip
+cypress/screenshots/
+cypress/videos/
