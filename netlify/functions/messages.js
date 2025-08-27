@@ -1,256 +1,139 @@
 // netlify/functions/messages.js
-import {
-  json,
-  bad,
-  method,
-  rateLimit,
-  bodyJSON,
-  handleOptions,
-} from "./_shared/utils.js";
-import { supabaseFromRequest, sbAdmin } from "./_shared/supabase.js";
+// Chat messages (GET list, POST create) – cu autentificare via Supabase JWT
 
-/*
-  Presupuneri flexibile de schemă (se încearcă în această ordine):
-  - chats_participants(chat_id uuid, user_id uuid)
-  - chats(id uuid, user_a_id uuid, user_b_id uuid)
-  - messages(id, chat_id, sender_id, text, created_at)
-  - providers(id, owner_user_id uuid)  // alternativ: user_id
-  RLS recomandat: utilizatorii văd doar chat-urile la care participă și doar mesajele acelor chat-uri.
-*/
+const { createClient } = require("@supabase/supabase-js");
 
-const TABLE_MSG = "messages";
-const TABLE_CHAT = "chats";
-const TABLE_PART = "chats_participants";
-const TABLE_PROV = "providers";
+// === ENV necesare (anon, nu service role – ca să lase RLS să aplice corect) ===
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-function sanitizeText(s = "", max = 2000) {
-  return String(s || "")
-    .replace(/[<>]/g, "")       // anti-HTML injection simplu
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
+// CORS + cache
+const baseHeaders = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Cache-Control": "no-store",
+};
+
+// mic rate-limit în memorie (per IP)
+const RL = global.__MSG_RL__ || new Map();
+global.__MSG_RL__ = RL;
+function rateLimit(ip, windowMs = 10000, max = 8) {
+  const now = Date.now();
+  const bucket = RL.get(ip) || [];
+  const fresh = bucket.filter((t) => now - t < windowMs);
+  fresh.push(now);
+  RL.set(ip, fresh);
+  return fresh.length <= max;
 }
 
-async function assertMembership(db, chatId, userId) {
-  // 1) Încearcă prin chats_participants
-  try {
-    const { data: part, error } = await db
-      .from(TABLE_PART)
-      .select("user_id")
-      .eq("chat_id", chatId);
-
-    if (!error && Array.isArray(part)) {
-      return part.some((r) => r.user_id === userId);
-    }
-  } catch (_) {}
-
-  // 2) Fallback: chats(user_a_id, user_b_id)
-  try {
-    const { data: chat, error } = await db
-      .from(TABLE_CHAT)
-      .select("user_a_id, user_b_id")
-      .eq("id", chatId)
-      .maybeSingle();
-    if (!error && chat) {
-      return chat.user_a_id === userId || chat.user_b_id === userId;
-    }
-  } catch (_) {}
-
-  return false;
+function getBearerToken(event) {
+  const auth = event.headers.authorization || event.headers.Authorization || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1] : null;
 }
 
-async function findOrCreateChat(dbUserScope, dbAdminScope, me, providerId) {
-  // Află proprietarul provider-ului
-  const { data: prov, error: pErr } = await (dbAdminScope || dbUserScope)
-    .from(TABLE_PROV)
-    .select("id, owner_user_id, user_id")
-    .eq("id", providerId)
-    .maybeSingle();
+function sanitizeText(s = "") {
+  return String(s).replace(/[<>]/g, "");
+}
 
-  if (pErr) throw pErr;
-  if (!prov) throw new Error("Provider inexistent.");
-
-  const other =
-    prov.owner_user_id || prov.user_id || null;
-  if (!other) throw new Error("Provider fără proprietar asociat.");
-
-  if (other === me) {
-    // utilizatorul trimite către el însuși – permite, dar nu creăm chat duplicat
-    // continuăm ca mai jos (căutăm/creăm chat)
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: baseHeaders };
+  }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return {
+      statusCode: 500,
+      headers: baseHeaders,
+      body: JSON.stringify({ error: "Missing Supabase env (URL/ANON_KEY)" }),
+    };
   }
 
-  // 1) Încearcă să găsești un chat existent
-  // 1a) prin chats_participants: găsim un chat cu ambii participanți
-  try {
-    const { data: mine } = await (dbAdminScope || dbUserScope)
-      .from(TABLE_PART)
-      .select("chat_id")
-      .eq("user_id", me);
+  // extrage tokenul
+  const token = getBearerToken(event);
+  if (!token) {
+    return { statusCode: 401, headers: baseHeaders, body: JSON.stringify({ error: "Necesită autentificare" }) };
+  }
 
-    const { data: his } = await (dbAdminScope || dbUserScope)
-      .from(TABLE_PART)
-      .select("chat_id")
-      .eq("user_id", other);
+  // client pt auth (folosim getUser(token))
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
-    if (Array.isArray(mine) && Array.isArray(his)) {
-      const mineSet = new Set(mine.map((r) => r.chat_id));
-      const common = his.find((r) => mineSet.has(r.chat_id));
-      if (common?.chat_id) return common.chat_id;
-    }
-  } catch (_) {}
+  // client DB cu RLS, sub identitatea tokenului
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
-  // 1b) fallback: chats(user_a_id,user_b_id)
-  try {
-    const { data: chatA } = await (dbAdminScope || dbUserScope)
-      .from(TABLE_CHAT)
-      .select("id")
-      .eq("user_a_id", me)
-      .eq("user_b_id", other)
-      .maybeSingle();
-    if (chatA?.id) return chatA.id;
+  // validează userul
+  const { data: userData, error: userErr } = await authClient.auth.getUser(token);
+  if (userErr || !userData?.user) {
+    return { statusCode: 401, headers: baseHeaders, body: JSON.stringify({ error: "Token invalid" }) };
+  }
+  const user = userData.user;
 
-    const { data: chatB } = await (dbAdminScope || dbUserScope)
-      .from(TABLE_CHAT)
-      .select("id")
-      .eq("user_a_id", other)
-      .eq("user_b_id", me)
-      .maybeSingle();
-    if (chatB?.id) return chatB.id;
-  } catch (_) {}
-
-  // 2) Creează chat nou
-  //    Preferăm să-l creăm cu service-role (sbAdmin) dacă există, ca să nu depindă de RLS strict.
-  const writer = dbAdminScope || dbUserScope;
-
-  // 2a) încerci întâi schema cu chats + chats_participants
-  try {
-    const { data: chat, error: cErr } = await writer
-      .from(TABLE_CHAT)
-      .insert({})
-      .select("id")
-      .single();
-    if (cErr) throw cErr;
-
-    const chatId = chat.id;
-
-    // adaugă participanții (încearcă, dar nu e fatal dacă tabela nu există)
+  // GET: lista de mesaje (cu paginare)
+  if (event.httpMethod === "GET") {
     try {
-      const { error: pErr2 } = await writer
-        .from(TABLE_PART)
-        .insert([{ chat_id: chatId, user_id: me }, { chat_id: chatId, user_id: other }]);
-      if (pErr2) {
-        // dacă tabela nu există, ignorăm — poate folosim schema 1b
+      const qs = event.queryStringParameters || {};
+      const chat_id = qs.chat_id || qs.chatId || "";
+      const from = Math.max(parseInt(qs.from || "0", 10), 0);
+      const limit = Math.min(Math.max(parseInt(qs.limit || "50", 10), 1), 100);
+      if (!chat_id) {
+        return { statusCode: 400, headers: baseHeaders, body: JSON.stringify({ error: "chat_id obligatoriu" }) };
       }
-    } catch (_) {}
 
-    // fallback: setează user_a/b dacă există coloanele
-    try {
-      await writer
-        .from(TABLE_CHAT)
-        .update({ user_a_id: me, user_b_id: other })
-        .eq("id", chatId);
-    } catch (_) {}
+      // IMPORTANT: RLS trebuie să te asigure că userul are dreptul la chat-ul respectiv.
+      const { data, error } = await db
+        .from("messages")
+        .select("*")
+        .eq("chat_id", chat_id)
+        .order("created_at", { ascending: false })
+        .range(from, from + limit - 1);
 
-    return chatId;
-  } catch (e) {
-    // 2b) fallback: creează direct cu user_a_id/user_b_id (dacă schema e din a doua variantă)
-    const { data: chat2, error: cErr2 } = await writer
-      .from(TABLE_CHAT)
-      .insert({ user_a_id: me, user_b_id: other })
-      .select("id")
-      .single();
-    if (cErr2) throw cErr2;
-    return chat2.id;
-  }
-}
-
-export default async (req) => {
-  const pre = handleOptions(req);
-  if (pre) return pre;
-
-  const m = method(req, ["GET", "POST"]);
-  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
-
-  // client cu tokenul utilizatorului
-  const supa = supabaseFromRequest(req);
-
-  // cine e user-ul?
-  const { data: { user }, error: uerr } = await supa.auth.getUser();
-  if (uerr || !user) return bad("Necesită autentificare", 401);
-
-  // ============ GET: listare mesaje ============ //
-  if (m === "GET") {
-    const url = new URL(req.url);
-    const chatId = url.searchParams.get("chat_id");
-    const from = Math.max(0, parseInt(url.searchParams.get("from") || "0", 10));
-    const limit = Math.min(Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10)), 100);
-    if (!chatId) return bad("chat_id obligatoriu", 400);
-
-    // verifică membru
-    const allowed = await assertMembership(supa, chatId, user.id);
-    if (!allowed) return bad("Nu ai acces la acest chat", 403);
-
-    const { data, error } = await supa
-      .from(TABLE_MSG)
-      .select("*")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true }) // cronologic
-      .range(from, from + limit - 1);
-
-    if (error) return bad(error.message || "Eroare la listare", 500);
-    return json(
-      { ok: true, items: data, from, limit },
-      200,
-      { "Cache-Control": "no-store" }
-    );
-  }
-
-  // ============ POST: trimite mesaj ============ //
-  if (!rateLimit(req, { windowSec: 10, max: 8 })) {
-    return bad("Prea des", 429);
-  }
-
-  const body = await bodyJSON(req);
-  const rawText = body?.text;
-  const text = sanitizeText(rawText);
-  if (!text) return bad("Text invalid", 400);
-
-  let chatId = body?.chat_id || null;
-
-  // dacă vine cu to_provider_id, găsește sau creează chatul cu proprietarul provider-ului
-  if (!chatId && body?.to_provider_id) {
-    try {
-      chatId = await findOrCreateChat(
-        supa,
-        sbAdmin || null,
-        user.id,
-        body.to_provider_id
-      );
+      if (error) {
+        return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error: error.message }) };
+      }
+      return { statusCode: 200, headers: baseHeaders, body: JSON.stringify({ ok: true, items: data || [] }) };
     } catch (e) {
-      return bad(e?.message || "Nu pot inițializa conversația", 400);
+      return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error: e.message || String(e) }) };
     }
   }
 
-  if (!chatId) return bad("chat_id sau to_provider_id obligatoriu", 400);
+  // POST: adaugă mesaj
+  if (event.httpMethod === "POST") {
+    // rate-limit per IP
+    const ip = (event.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+    if (!rateLimit(ip, 10000, 8)) {
+      return { statusCode: 429, headers: baseHeaders, body: JSON.stringify({ error: "Prea des. Încearcă mai târziu." }) };
+    }
 
-  // verifică membru pentru chat-ul țintă
-  const allowed = await assertMembership(supa, chatId, user.id);
-  if (!allowed) return bad("Nu ai acces la acest chat", 403);
+    try {
+      const body = JSON.parse(event.body || "{}");
+      const chat_id = body.chat_id || body.chatId || "";
+      const text = sanitizeText(body.text || body.message || "");
 
-  // scrie mesajul (preferăm service-role dacă există; altfel user-scope cu RLS)
-  const writer = sbAdmin || supa;
+      if (!chat_id || !text.trim()) {
+        return { statusCode: 400, headers: baseHeaders, body: JSON.stringify({ error: "Date invalide" }) };
+      }
 
-  const { data, error } = await writer
-    .from(TABLE_MSG)
-    .insert([{ chat_id: chatId, sender_id: user.id, text }])
-    .select()
-    .single();
+      const { data, error } = await db
+        .from("messages")
+        .insert([{ chat_id, sender_id: user.id, text }])
+        .select()
+        .single();
 
-  if (error) return bad(error.message || "Eroare la trimitere", 500);
+      if (error) {
+        return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error: error.message }) };
+      }
+      return { statusCode: 201, headers: baseHeaders, body: JSON.stringify({ ok: true, message: data }) };
+    } catch (e) {
+      return { statusCode: 500, headers: baseHeaders, body: JSON.stringify({ error: e.message || String(e) }) };
+    }
+  }
 
-  return json(
-    { ok: true, chat_id: chatId, message: data },
-    201,
-    { "Cache-Control": "no-store" }
-  );
+  // Metodă neacceptată
+  return { statusCode: 405, headers: baseHeaders, body: JSON.stringify({ error: "Method Not Allowed" }) };
 };
