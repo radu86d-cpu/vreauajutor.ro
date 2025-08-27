@@ -35,3 +35,15 @@ build/
 .vercel/
 .netlify/
 .next/
+
+# Loguri
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+
+# Arhive / exporturi locale
+*.zip
