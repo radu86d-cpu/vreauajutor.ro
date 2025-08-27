@@ -1,39 +1,41 @@
 [build]
-  publish = "."
+  publish   = "."
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["twilio","@supabase/supabase-js"]
 
-# ---------- HEADERS (CSP) ----------
-# Setăm Content-Security-Policy la nivel de server (recomandat).
-# IMPORTANT: După ce activezi asta, elimină orice <meta http-equiv="Content-Security-Policy"> din HTML,
-# ca să nu intre în conflict cu headerul.
+# ===== Securitate: Content-Security-Policy + alte headere
 [[headers]]
   for = "/*"
   [headers.values]
+    # IMPORTANT: nu mai pune surse relative (ex: "/api/*") în CSP.
+    # 'self' acoperă toate apelurile către /.netlify/functions/*.
     Content-Security-Policy = """
       default-src 'self';
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://verify.twilio.com https://api.twilio.com;
-      img-src 'self' data: https:;
-      script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
-      style-src  'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-      style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-      font-src 'self' https://fonts.gstatic.com data:;
+      script-src  'self' https://cdn.jsdelivr.net https://cdn.jsdelivr.net/npm/@supabase/supabase-js https://unpkg.com;
+      connect-src 'self' https://*.supabase.co https://api.netlify.com https://verify.twilio.com https://*.twilio.com data: blob:;
+      style-src   'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+      font-src    'self' https://fonts.gstatic.com data:;
+      img-src     'self' data: blob:;
       frame-ancestors 'self';
       base-uri 'self';
+      form-action 'self';
     """
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Permissions-Policy     = "geolocation=(), microphone=(), camera=()"
+    X-Frame-Options        = "SAMEORIGIN"
 
-# ---------- Redirecturi ----------
-# Proxy API -> Functions
+# Proxy API -> Functions (poți folosi /api/* dacă vrei, dar nu-l include în CSP)
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to   = "/.netlify/functions/:splat"
   status = 200
 
-# (opțional) fallback pentru SPA — dacă vrei ca toate rutele necunoscute să trimită la index.html
+# (opțional) fallback pentru SPA — păstrează doar dacă site-ul e 100% SPA
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
