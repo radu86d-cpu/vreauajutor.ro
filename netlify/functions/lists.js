@@ -1,152 +1,114 @@
 // netlify/functions/lists.js
-import { handleOptions, requireMethod, json, bad, cache } from "./_shared/utils.js";
-import { sbAnon as db } from "./_shared/supabase.js";
+// Liste pentru selectoare: signup + homepage (judet/oras/servicii)
 
-/* ---------- Helpers ---------- */
-const stripDiacritics = (s) =>
-  String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const norm = (s) => stripDiacritics(String(s || "").trim()).toLowerCase();
-const toAsciiTitle = (s) => {
-  const base = stripDiacritics(String(s || "").trim()).toLowerCase();
-  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
+const { createClient } = require("@supabase/supabase-js");
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+
+// Helpers
+const strip = (s = "") => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = (s = "") => strip(String(s).trim()).toLowerCase();
+const titleCase = (s = "") => {
+  const t = String(s || "").trim().toLowerCase();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
 };
 
-/* ---------- Tabele (ajustează dacă ai alte nume) ---------- */
-const TBL_PROVIDERS = "providers";         // coloane: is_active bool, judet text, oras text, service_id int
-const TBL_SERVICES  = "services";          // coloane: id int, name text
-const TBL_LOCATIONS = "locations";         // coloane: judet text, oras text (opțional; folosit pt signup)
-
-export default async (req) => {
-  // CORS preflight
-  const pre = handleOptions(req);
-  if (pre) return pre;
-
-  // doar GET
-  const notAllowed = requireMethod(req, ["GET"]);
-  if (notAllowed) return notAllowed;
+exports.handler = async (event) => {
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Cache-Control": "public, max-age=60, s-maxage=60",
+  };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers };
+  if (event.httpMethod !== "GET") {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  }
 
   try {
-    const url    = new URL(req.url);
-    const mode   = (url.searchParams.get("mode") || "").trim();
-    const judetQ = (url.searchParams.get("judet") || "").trim();
-    const orasQ  = (url.searchParams.get("oras")  || "").trim();
+    const qs = event.queryStringParameters || {};
+    const mode = (qs.mode || "").trim();
+    const judetQ = (qs.judet || "").trim();
+    const orasQ = (qs.oras || "").trim();
 
-    /* =========================================================
-       MODE=signup — folosit pe pagina de înscriere furnizor
-       ========================================================= */
+    // === MODE=SIGNUP ===
     if (mode === "signup") {
-      // fără județ → servicii + toate județele din `locations`
       if (!judetQ) {
-        // servicii (listă simplă, ordonată)
-        {
-          const { data, error } = await db
-            .from(TBL_SERVICES)
-            .select("id, name")
-            .order("name", { ascending: true });
-          if (error) return bad(error.message || "Eroare servicii", 500, req);
+        // 1) Toate serviciile
+        const { data: svc, error: e1 } = await supabase.from("services").select("id, name").order("name");
+        if (e1) throw e1;
+        const services = (svc || []).map((s) => ({ name: s.name, label: titleCase(s.name) }));
 
-          // forma: { name, label } – păstrează compatibilitatea cu UI-ul tău
-          var services = (data || []).map((s) => ({
-            name: s.name,
-            label: toAsciiTitle(s.name),
-          }));
+        // 2) Toate județele
+        const { data: locs, error: e2 } = await supabase.from("locations").select("judet");
+        if (e2) throw e2;
+        const judMap = new Map();
+        for (const r of locs || []) {
+          const k = norm(r.judet);
+          if (k && !judMap.has(k)) judMap.set(k, titleCase(r.judet));
         }
+        const judete = Array.from(judMap.values()).sort((a, b) => a.localeCompare(b, "ro"));
 
-        // judete distinct din `locations` (mai curate pentru înscriere)
-        {
-          const { data, error } = await db
-            .from(TBL_LOCATIONS)
-            .select("judet");
-          if (error) return bad(error.message || "Eroare județe", 500, req);
-
-          const judMap = new Map();
-          for (const r of data || []) {
-            const key = norm(r.judet);
-            if (!key) continue;
-            if (!judMap.has(key)) judMap.set(key, toAsciiTitle(r.judet));
-          }
-          var judete = Array.from(judMap.values()).sort((a, b) => a.localeCompare(b));
-        }
-
-        return json({ services, judete }, 200, req, cache(300)); // 5 min
-      }
-
-      // cu județ → orase distinct din `locations`
-      {
+        return { statusCode: 200, headers, body: JSON.stringify({ services, judete }) };
+      } else {
+        // Orașe pentru un județ dat
         const judKey = norm(judetQ);
-        const { data, error } = await db
-          .from(TBL_LOCATIONS)
-          .select("oras, judet");
-        if (error) return bad(error.message || "Eroare orașe", 500, req);
+        const { data: locs, error: e3 } = await supabase.from("locations").select("oras, judet");
+        if (e3) throw e3;
 
         const map = new Map();
-        for (const r of data || []) {
+        for (const r of locs || []) {
           if (norm(r.judet) !== judKey) continue;
           const k = norm(r.oras);
-          if (!k) continue;
-          if (!map.has(k)) map.set(k, toAsciiTitle(r.oras));
+          if (k && !map.has(k)) map.set(k, titleCase(r.oras));
         }
-        const orase = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-        return json({ orase }, 200, req, cache(300));
+        const orase = Array.from(map.values()).sort((a, b) => a.localeCompare(b, "ro"));
+        return { statusCode: 200, headers, body: JSON.stringify({ orase }) };
       }
     }
 
-    /* =========================================================
-       HOMEPAGE / SELECTOARE — bazate pe furnizori activi
-       ========================================================= */
+    // === HOMEPAGE SELECTORS ===
 
-    // 1) Doar județe (din providers activi)
+    // 1) Toate județele cu furnizori activi
     if (!judetQ && !orasQ) {
-      // Ideal ar fi un `select('judet', { head: true, count: 'exact' })` cu distinct,
-      // dar Supabase PostgREST nu face DISTINCT simplu cu head. Așa că agregăm client-side.
-      const { data, error } = await db
-        .from(TBL_PROVIDERS)
-        .select("judet")
-        .eq("is_active", true);
-      if (error) return bad(error.message || "Eroare județe", 500, req);
+      const { data, error } = await supabase.from("providers").select("judet").eq("is_active", true);
+      if (error) throw error;
 
       const map = new Map();
       for (const r of data || []) {
-        const key = norm(r.judet);
-        if (!key) continue;
-        if (!map.has(key)) map.set(key, toAsciiTitle(r.judet));
+        const k = norm(r.judet);
+        if (k && !map.has(k)) map.set(k, titleCase(r.judet));
       }
-      const judete = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-      return json({ judete }, 200, req, cache(120));
+      const judete = Array.from(map.values()).sort((a, b) => a.localeCompare(b, "ro"));
+      return { statusCode: 200, headers, body: JSON.stringify({ judete }) };
     }
 
-    // 2) Orase pentru un județ (din providers activi)
+    // 2) Orașe pentru un județ
     if (judetQ && !orasQ) {
       const judKey = norm(judetQ);
-      // luăm doar coloanele necesare; filtrăm în JS pt robusteză la diacritice/caz
-      const { data, error } = await db
-        .from(TBL_PROVIDERS)
-        .select("oras, judet")
-        .eq("is_active", true);
-      if (error) return bad(error.message || "Eroare orașe", 500, req);
+      const { data, error } = await supabase.from("providers").select("oras, judet").eq("is_active", true);
+      if (error) throw error;
 
       const map = new Map();
       for (const r of data || []) {
         if (norm(r.judet) !== judKey) continue;
         const k = norm(r.oras);
-        if (!k) continue;
-        if (!map.has(k)) map.set(k, toAsciiTitle(r.oras));
+        if (k && !map.has(k)) map.set(k, titleCase(r.oras));
       }
-      const orase = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-      return json({ orase }, 200, req, cache(120));
+      const orase = Array.from(map.values()).sort((a, b) => a.localeCompare(b, "ro"));
+      return { statusCode: 200, headers, body: JSON.stringify({ orase }) };
     }
 
-    // 3) Categorii pentru (judet, oras) (din providers activi)
+    // 3) Servicii pentru un (judet, oras)
     if (judetQ && orasQ) {
       const judKey = norm(judetQ);
       const orasKey = norm(orasQ);
 
-      // select cu join la services pentru nume
-      const { data, error } = await db
-        .from(TBL_PROVIDERS)
+      const { data, error } = await supabase
+        .from("providers")
         .select("service_id, services(name), judet, oras")
         .eq("is_active", true);
-      if (error) return bad(error.message || "Eroare servicii", 500, req);
+      if (error) throw error;
 
       const byId = new Map();
       for (const r of data || []) {
@@ -154,16 +116,14 @@ export default async (req) => {
         if (norm(r.oras) !== orasKey) continue;
         const sid = r.service_id;
         const sname = r.services?.name;
-        if (!sid || !sname) continue;
-        if (!byId.has(sid)) byId.set(sid, { id: sid, name: toAsciiTitle(sname) });
+        if (sid && sname && !byId.has(sid)) byId.set(sid, { id: sid, name: titleCase(sname) });
       }
-      const servicii = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
-      const names = servicii.map((s) => s.name);
-      return json({ servicii, names }, 200, req, cache(120));
+      const servicii = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, "ro"));
+      return { statusCode: 200, headers, body: JSON.stringify({ servicii }) };
     }
 
-    return bad("Parametri invalizi", 400, req);
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Parametri invalizi" }) };
   } catch (e) {
-    return bad(e?.message || "Eroare internă", 500, req);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: e.message || String(e) }) };
   }
 };
