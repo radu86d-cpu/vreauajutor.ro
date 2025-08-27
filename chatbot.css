@@ -1,107 +1,139 @@
-<!doctype html>
-<html lang="ro">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AjutorBot – Chat AI</title>
+/* ===== AjutorBot styles ===== */
 
-  <!-- Stiluri locale -->
-  <link rel="stylesheet" href="chatbot.css" />
+:root {
+  --ajb-bg: #ffffff;
+  --ajb-fg: #111827;
+  --ajb-muted: #6b7280;
+  --ajb-primary: #004080;
+  --ajb-radius: 12px;
+  --ajb-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
 
-  <!-- Permite setarea endpoint-ului prin ?api=... sau window.CHATBOT_API_URL -->
-  <script>
-    (function () {
-      const fromQS = new URL(location.href).searchParams.get('api');
-      if (fromQS) window.CHATBOT_API_URL = fromQS;
-    })();
-  </script>
-</head>
-<body>
-  <div class="ajb-container" role="application" aria-label="Interfață chat AjutorBot">
-    <div class="ajb-header">
-      <h1 class="ajb-title">AjutorBot 🤖</h1>
-    </div>
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: #f4f4f4;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
 
-    <div class="chat-container">
-      <div id="chat-box" class="chat-box" aria-live="polite" aria-atomic="false"></div>
+/* container principal */
+.ajb-container {
+  width: 100%;
+  max-width: 420px;
+  background: var(--ajb-bg);
+  border-radius: var(--ajb-radius);
+  box-shadow: var(--ajb-shadow);
+  margin: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-      <form class="input-area" id="chat-form" autocomplete="off">
-        <label for="user-input" class="sr-only">Mesaj</label>
-        <input
-          type="text"
-          id="user-input"
-          placeholder="Scrie mesajul tău..."
-          aria-label="Scrie mesajul tău"
-          required
-        />
-        <button id="send-btn" type="submit" aria-label="Trimite mesaj">Trimite</button>
-      </form>
-    </div>
-  </div>
+/* header */
+.ajb-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.ajb-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ajb-primary);
+}
 
-  <script>
-    // Ordinea de prioritate: window.CHATBOT_API_URL → ?api=… → implicit Netlify Function
-    const API_URL =
-      window.CHATBOT_API_URL ||
-      new URLSearchParams(location.search).get('api') ||
-      '/.netlify/functions/chat';
+/* chat box */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  padding: 12px;
+}
+.chat-box {
+  border: 1px solid #e5e7eb;
+  border-radius: var(--ajb-radius);
+  height: 320px;
+  overflow-y: auto;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #f9fafb;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.message {
+  margin: 6px 0;
+}
+.message strong {
+  display: inline-block;
+  min-width: 80px;
+  color: var(--ajb-primary);
+}
 
-    const chatBox   = document.getElementById('chat-box');
-    const input     = document.getElementById('user-input');
-    const form      = document.getElementById('chat-form');
-    const sendBtn   = document.getElementById('send-btn');
+/* input */
+.input-area {
+  display: flex;
+  gap: 8px;
+}
+.input-area input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--ajb-radius);
+  font-size: 14px;
+}
+.input-area input:focus {
+  outline: none;
+  border-color: var(--ajb-primary);
+  box-shadow: 0 0 0 3px rgba(0, 64, 128, 0.2);
+}
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const message = (input.value || '').trim();
-      if (!message) return;
+/* buton */
+.input-area button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--ajb-radius);
+  background: var(--ajb-primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.input-area button:hover {
+  background: #0059b3;
+}
+.input-area button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
-      appendMessage('Tu', message);
-      input.value = '';
-      input.focus();
-      setSending(true);
+/* accesibilitate */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
 
-      try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
-
-        if (!response.ok) {
-          throw new Error('Request failed: ' + response.status + ' ' + response.statusText);
-        }
-
-        const data = await response.json();
-        const botReply = data.reply ?? data.echo ?? 'Răspuns gol de la server.';
-        appendMessage('AjutorBot', botReply);
-      } catch (err) {
-        console.error(err);
-        appendMessage('AjutorBot', 'Nu pot contacta serverul. Verifică endpoint-ul și configurația.');
-      } finally {
-        setSending(false);
-      }
-    });
-
-    function appendMessage(sender, text) {
-      const div = document.createElement('div');
-      div.className = 'message ajb-message';
-      div.innerHTML = '<strong>' + escapeHTML(sender) + ':</strong> ' + escapeHTML(text);
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function setSending(sending) {
-      sendBtn.disabled = sending;
-      sendBtn.textContent = sending ? 'Se trimite…' : 'Trimite';
-    }
-
-    function escapeHTML(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-  </script>
-</body>
-</html>
+/* responsive */
+@media (max-width: 480px) {
+  .ajb-container {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    height: 100vh;
+  }
+  .chat-box {
+    flex: 1;
+    height: auto;
+    min-height: 60vh;
+  }
+}
