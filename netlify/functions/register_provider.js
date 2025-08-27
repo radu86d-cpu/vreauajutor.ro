@@ -1,157 +1,152 @@
-const { createClient } = require('@supabase/supabase-js');
+// netlify/functions/register_provider.js
+import { json, bad, method, rateLimit, bodyJSON, handleOptions } from "./_shared/utils.js";
+import { supabaseFromRequest, sbAdmin } from "./_shared/supabase.js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+/* ===== Helpers locale ===== */
+const strip = (s = "") => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm  = (s = "") => strip(String(s).trim()).toLowerCase();
+const titleCaseRO = (s = "") =>
+  String(s).trim().toLowerCase().replace(/\s+/g, " ")
+    .split(" ").map(w => (w ? w[0].toUpperCase() + w.slice(1) : "")).join(" ");
 
-// helpers
-const stripDiacritics = (s = '') => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const norm = (s = '') => stripDiacritics(String(s).trim()).toLowerCase();
-function titleCaseRO(s = '') {
-  return String(s)
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .split(' ')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+function ensureArrayOfIds(val) {
+  const ids = new Set();
+  const add = (v) => { const s = String(v ?? ""); if (/^\d+$/.test(s)) ids.add(parseInt(s, 10)); };
+  if (Array.isArray(val)) val.forEach(add);
+  else if (typeof val === "string" && val.trim()) val.split(",").forEach(add);
+  else if (val != null) add(val);
+  return Array.from(ids);
 }
 
-exports.handler = async (event) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+/* ===== Handler ===== */
+export default async (req) => {
+  // CORS / preflight
+  const opt = handleOptions(req);
+  if (opt) return opt;
+
+  const m = method(req, ["POST"]);
+  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
+
+  if (!rateLimit(req, { windowSec: 20, max: 10 })) {
+    return bad("Prea multe cereri. Încearcă mai târziu.", 429);
+  }
+  if (!sbAdmin) return bad("Server misconfigured (no service role key)", 500);
+
+  // Autentificare pe token (Bearer sau cookie) → extragem user-ul
+  const supa = supabaseFromRequest(req);
+  const { data: { user }, error: uerr } = await supa.auth.getUser();
+  if (uerr || !user) return bad("Trebuie să fii autentificat.", 401);
+
+  // Body
+  const body = await bodyJSON(req);
+  const {
+    company_name,
+    service_name,
+    judet,
+    oras,
+    phone,
+    email,
+    description,
+    subcat,        // poate fi id sau string
+    subsub,        // idem
+    subsubs        // array sau string cu ids separate prin virgulă
+  } = body || {};
+
+  // Validări minime
+  const required = { company_name, service_name, judet, oras };
+  for (const [k, v] of Object.entries(required)) {
+    if (!v || String(v).trim() === "") return bad(`Lipsește: ${k}`);
+  }
+
+  /* ===== Găsire service_id după service_name (cu fallback fără diacritice) ===== */
+  let serviceId = null;
+
+  // 1) Match exact
+  {
+    const { data: svcExact, error: e1 } = await sbAdmin
+      .from("services")
+      .select("id, name")
+      .eq("name", service_name)
+      .maybeSingle();
+    if (e1) return bad(e1.message, 500);
+    if (svcExact?.id) serviceId = svcExact.id;
+  }
+
+  // 2) Fallback – fără diacritice / insensitive
+  if (!serviceId) {
+    const { data: allS, error: e2 } = await sbAdmin.from("services").select("id, name");
+    if (e2) return bad(e2.message, 500);
+
+    const target = norm(service_name);
+    const found =
+      (allS || []).find(s => norm(s.name) === target) ||
+      (allS || []).find(s => norm(s.name).includes(target) || target.includes(norm(s.name)));
+
+    if (found?.id) serviceId = found.id;
+  }
+
+  if (!serviceId) return bad("Serviciu inexistent.");
+
+  /* ===== Inserare provider ===== */
+  const insertProvider = {
+    user_id:      user.id,
+    company_name: String(company_name).trim(),
+    description:  (description || "").trim() || null,
+    service_id:   serviceId,
+    judet:        titleCaseRO(judet),
+    oras:         titleCaseRO(oras),
+    phone:        (phone || "").trim() || null,
+    email:        (email || "").trim() || null,
+    is_active:    true,
   };
 
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
-  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Use POST' }) };
+  const { data: provRows, error: insErr } = await sbAdmin
+    .from("providers")
+    .insert(insertProvider)
+    .select("id, company_name")
+    .limit(1);
 
-  try {
-    const body = JSON.parse(event.body || '{}');
-
-    // validări minime
-    const required = ['company_name', 'service_name', 'judet', 'oras'];
-    for (const k of required) {
-      if (!body[k] || String(body[k]).trim() === '') {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: `Lipsește: ${k}` }) };
-      }
-    }
-
-    // auth
-    const auth = event.headers.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!token) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Trebuie autentificare (lipsește token-ul).' }) };
-    }
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Token invalid.' }) };
-    }
-    const user = userData.user;
-
-    // găsește service_id după service_name
-    let serviceId = null;
-
-    // 1) match exact
-    {
-      const { data: svc1, error: e1 } = await supabase
-        .from('services')
-        .select('id, name')
-        .eq('name', body.service_name)
-        .maybeSingle();
-      if (e1) throw e1;
-      if (svc1?.id) serviceId = svc1.id;
-    }
-
-    // 2) fallback: fără diacritice / case-insensitive
-    if (!serviceId) {
-      const { data: allS, error: e2 } = await supabase
-        .from('services')
-        .select('id, name');
-      if (e2) throw e2;
-      const target = norm(body.service_name);
-      const found = (allS || []).find(s => norm(s.name) === target)
-                || (allS || []).find(s => norm(s.name).includes(target) || target.includes(norm(s.name)));
-      if (found) serviceId = found.id;
-    }
-
-    if (!serviceId) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Serviciu inexistent' }) };
-    }
-
-    // inserare provider
-    const insert = {
-      user_id:      user.id,
-      company_name: (body.company_name || '').trim(),
-      description:  (body.description || '').trim() || null,
-      service_id:   serviceId,
-      judet:        titleCaseRO(body.judet),
-      oras:         titleCaseRO(body.oras),
-      phone:        (body.phone || '').trim() || null,
-      email:        (body.email || '').trim() || null,
-      is_active:    true,
-    };
-
-    const { data: provRows, error: insErr } = await supabase
-      .from('providers')
-      .insert(insert)
-      .select('id, company_name')
-      .limit(1);
-
-    if (insErr) {
-      if (insErr.code === '23505') {
-        return { statusCode: 409, headers, body: JSON.stringify({ error: 'Compania există deja.' }) };
-      }
-      throw insErr;
-    }
-
-    const provider = provRows?.[0];
-    const providerId = provider?.id;
-    if (!providerId) throw new Error('Insert provider fără id.');
-
-    // Subcategorie / copii
-    const toLink = new Set();
-    const addIfNum = (v) => {
-      const s = String(v ?? '');
-      if (/^\d+$/.test(s)) toLink.add(parseInt(s, 10));
-    };
-
-    addIfNum(body.subcat);
-    addIfNum(body.subsub);
-
-    if (Array.isArray(body.subsubs)) {
-      body.subsubs.forEach(addIfNum);
-    } else if (typeof body.subsubs === 'string' && body.subsubs.trim()) {
-      body.subsubs.split(',').forEach(addIfNum);
-    }
-
-    if (toLink.size) {
-      const ids = Array.from(toLink);
-      const { data: subs, error: sErr } = await supabase
-        .from('subcategories')
-        .select('id')
-        .in('id', ids);
-      if (sErr) throw sErr;
-
-      const validIds = new Set((subs || []).map(r => r.id));
-      for (const sid of ids) {
-        if (!validIds.has(sid)) continue;
-        const { error: linkErr } = await supabase
-          .from('provider_subcategories')
-          .insert({ provider_id: providerId, subcategory_id: sid });
-        if (linkErr && linkErr.code !== '23505') throw linkErr;
-      }
-    }
-
-    return {
-      statusCode: 201,
-      headers,
-      body: JSON.stringify({ ok: true, provider }),
-    };
-  } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message || String(err) }) };
+  if (insErr) {
+    if (insErr.code === "23505") return bad("Compania există deja.", 409); // unique_violation
+    return bad(insErr.message || "Eroare la inserare provider", 500);
   }
+
+  const provider = provRows?.[0];
+  if (!provider?.id) return bad("Insert provider fără id.", 500);
+  const providerId = provider.id;
+
+  /* ===== Legare subcategorii / copii ===== */
+  const candidateIds = ensureArrayOfIds([subcat, subsub, subsubs].flat());
+
+  if (candidateIds.length) {
+    // Validăm că subcategoriile există
+    const { data: subs, error: sErr } = await sbAdmin
+      .from("subcategories")
+      .select("id")
+      .in("id", candidateIds);
+    if (sErr) return bad(sErr.message, 500);
+
+    const validIds = new Set((subs || []).map(r => r.id));
+    const rows = candidateIds
+      .filter(id => validIds.has(id))
+      .map(id => ({ provider_id: providerId, subcategory_id: id }));
+
+    if (rows.length) {
+      // Dacă ai o constrângere unică (provider_id, subcategory_id), poți folosi upsert
+      const { error: linkErr } = await sbAdmin
+        .from("provider_subcategories")
+        .upsert(rows, { onConflict: "provider_id,subcategory_id", ignoreDuplicates: true });
+
+      if (linkErr && linkErr.code !== "23505") {
+        // dacă nu ai onConflict configurat corect, revenim pe insert în buclă, ignorând duplicatele
+        for (const r of rows) {
+          const { error } = await sbAdmin.from("provider_subcategories").insert(r);
+          if (error && error.code !== "23505") return bad(error.message, 500);
+        }
+      }
+    }
+  }
+
+  return json({ ok: true, provider }, 201);
 };
+```0
