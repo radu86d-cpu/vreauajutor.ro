@@ -4,29 +4,53 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Se finalizează autentificarea…</title>
+  <meta name="robots" content="noindex" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; line-height: 1.5; padding: 24px; }
+  </style>
 </head>
 <body>
   <p>Te autentifici, te rugăm așteaptă…</p>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // Helper: citire redirect memorat (din index)
+    function consumeRedirect() {
+      try {
+        const to = localStorage.getItem('__va_after_login_redirect');
+        if (to) { localStorage.removeItem('__va_after_login_redirect'); return to; }
+      } catch {}
+      return null;
+    }
+
+    // Încărcare ENV cu fallback dacă răspunsul nu e JSON (ex. 502 HTML)
+    async function loadEnv() {
+      const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+      if (!res.ok) throw new Error('ENV endpoint failed: ' + res.status);
+      let env = {};
+      try { env = await res.json(); } catch { throw new Error('ENV response is not valid JSON'); }
+      if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) throw new Error('Missing Supabase envs');
+      return env;
+    }
+
     (async () => {
       try {
-        const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
-        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const env = await loadEnv();
+        const supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 
-        // schimbă 'code' pe sesiune
+        // Schimbă "code" pe sesiune (PKCE/OAuth/Email link)
         const { error } = await supa.auth.exchangeCodeForSession(window.location.href);
         if (error) throw error;
 
-        // du-l unde vrei după login (home sau ofera-servicii)
-        location.replace('/ofera-servicii.html');
+        // Redirect prioritar: către ce am memorat înainte de login
+        const redirectTo = consumeRedirect() || '/ofera-servicii.html';
+        location.replace(redirectTo);
       } catch (e) {
         console.error('Auth callback error:', e);
-        document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă.</p>';
+        document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă din <a href="/">pagina principală</a>.</p>';
       }
     })();
   </script>
 </body>
 </html>
+```0
