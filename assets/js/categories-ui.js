@@ -13,10 +13,9 @@ export async function initServiceSelect(selectSelector = "#service_name") {
   const select = document.querySelector(selectSelector);
   if (!select) return;
 
-  // servicii pentru înscriere (lists?mode=signup) – exact ca pagina ta
+  // servicii pentru înscriere (lists?mode=signup) – safe cu fetchJSON
   try {
-    const res = await fetch("/.netlify/functions/lists?mode=signup", { cache: "no-store" });
-    const { services = [] } = await res.json();
+    const { services = [] } = await fetchJSON("/.netlify/functions/lists?mode=signup", { cache: "no-store" });
 
     select.innerHTML = '<option value="">Alege serviciul</option>';
     (services || []).forEach(s => {
@@ -28,6 +27,7 @@ export async function initServiceSelect(selectSelector = "#service_name") {
     });
   } catch (e) {
     console.error("Nu pot încărca serviciile:", e);
+    select.innerHTML = '<option value="">Eroare la încărcare</option>';
   }
 
   // când se schimbă categoria -> încarcă subcategoriile
@@ -64,9 +64,17 @@ export async function renderSubcategories(containerSelector, serviceName) {
     return;
   }
 
-  const { subcategories: items } = await fetchJSON(
-    "/.netlify/functions/taxonomy?mode=subcategories&service=" + encodeURIComponent(serviceName)
-  );
+  let items = [];
+  try {
+    const resp = await fetchJSON(
+      "/.netlify/functions/taxonomy?mode=subcategories&service=" + encodeURIComponent(serviceName)
+    );
+    items = resp.subcategories;
+  } catch (e) {
+    console.error("Nu pot încărca subcategoriile:", e);
+    el.textContent = "Eroare la încărcarea subcategoriilor.";
+    return;
+  }
 
   if (!items?.length) {
     el.textContent = "Nu există subcategorii pentru acest serviciu.";
@@ -99,6 +107,7 @@ export async function renderSubcategories(containerSelector, serviceName) {
 
       // încarcă nivelul 2 în coloana din dreapta
       await renderChildren("#children", __activeSubcatId ?? __activeSubcatName);
+      scrollActiveIntoView("#subcats");
     });
 
     el.appendChild(btn);
@@ -114,9 +123,15 @@ export async function renderChildren(containerSelector, subcatKey) {
   if (!subcatKey) { el.textContent = "Alege o subcategorie în stânga."; return; }
 
   const param = encodeURIComponent(String(subcatKey));
-  const { children: items } = await fetchJSON(
-    "/.netlify/functions/taxonomy?mode=children&subcat=" + param
-  );
+  let items = [];
+  try {
+    const resp = await fetchJSON("/.netlify/functions/taxonomy?mode=children&subcat=" + param);
+    items = resp.children;
+  } catch (e) {
+    console.error("Nu pot încărca nivelul 2:", e);
+    el.textContent = "Eroare la încărcarea elementelor de pe nivelul următor.";
+    return;
+  }
 
   if (!items?.length) {
     el.textContent = "Nu există elemente pe nivelul următor.";
@@ -125,7 +140,8 @@ export async function renderChildren(containerSelector, subcatKey) {
 
   // pentru selecții multiple vom păstra într-un Set pe subcategorie
   if (!window.__sel) window.__sel = { bySub: new Map() };
-  const set = window.__sel.bySub.get(__activeSubcatId ?? __activeSubcatName) || new Set();
+  const subKey = __activeSubcatId ?? __activeSubcatName;
+  const set = window.__sel.bySub.get(subKey) || new Set();
 
   items.forEach((it) => {
     const idVal = (it.id != null) ? String(it.id) : String(it.name);
@@ -143,11 +159,11 @@ export async function renderChildren(containerSelector, subcatKey) {
     if (cb.checked) lab.classList.add("on");
 
     cb.addEventListener("change", () => {
-      let cur = window.__sel.bySub.get(__activeSubcatId ?? __activeSubcatName);
-      if (!cur) { cur = new Set(); window.__sel.bySub.set(__activeSubcatId ?? __activeSubcatName, cur); }
+      let cur = window.__sel.bySub.get(subKey);
+      if (!cur) { cur = new Set(); window.__sel.bySub.set(subKey, cur); }
 
       if (cb.checked) cur.add(idVal); else cur.delete(idVal);
-      if (cur.size === 0) window.__sel.bySub.delete(__activeSubcatId ?? __activeSubcatName);
+      if (cur.size === 0) window.__sel.bySub.delete(subKey);
 
       lab.classList.toggle("on", cb.checked);
 
@@ -157,7 +173,8 @@ export async function renderChildren(containerSelector, subcatKey) {
 
       // ascunde/afișează hintul „minim unul”
       const hasAny = Array.from(window.__sel.bySub.values()).some(s=>s.size>0);
-      document.getElementById("min1-hint").style.display = hasAny ? "none" : "";
+      const hint = document.getElementById("min1-hint");
+      if (hint) hint.style.display = hasAny ? "none" : "";
     });
 
     lab.appendChild(cb);
