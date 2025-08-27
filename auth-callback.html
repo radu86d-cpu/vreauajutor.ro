@@ -4,50 +4,97 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Se finalizează autentificarea…</title>
-  <meta name="robots" content="noindex" />
+  <meta name="robots" content="noindex,nofollow" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; line-height: 1.5; padding: 24px; }
+    :root{--fg:#0f172a;--muted:#64748b;--ok:#16a34a;--err:#dc2626}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7f9;color:var(--fg)}
+    .wrap{min-height:100dvh;display:grid;place-items:center;padding:24px}
+    .card{width:min(560px,94vw);background:#fff;border:1px solid #e6e8ec;border-radius:16px;box-shadow:0 18px 50px rgba(16,24,40,.12);padding:20px}
+    h1{margin:0 0 .4rem;font-size:clamp(20px,3vw,26px)}
+    p{margin:.25rem 0;color:var(--muted)}
+    .row{display:flex;align-items:center;gap:10px;margin-top:10px}
+    .spinner{width:18px;height:18px;border-radius:50%;border:3px solid #e5e7eb;border-top-color:#3b82f6;animation:s 1s linear infinite}
+    @keyframes s{to{transform:rotate(360deg)}}
+    .ok{color:var(--ok);font-weight:700}
+    .err{color:var(--err);font-weight:700}
+    .hint{font-size:13px;color:#94a3b8;margin-top:6px}
+    .btn{display:inline-flex;align-items:center;gap:8px;margin-top:12px;background:#0f62fe;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#fff;color:#0f62fe;border:1px solid #cfe0ff}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:.2rem .45rem;background:#f3f4f6;border-radius:6px}
   </style>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <p>Te autentifici, te rugăm așteaptă…</p>
+  <main class="wrap" aria-busy="true" aria-live="polite">
+    <section class="card">
+      <h1>Se finalizează autentificarea…</h1>
+      <p id="status"><span class="spinner" aria-hidden="true"></span> Facem schimbul de cod pentru sesiune.</p>
+      <p class="hint">Dacă această pagină rămâne blocată, poți reveni pe <a href="/" class="code">/</a> și reîncerci autentificarea.</p>
+      <div id="actions" style="display:none">
+        <button class="btn" id="goHome">Mergi la Acasă</button>
+        <button class="btn secondary" id="retry">Reîncearcă login</button>
+      </div>
+    </section>
+  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Helper: citire redirect memorat (din index)
-    function consumeRedirect() {
+    // Încarcă cheile publice din funcția serverless (nu expunem chei în build)
+    async function getEnv() {
+      const r = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+      const js = await r.json();
+      if (!r.ok || !js.SUPABASE_URL || !js.SUPABASE_ANON_KEY) {
+        throw new Error(js.error || 'Nu am putut obține cheile Supabase.');
+      }
+      return js;
+    }
+
+    // Citește și consumă redirect-ul setat de site (dacă există)
+    function consumeStoredRedirect() {
       try {
-        const to = localStorage.getItem('__va_after_login_redirect');
-        if (to) { localStorage.removeItem('__va_after_login_redirect'); return to; }
+        const k = '__va_after_login_redirect';
+        const to = localStorage.getItem(k);
+        if (to) { localStorage.removeItem(k); return to; }
       } catch {}
       return null;
     }
 
-    // Încărcare ENV cu fallback dacă răspunsul nu e JSON (ex. 502 HTML)
-    async function loadEnv() {
-      const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-      if (!res.ok) throw new Error('ENV endpoint failed: ' + res.status);
-      let env = {};
-      try { env = await res.json(); } catch { throw new Error('ENV response is not valid JSON'); }
-      if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) throw new Error('Missing Supabase envs');
-      return env;
-    }
-
     (async () => {
-      try {
-        const env = await loadEnv();
-        const supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+      const $status  = document.getElementById('status');
+      const $actions = document.getElementById('actions');
+      const $goHome  = document.getElementById('goHome');
+      const $retry   = document.getElementById('retry');
 
-        // Schimbă "code" pe sesiune (PKCE/OAuth/Email link)
+      // Butoane fallback
+      $goHome.onclick = () => location.replace('/');
+      $retry.onclick  = () => location.replace('/autentificare.html');
+
+      try {
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await getEnv();
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 1) Schimbă ?code=… pe sesiune
         const { error } = await supa.auth.exchangeCodeForSession(window.location.href);
         if (error) throw error;
 
-        // Redirect prioritar: către ce am memorat înainte de login
-        const redirectTo = consumeRedirect() || '/ofera-servicii.html';
-        location.replace(redirectTo);
+        // 2) Redirect logic:
+        //    a) dacă există un redirect stocat (pus înainte de a deschide loginul) -> mergi acolo
+        //    b) altfel, dacă e în query ?redirect=/ofera-servicii.html -> mergi acolo
+        //    c) fallback: acasă
+        const url = new URL(location.href);
+        const qRedirect = url.searchParams.get('redirect');
+        const stored = consumeStoredRedirect();
+
+        const dest = stored || qRedirect || '/';
+        $status.innerHTML = '<span class="ok">Gata!</span> Ești autentificat. Te redirecționăm…';
+        // Mic delay pentru UX (să se vadă mesajul)
+        setTimeout(() => location.replace(dest), 300);
       } catch (e) {
         console.error('Auth callback error:', e);
-        document.body.innerHTML = '<p>Eroare la finalizarea autentificării. Reîncearcă din <a href="/">pagina principală</a>.</p>';
+        $status.innerHTML = '<span class="err">Eroare:</span> ' + (e?.message || 'Nu s-a putut finaliza autentificarea.');
+        $actions.style.display = 'block';
+        document.querySelector('main').setAttribute('aria-busy', 'false');
       }
     })();
   </script>
