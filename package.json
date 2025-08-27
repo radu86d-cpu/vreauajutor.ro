@@ -1,14 +1,27 @@
 {
   "name": "vreauajutor.ro",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.18 <23"
+  },
   "scripts": {
     "dev": "netlify dev",
-    "build": "echo \"Static site\" && exit 0"
+    "dev:verbose": "NETLIFY_DEV_LOG=debug netlify dev --inspect",
+    "test:env": "node -e \"console.log('Node:', process.version)\"",
+    "lint": "eslint --ext .js,.mjs functions/**/*.js assets/js/**/*.js || true",
+    "format": "prettier -w \"**/*.{js,mjs,css,html,json,md}\"",
+    "build": "echo \"Static site – nothing to build\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "twilio": "^5.4.4"
-  }
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.34.1",
+    "eslint": "^9.9.0",
+    "prettier": "^3.3.3"
+  },
+  "packageManager": "npm@10"
 }
