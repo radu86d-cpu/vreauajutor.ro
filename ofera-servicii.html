@@ -8,7 +8,7 @@
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css"/>
   <!-- CSS scoped pentru pagina aceasta -->
-  <link rel="stylesheet" href="./assets/css/offer.css?v=2"/>
+  <link rel="stylesheet" href="./assets/css/offer.css?v=3"/>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -80,34 +80,45 @@
             <div class="msg" id="msg" role="status" aria-live="polite"></div>
           </div>
 
-          <!-- 2) Subcategorii -->
+          <!-- 2) Subcategorii – CASCADER în 2 coloane (stânga: subcategorii, dreapta: copii) -->
           <div class="card">
-            <div class="row" style="justify-content:space-between;">
+            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
               <h3 style="margin:4px 0;">Subcategorii</h3>
               <div class="row">
                 <button type="button" id="subcat-toggle" class="btn-chip">Restrânge</button>
                 <button type="button" id="subcat-reset" class="btn-chip">Reset</button>
               </div>
             </div>
-            <div id="subcats"></div>
-            <!-- hidden pentru backend -->
+
+            <div class="cascader">
+              <!-- Subcategorii (nivel 1) -->
+              <section class="pane">
+                <div class="pane-title">Nivel 1</div>
+                <div id="subcats" class="pane-body"></div>
+              </section>
+
+              <!-- Copii (nivel 2) -->
+              <section class="pane" id="child-wrap" aria-live="polite">
+                <div class="pane-title">
+                  Nivel 2
+                  <div class="tools" style="float:right;display:flex;gap:8px;align-items:center;">
+                    <button type="button" class="btn-chip" id="children-collapse-all">Restrânge toate</button>
+                    <button type="button" class="btn-chip" id="children-expand-all">Extinde toate</button>
+                    <small id="min1-hint" class="hint-danger" style="display:none;margin-left:6px;">Selectează cel puțin una</small>
+                  </div>
+                </div>
+                <div id="children" class="pane-body"></div>
+              </section>
+            </div>
+
+            <!-- hidden pentru backend (rămân neschimbate) -->
             <input type="hidden" id="subcat">
             <input type="hidden" id="subcat_name">
             <input type="hidden" id="subsub">
           </div>
 
-          <!-- 3) Copii -->
-          <div class="card" id="child-wrap" hidden aria-live="polite">
-            <div class="child-title">
-              <span>Sub-subcategorii (bifează minim 1)</span>
-              <div class="tools">
-                <button type="button" class="btn-chip" id="children-collapse-all">Restrânge toate</button>
-                <button type="button" class="btn-chip" id="children-expand-all">Extinde toate</button>
-                <small id="min1-hint" class="hint-danger" style="display:none;margin-left:6px;">Selectează cel puțin una</small>
-              </div>
-            </div>
-            <div id="children"></div>
-          </div>
+          <!-- 3) (slotul al treilea din grid rămâne liber pentru viitoare extensii / media) -->
+          <div class="card" style="display:none"></div>
         </section>
       </form>
     </main>
@@ -157,7 +168,7 @@
         // Reset DOAR când se schimbă serviciul
         selServ.addEventListener('change', ()=>{ resetForServiceChange(); loadSubcatsForSignup(); updateSubmitState(); });
 
-        if (!selServ.value && services.length){ selServ.value = services[0]; loadSubcatsForSignup(); }
+        if (!selServ.value && services.length){ selServ.value = services[0].name || services[0]; loadSubcatsForSignup(); }
       } catch(e){ console.error(e); }
     });
   </script>
@@ -215,7 +226,7 @@
         if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
         msg.classList.add('hint-ok'); msg.textContent='Înscriere reușită! Mulțumim.';
         form.reset(); document.getElementById('reg_oras').disabled=true;
-        document.getElementById('child-wrap').hidden=true;
+        document.getElementById('children').innerHTML='';
         __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
         resetOtpUI();
         updateSubmitState();
@@ -231,28 +242,26 @@
   <!-- ======================== Taxonomy (subcategorii & copii) + OTP ======================== -->
   <script>
     // --- State central ---
-    const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
-    const __subMeta = new Map();          // subId -> {btn, name, badge}
-    const __cacheChildren = new Map();    // subId -> children[]
+    const __sel = { bySub: new Map() };   // subId/name -> Set(childIds as strings)
+    const __subMeta = new Map();          // subId/name -> {btn, name, badge}
+    const __cacheChildren = new Map();    // subId/name -> children[]
 
     // --- Utils ---
     async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-    function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
-    function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
 
     // setează vizualul pt un singur subId
-    function updateChipVisuals(subId){
-      const meta = __subMeta.get(subId);
+    function updateChipVisuals(subKey){
+      const meta = __subMeta.get(subKey);
       if (!meta) return;
-      const size = (__sel.bySub.get(subId)?.size || 0);
+      const size = (__sel.bySub.get(subKey)?.size || 0);
       meta.btn.classList.toggle('blue', size > 0);
       if (meta.badge) meta.badge.textContent = String(size);
     }
 
     // reface vizualul pentru TOATE chip-urile
     function applyBlueFromState(){
-      for (const [subId, meta] of __subMeta.entries()){
-        const size = (__sel.bySub.get(subId)?.size || 0);
+      for (const [subKey, meta] of __subMeta.entries()){
+        const size = (__sel.bySub.get(subKey)?.size || 0);
         meta.btn.classList.toggle('blue', size > 0);
         if (meta.badge) meta.badge.textContent = String(size);
       }
@@ -276,17 +285,28 @@
     function renderChips(container, items){
       container.innerHTML=''; __subMeta.clear();
       items.forEach(it=>{
-        const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-        const name = it.name ?? it.subcat_name ?? '';
+        const id = (it.id!=null) ? Number(it.id) : (it.name || '');
+        const name = it.name ?? '';
 
         const btn = document.createElement('button');
-        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
+        btn.type='button'; btn.className='chip';
         const title = document.createElement('span'); title.textContent=name;
         const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
         btn.appendChild(title); btn.appendChild(badge);
 
         __subMeta.set(id,{btn,name,badge});
-        btn.addEventListener('click', ()=>toggleChildGroup(id));
+        btn.addEventListener('click', async ()=>{
+          // active în coloana stângă
+          container.querySelectorAll('.chip').forEach(b=>b.classList.remove('active','blue'));
+          btn.classList.add('active','blue');
+
+          // reset copii pentru subcat selectată
+          const childC = document.getElementById('children');
+          childC.innerHTML='';
+
+          // încărcăm copii
+          await loadChildrenForSubcat(id);
+        });
         container.appendChild(btn);
       });
 
@@ -294,113 +314,95 @@
       applyBlueFromState();
     }
 
-    function resyncGroupCheckboxes(subId){
-      const group = document.getElementById(childGroupId(subId));
+    function resyncChildCheckboxes(subKey){
+      const group = document.getElementById('children');
       if (!group) return;
-      const set = __sel.bySub.get(subId) || new Set();
+      const set = __sel.bySub.get(subKey) || new Set();
       group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
         cb.checked = set.has(String(cb.value));
         cb.closest('.child-item')?.classList.toggle('on', cb.checked);
       });
-      updateChipVisuals(subId);
+      updateChipVisuals(subKey);
       applyBlueFromState();
       updateSubmitState();
     }
 
-    async function toggleChildGroup(subId){
-      ensureChildWrapVisible();
-      const container = document.getElementById('children');
-      const groupId = childGroupId(subId);
-      let group = document.getElementById(groupId);
+    async function loadChildrenForSubcat(subKey){
+      const meta = __subMeta.get(subKey) || {};
+      const subParam = Number.isInteger(subKey) ? String(subKey) : (meta.name || String(subKey));
+      const url = '/.netlify/functions/taxonomy?mode=children&subcat='+encodeURIComponent(subParam);
 
-      const isOpen = !!group && !group.hidden;
-      if (isOpen){ group.hidden = true; return; }
+      let children = [];
+      try{
+        const { children: list=[] } = await ajx(url);
+        children = list;
+      }catch(e){ console.error(e); }
 
-      if (!group){
-        const kids = await loadChildren(subId);
-        const meta = __subMeta.get(subId) || {};
+      // render în #children
+      const cont = document.getElementById('children');
+      cont.innerHTML = '';
+      const selectedSet = __sel.bySub.get(subKey) || new Set();
 
-        group = document.createElement('section'); group.className = 'child-group'; group.id = groupId;
+      children.forEach(kid=>{
+        const safeKey = (kid.id != null) ? String(kid.id) : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+        const inputId = `kid_${safeKey}`;
 
-        const title = document.createElement('div'); title.className = 'child-title';
-        const tspan = document.createElement('span'); tspan.textContent = meta.name || ('Subcategorie ' + subId);
-        const ttools = document.createElement('div'); ttools.className = 'tools';
-        const tbtn = document.createElement('button'); tbtn.type='button'; tbtn.className='btn-chip'; tbtn.textContent='Ascunde';
-        tbtn.addEventListener('click', ()=>{ group.hidden = true; });
-        ttools.appendChild(tbtn);
-        title.appendChild(tspan); title.appendChild(ttools);
-        group.appendChild(title);
+        const lab = document.createElement('label'); lab.className = 'child-item'; lab.setAttribute('for', inputId);
 
-        const grid = document.createElement('div'); grid.className = 'child-grid';
-        const selectedSet = __sel.bySub.get(subId) || new Set();
+        const cb  = document.createElement('input'); cb.type='checkbox'; cb.id=inputId;
+        cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
+        cb.checked = selectedSet.has(String(cb.value));
+        if (cb.checked) lab.classList.add('on');
 
-        kids.forEach(kid=>{
-          const safeKey = (kid.id != null) ? String(kid.id) : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
-          const inputId = `kid_${subId}_${safeKey}`;
+        cb.addEventListener('change', ()=>{
+          let set = __sel.bySub.get(subKey);
+          if (!set){ set = new Set(); __sel.bySub.set(subKey, set); }
 
-          const lab = document.createElement('label'); lab.className = 'child-item'; lab.setAttribute('for', inputId);
+          const val = String(cb.value);
+          if (cb.checked) set.add(val); else set.delete(val);
+          if (set.size === 0) __sel.bySub.delete(subKey);
 
-          const cb  = document.createElement('input'); cb.type='checkbox'; cb.id=inputId;
-          cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
-          cb.checked = selectedSet.has(String(cb.value));
-          if (cb.checked) lab.classList.add('on');
+          lab.classList.toggle('on', cb.checked);
 
-          cb.addEventListener('change', ()=>{
-            let set = __sel.bySub.get(subId);
-            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
+          // reflectă chip-ul + badge
+          updateChipVisuals(subKey);
+          // sincronizează hidden fields
+          syncHiddenFromState();
+          // forțează culoarea pe toate chip-urile
+          applyBlueFromState();
 
-            const val = String(cb.value);
-            if (cb.checked) set.add(val); else set.delete(val);
-            if (set.size === 0) __sel.bySub.delete(subId);
-
-            lab.classList.toggle('on', cb.checked);
-
-            // reflectă chip-ul + badge
-            updateChipVisuals(subId);
-            // sincronizează hidden fields
-            syncHiddenFromState();
-            // forțează culoarea pe toate chip-urile
-            applyBlueFromState();
-
-            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-              document.getElementById('min1-hint').style.display = 'none';
-            }
-          });
-
-          lab.appendChild(cb);
-          lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
-          grid.appendChild(lab);
+          if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
+            document.getElementById('min1-hint').style.display = 'none';
+          }
         });
 
-        group.appendChild(grid);
-        container.appendChild(group);
-      }
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
+        cont.appendChild(lab);
+      });
 
-      document.querySelectorAll('#children .child-group').forEach(g=>{ g.hidden = (g.id !== groupId) ? true : false; });
-      group.hidden = false;
-      resyncGroupCheckboxes(subId);
-    }
+      // setează hidden-urile pentru nivelul 1 selectat
+      document.getElementById('subcat').value = Number.isInteger(subKey) ? String(subKey) : '';
+      document.getElementById('subcat_name').value = meta.name || (Number.isInteger(subKey) ? '' : String(subKey));
 
-    // Fără filtrare pe judet/oras (furnizorul vede toți copiii posibili)
-    async function loadChildren(subId){
-      if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
-      const meta = __subMeta.get(subId) || {};
-      const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
-      const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam);
-      const { children=[] } = await ajx(url);
-      __cacheChildren.set(subId, children);
-      return children;
+      resyncChildCheckboxes(subKey);
     }
 
     // Încarcă subcategoriile DOAR după serviciu (fără judet/oras)
     async function loadSubcatsForSignup(){
       const service = document.getElementById('service_name')?.value || '';
       const cont    = document.getElementById('subcats');
-      const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
 
+      // reset
+      document.getElementById('subcat').value='';
+      document.getElementById('subcat_name').value='';
+      document.getElementById('subsub').value='';
+      __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
+      childC.innerHTML='';
+
       if (!service){
-        cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
+        cont.innerHTML='Alege un serviciu mai sus.';
         updateSubmitState(); return;
       }
 
@@ -410,7 +412,7 @@
       try{
         const { subcategories=[] } = await ajx(url);
         if (!subcategories.length){
-          cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
+          cont.innerHTML='Nu există subcategorii.';
           updateSubmitState(); return;
         }
         renderChips(cont, subcategories);
@@ -424,9 +426,8 @@
       document.getElementById('subcat_name').value='';
       document.getElementById('subsub').value='';
       __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-      const childW  = document.getElementById('child-wrap');
       const childC  = document.getElementById('children');
-      childW.hidden = true; childC.innerHTML = '';
+      childC.innerHTML = '';
       const cont = document.getElementById('subcats');
       cont.innerHTML = '';
     }
