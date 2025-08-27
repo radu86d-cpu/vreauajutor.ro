@@ -9,25 +9,28 @@
   <!-- (opțional, mic boost LCP) -->
   <link rel="preload" as="image" href="imagini-chatgpt/curatenie.png">
 
-  <!-- Fonts -->
+  <!-- Fonts (preconnect + un singur stylesheet cu greutăți) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- CSS global + pagina auth separat (dacă îl ai) -->
+  <!-- CSS global + auth -->
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="assets/css/auth.css" />
+  <link rel="stylesheet" href="./assets/css/auth.css" />
 
-  <!-- AOS -->
+  <!-- AOS (animații la scroll – dacă vrei) -->
   <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => AOS.init());
+    document.addEventListener('DOMContentLoaded', () => { if (window.AOS) AOS.init(); });
   </script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-  <!-- MODAL autentificare/înregistrare (varianta „OLX-style”) -->
+  <!-- MODAL autentificare/înregistrare -->
   <div id="authModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="modal-content">
       <h2 id="authTitle" class="sr-only">Autentificare sau înregistrare</h2>
@@ -35,71 +38,61 @@
         <span aria-hidden="true">×</span>
       </button>
 
+      <!-- Tab-urile Autentificare/Înregistrare -->
       <div class="tab-buttons" role="tablist" aria-label="Formular autentificare">
         <button type="button" id="tab-login" role="tab" aria-controls="loginForm" aria-selected="true" class="active" onclick="schimbaTab('login')">Autentificare</button>
         <button type="button" id="tab-register" role="tab" aria-controls="registerForm" aria-selected="false" onclick="schimbaTab('register')">Înregistrare</button>
       </div>
 
-      <!-- LOGIN -->
+      <!-- Panou LOGIN -->
       <div id="loginForm" class="tab-content" role="tabpanel" aria-labelledby="tab-login" aria-hidden="false">
+        <label class="sr-only" for="login_email">Email</label>
         <input type="email" id="login_email" name="email" placeholder="Email" autocomplete="username" required>
+        <label class="sr-only" for="login_password">Parolă</label>
         <input type="password" id="login_password" name="password" placeholder="Parolă" autocomplete="current-password" required>
         <button type="button" onclick="autentificare()">Autentificare</button>
 
-        <div class="oauth-row" aria-label="Autentificare rapidă">
-          <button type="button" id="fbSignIn" class="oauth-btn" aria-label="Continuă cu Facebook">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/></svg>
-            </span>
-            Continuă cu Facebook
+        <div class="or">SAU</div>
+        <!-- Social login rapid (redirect direct spre ofera-servicii după auth) -->
+        <div class="row">
+          <button id="loginGoogle" class="btn google-btn" type="button" aria-label="Continuă cu Google" style="flex:1">
+            <span class="google-icon" aria-hidden="true">G</span><span>Google</span>
           </button>
-          <button type="button" id="appleSignIn" class="oauth-btn" aria-label="Continuă cu Apple">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/></svg>
-            </span>
-            Apple
-          </button>
-          <button type="button" id="googleSignIn" class="oauth-btn" aria-label="Continuă cu Google">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/></svg>
-            </span>
-            Google
+          <button id="loginApple" class="btn" type="button" aria-label="Continuă cu Apple" style="flex:1">
+             Apple
           </button>
         </div>
+        <button id="loginFacebook" class="btn" type="button" aria-label="Continuă cu Facebook" style="margin-top:8px">
+          f Facebook
+        </button>
       </div>
 
-      <!-- REGISTER -->
+      <!-- Panou REGISTER -->
       <div id="registerForm" class="tab-content" role="tabpanel" aria-labelledby="tab-register" aria-hidden="true" style="display:none;">
+        <label class="sr-only" for="register_email">Email</label>
         <input type="email" id="register_email" placeholder="Email" autocomplete="email" required>
-        <input type="password" id="register_password" placeholder="Parolă" autocomplete="new-password" required>
+        <label class="sr-only" for="register_password">Parolă</label>
+        <input type="password" id="register_password" placeholder="Parolă (minim 9 caractere)" autocomplete="new-password" required>
 
-        <label class="agree" style="display:flex;align-items:flex-start;gap:8px;margin:8px 0 10px;">
-          <input id="agree_terms" type="checkbox" style="margin-top:4px;">
+        <label class="agree" style="margin-top:6px">
+          <input id="register_agree" type="checkbox" />
           <span>Sunt de acord cu <a href="/termeni.html" target="_blank" rel="noopener">Termenii și condițiile</a> și <a href="/confidentialitate.html" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
         </label>
 
-        <button type="button" onclick="inregistrare()">Creează cont</button>
+        <button type="button" onclick="inregistrare()">Creează un cont</button>
 
-        <div class="oauth-row" aria-label="Înscriere rapidă">
-          <button type="button" id="fbSignUp" class="oauth-btn" aria-label="Continuă cu Facebook">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/></svg>
-            </span>
-            Continuă cu Facebook
+        <div class="or">SAU</div>
+        <div class="row">
+          <button id="registerGoogle" class="btn google-btn" type="button" aria-label="Continuă cu Google" style="flex:1">
+            <span class="google-icon" aria-hidden="true">G</span><span>Google</span>
           </button>
-          <button type="button" id="appleSignUp" class="oauth-btn" aria-label="Continuă cu Apple">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/></svg>
-            </span>
-            Apple
-          </button>
-          <button type="button" id="googleSignUp" class="oauth-btn" aria-label="Continuă cu Google">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/></svg>
-            </span>
-            Google
+          <button id="registerApple" class="btn" type="button" aria-label="Continuă cu Apple" style="flex:1">
+             Apple
           </button>
         </div>
+        <button id="registerFacebook" class="btn" type="button" aria-label="Continuă cu Facebook" style="margin-top:8px">
+          f Facebook
+        </button>
       </div>
     </div>
   </div>
@@ -111,23 +104,26 @@
       <h1>VreauAjutor.ro</h1>
     </div>
     <nav>
-      <a href="#">Acasă</a>
-      <a href="#">Categorii</a>
+      <a href="index.html">Acasă</a>
       <a href="furnizori.html">Furnizori</a>
-      <a href="ofera-servicii.html" class="cta-suppliers">Oferă servicii</a>
+      <!-- Linkul „Oferă servicii” este protejat: dacă nu ești autentificat -> deschide modalul -->
+      <a href="ofera-servicii.html" class="cta-suppliers requires-auth" data-requires-auth="true">Oferă servicii</a>
       <a href="#">Contact</a>
     </nav>
+
     <div class="auth-buttons">
       <button id="btnLogin" onclick="openLogin()">Autentificare</button>
       <button id="btnRegister" onclick="openRegister()">Înregistrare</button>
-      <a href="ofera-servicii.html" class="link-suppliers">Oferă servicii (pentru firme)</a>
+      <!-- link informativ – îl păstrăm dar tot protejat -->
+      <a href="ofera-servicii.html" class="link-suppliers requires-auth" data-requires-auth="true">Oferă servicii (pentru firme)</a>
     </div>
   </header>
 
-  <!-- HERO SEARCH -->
+  <!-- HERO SEARCH (bandă albastră deasupra sliderului) -->
   <section class="hero-search-band" role="search">
     <form class="hero-search" onsubmit="heroSearch(); return false;">
-      <input id="heroQuery" type="search" placeholder="Ex: curățenie Cluj-Napoca" aria-label="Caută servicii sau oraș" enterkeyhint="search">
+      <input id="heroQuery" type="search" placeholder="Ex: curățenie Cluj-Napoca"
+             aria-label="Caută servicii sau oraș" enterkeyhint="search">
       <button type="submit">Caută</button>
     </form>
   </section>
@@ -141,7 +137,10 @@
     <div class="slider-modern">
       <div class="slider-container">
         <div class="slides" id="slides">
-          <img src="imagini-chatgpt/curatenie.png" alt="Curățenie" loading="eager" fetchpriority="high" decoding="async">
+          <!-- Prima imagine: LCP mai rapid -->
+          <img src="imagini-chatgpt/curatenie.png" alt="Curățenie"
+               loading="eager" fetchpriority="high" decoding="async">
+          <!-- Restul: lazy -->
           <img src="imagini-chatgpt/instal.png" alt="Instalator" loading="lazy" decoding="async">
           <img src="imagini-chatgpt/mecanic.png" alt="Mecanic" loading="lazy" decoding="async">
           <img src="imagini-chatgpt/transport.png" alt="Transport" loading="lazy" decoding="async">
@@ -201,6 +200,7 @@
           <input type="checkbox" id="has_photos"> Numai cu fotografii
         </label>
 
+        <!-- Subcategorii + copii (pentru căutare avansată) -->
         <div id="subcat-wrap" class="advanced-panel" style="margin-top:10px;" hidden>
           <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
             <strong>Subcategorii</strong>
@@ -227,7 +227,6 @@
            data-aos="fade-up"
            data-aos-delay="120"
            data-aos-duration="600">
-
     <h2>Servicii Populare</h2>
     <div class="servicii-container">
       <div class="serviciu-box">
@@ -289,135 +288,21 @@
     </div>
   </div>
 
-  <!-- Script widget chat -->
+  <!-- ================== JS APP ================== -->
+
+  <!-- Slider + modal + accesibilitate + vechiul comportament -->
+  <script src="script.js"></script>
+
+  <!-- Helpers pentru AJAX simplu -->
   <script>
-    const AJB_API = new URLSearchParams(location.search).get('api') || '/chat';
-    function toggleAjb(){
-      const w = document.getElementById('ajb-widget');
-      const header = w.querySelector('.ajb-header');
-      w.classList.toggle('minimized');
-      const expanded = !w.classList.contains('minimized');
-      header.setAttribute('aria-expanded', String(expanded));
-      if (expanded) setTimeout(() => document.getElementById('ajb-input').focus(), 0);
-    }
-    function ajbAppend(sender, text){
-      const box = document.getElementById('ajb-messages');
-      const d = document.createElement('div');
-      d.style.margin = '6px 0';
-      d.innerHTML = '<strong>' + sender + ':</strong> ' + (text || '');
-      box.appendChild(d);
-      box.scrollTop = box.scrollHeight;
-    }
-    async function ajbSend(){
-      const inp = document.getElementById('ajb-input');
-      const txt = (inp.value || '').trim();
-      if(!txt) return;
-      ajbAppend('Tu', txt);
-      inp.value = '';
-      try{
-        const r = await fetch(AJB_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: txt })
-        });
-        if (!r.ok) throw new Error('Request failed: ' + r.status + ' ' + r.statusText);
-        const data = await r.json();
-        ajbAppend('AjutorBot', data.reply ?? 'Răspuns gol de la server.');
-      }catch(e){
-        console.error(e);
-        ajbAppend('AjutorBot', 'Nu pot contacta serverul. Verifică dacă rulează pe http://localhost:3000 și dacă ai pus OPENAI_API_KEY.');
-      }
-    }
+    async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
   </script>
 
-  <!-- Căutare avansată helpers -->
+  <!-- Selectoare dependente (judet/oras/serviciu) + căutare -->
   <script>
-    function toggleAdvanced(){
-      const panel = document.getElementById('advanced-panel');
-      const btn   = document.getElementById('btnAdv');
-      const isHidden = panel.hasAttribute('hidden');
-      if (isHidden){
-        panel.removeAttribute('hidden');
-        btn.setAttribute('aria-expanded','true');
-        setTimeout(()=> document.getElementById('price_max')?.focus(), 0);
-      } else {
-        panel.setAttribute('hidden','');
-        btn.setAttribute('aria-expanded','false');
-      }
-    }
-    function gotoFurnizori() {
-      const judet    = document.getElementById('judet')?.value || '';
-      const oras     = document.getElementById('oras')?.value || '';
-      const serviciu = document.getElementById('serviciu')?.value || '';
-      const subcat = document.getElementById('subcat')?.value || '';
-      const subsub = document.getElementById('subsub')?.value || '';
-      const priceMax = document.getElementById('price_max')?.value?.trim() || '';
-      const ratingMin= document.getElementById('rating_min')?.value || '';
-      const today    = document.getElementById('available_today')?.checked || false;
-      const photos   = document.getElementById('has_photos')?.checked || false;
-
-      const params = new URLSearchParams();
-      if (judet)    params.set('judet', judet);
-      if (oras)     params.set('oras', oras);
-      if (serviciu) params.set('service', serviciu);
-      if (subcat) params.set('subcat', subcat);
-      if (subsub) params.set('subsub', subsub);
-      if (priceMax) params.set('pmax', priceMax);
-      if (ratingMin)params.set('rmin', ratingMin);
-      if (today)    params.set('today', '1');
-      if (photos)   params.set('photos', '1');
-
-      window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
-    }
-    ['price_max','rating_min'].forEach(id=>{
-      document.getElementById(id)?.addEventListener('keydown', e=>{
-        if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
-      });
-    });
-  </script>
-
-  <!-- Enter pe selectoare -->
-  <script>
-    ['judet','oras','serviciu'].forEach(id=>{
-      document.getElementById(id)?.addEventListener('keydown', e=>{
-        if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
-      });
-    });
-  </script>
-
-  <!-- Hero search + selectori dinamici -->
-  <script>
-    function normalizeRO(s){
-      return (s || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g,'');
-    }
-    async function heroSearch(){
-      const q = (document.getElementById('heroQuery').value || '').trim();
-      if(!q) return;
-      try{
-        const r = await fetch('/.netlify/functions/lists', { cache:'no-store' });
-        const { judete = [] } = await r.json();
-        const services = [];
-        const nQ = normalizeRO(q);
-        const svc = services.find(s => nQ.includes(normalizeRO(s)));
-        const jud = judete.find(j => nQ.includes(normalizeRO(j)));
-        const params = new URLSearchParams();
-        if (svc) params.set('service', svc);
-        if (jud) params.set('judet', jud);
-        if (!svc && !jud) params.set('service', q);
-        location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
-      }catch(e){
-        location.href = 'furnizori.html?service=' + encodeURIComponent(q);
-      }
-    }
-  </script>
-
-  <script>
-    const elJudet    = document.getElementById('judet');
-    const elOras     = document.getElementById('oras');
-    const elCategorie= document.getElementById('serviciu');
+    const elJudet     = document.getElementById('judet');
+    const elOras      = document.getElementById('oras');
+    const elCategorie = document.getElementById('serviciu');
 
     function setOptions(selectEl, items, placeholder) {
       if (!selectEl) return;
@@ -432,9 +317,7 @@
 
     async function loadJudete() {
       try {
-        const r = await fetch('/.netlify/functions/lists');
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const { judete } = await r.json();
+        const { judete } = await ajx('/.netlify/functions/lists');
         setOptions(elJudet, (judete || []).map(j => ({ value: j, label: j })), 'Alege județul');
         setOptions(elOras, [], 'Alege orașul');
         setOptions(elCategorie, [], 'Alege serviciul');
@@ -446,14 +329,8 @@
 
     async function loadOrase(judet) {
       try {
-        if (!judet) {
-          setOptions(elOras, [], 'Alege orașul');
-          setOptions(elCategorie, [], 'Alege serviciul');
-          return;
-        }
-        const r = await fetch(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}`);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const { orase } = await r.json();
+        if (!judet) { setOptions(elOras, [], 'Alege orașul'); setOptions(elCategorie, [], 'Alege serviciul'); return; }
+        const { orase } = await ajx(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}`);
         setOptions(elOras, (orase || []).map(o => ({ value: o, label: o })), 'Alege orașul');
         setOptions(elCategorie, [], 'Alege serviciul');
       } catch (e) {
@@ -464,13 +341,8 @@
 
     async function loadCategorii(judet, oras) {
       try {
-        if (!judet || !oras) {
-          setOptions(elCategorie, [], 'Alege serviciul');
-          return;
-        }
-        const r = await fetch(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}&oras=${encodeURIComponent(oras)}`);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const { names = [] } = await r.json();
+        if (!judet || !oras) { setOptions(elCategorie, [], 'Alege serviciul'); return; }
+        const { names = [] } = await ajx(`/.netlify/functions/lists?judet=${encodeURIComponent(judet)}&oras=${encodeURIComponent(oras)}`);
         setOptions(elCategorie, (names || []).map(n => ({ value: n, label: n })), 'Alege serviciul');
       } catch (e) {
         console.error('loadCategorii failed', e);
@@ -478,105 +350,42 @@
       }
     }
 
-    elJudet?.addEventListener('change', (ev) => {
-      const j = ev.target.value || '';
-      loadOrase(j);
-    });
-    elOras?.addEventListener('change', (ev) => {
-      const j = elJudet?.value || '';
-      const o = ev.target.value || '';
-      loadCategorii(j, o);
-    });
+    elJudet?.addEventListener('change', (ev) => { loadOrase(ev.target.value || ''); });
+    elOras ?.addEventListener('change', (ev) => { loadCategorii(elJudet?.value || '', ev.target.value || ''); });
 
     document.addEventListener('DOMContentLoaded', loadJudete);
   </script>
 
-  <!-- Supabase + OAuth (init) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script id="auth-init">
-    window.supa = null;
-    (async () => {
-      try {
-        const r = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
-        window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const startOAuth = async (provider) => {
-          if (!window.supa) return;
-          await window.supa.auth.signInWithOAuth({
-            provider,
-            options: { redirectTo: window.location.origin + '/auth-callback.html' }
-          });
-        };
-
-        // OAuth – ambele panouri
-        document.getElementById('googleSignIn')?.addEventListener('click', () => startOAuth('google'));
-        document.getElementById('fbSignIn')?.addEventListener('click',     () => startOAuth('facebook'));
-        document.getElementById('appleSignIn')?.addEventListener('click',  () => startOAuth('apple'));
-        document.getElementById('googleSignUp')?.addEventListener('click', () => startOAuth('google'));
-        document.getElementById('fbSignUp')?.addEventListener('click',     () => startOAuth('facebook'));
-        document.getElementById('appleSignUp')?.addEventListener('click',  () => startOAuth('apple'));
-
-        // Greeting în header
-        const { data:{ user } } = await window.supa.auth.getUser();
-        if (user) {
-          const box = document.querySelector('.auth-buttons');
-          if (box) {
-            document.getElementById('btnLogin')?.remove();
-            document.getElementById('btnRegister')?.remove();
-            const hi = document.createElement('div');
-            hi.style.fontSize = '13px'; hi.style.opacity = '.9';
-            hi.textContent = `Salut, ${user.email}`;
-            const out = document.createElement('button');
-            out.textContent = 'Ieșire';
-            out.style.padding = '6px 10px';
-            out.onclick = async () => { await window.supa.auth.signOut(); location.reload(); };
-            box.append(hi, out);
-          }
-        }
-      } catch(e) { console.error('ENV load failed', e); }
-    })();
-  </script>
-
-  <!-- Email/parolă -->
-  <script id="auth-email-pass">
-    function validPass(p){ return /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||''); }
-
-    async function inregistrare(){
-      const email = document.getElementById('register_email')?.value?.trim();
-      const pass  = document.getElementById('register_password')?.value||'';
-      const agree = document.getElementById('agree_terms')?.checked;
-
-      if (!window.supa) return alert('Auth indisponibil');
-      if (!email) return alert('Completează email-ul.');
-      if (!validPass(pass)) return alert('Parola trebuie să aibă minim 9 caractere, cu literă mică, mare și cifră.');
-      if (!agree) return alert('Trebuie să accepți Termenii și condițiile.');
-
-      const { error } = await window.supa.auth.signUp({
-        email, password: pass,
-        options:{ emailRedirectTo: location.origin + '/auth-callback.html' }
-      });
-      if (error) return alert('Eroare: ' + error.message);
-      alert('Cont creat! Verifică email-ul pentru confirmare.');
-      document.getElementById('authModal').style.display = 'none';
-    }
-
-    async function autentificare(){
-      const email = document.getElementById('login_email')?.value?.trim();
-      const pass  = document.getElementById('login_password')?.value||'';
-      if (!window.supa) return alert('Auth indisponibil');
-      if (!email || !pass) return alert('Completează email + parolă');
-      const { error } = await window.supa.auth.signInWithPassword({ email, password: pass });
-      if (error) return alert('Eroare: ' + error.message);
-      alert('Autentificat!');
-      document.getElementById('authModal').style.display = 'none';
-      location.reload();
-    }
-  </script>
-
-  <!-- Taxonomy subcategorii/copii + reload categorii după zonă -->
+  <!-- Căutarea din banda albastră -->
   <script>
-    async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+    function normalizeRO(s){
+      return (s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'');
+    }
+    async function heroSearch(){
+      const q = (document.getElementById('heroQuery').value || '').trim();
+      if(!q) return;
+      try{
+        const { judete = [] } = await ajx('/.netlify/functions/lists');
+        const services = []; // nu filtrăm după listă globală
+        const nQ = normalizeRO(q);
+        const svc = services.find(s => nQ.includes(normalizeRO(s)));
+        const jud = judete.find(j => nQ.includes(normalizeRO(j)));
+        const params = new URLSearchParams();
+        if (svc) params.set('service', svc);
+        if (jud) params.set('judet', jud);
+        if (!svc && !jud) params.set('service', q);
+        location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
+      }catch(e){
+        location.href = 'furnizori.html?service=' + encodeURIComponent(q);
+      }
+    }
+  </script>
+
+  <!-- Subcategorii/copii pentru panoul avansat -->
+  <script>
     function renderChips(container, items, onClick){
       container.innerHTML = '';
       (items || []).forEach(it => {
@@ -589,6 +398,7 @@
         container.appendChild(b);
       });
     }
+
     async function loadSubcatsForSelectedService() {
       const service = document.getElementById('serviciu')?.value || '';
       const judet   = document.getElementById('judet')?.value || '';
@@ -621,6 +431,7 @@
         wrap.hidden = true;
       }
     }
+
     async function loadChildrenForSubcat(subcatId){
       const judet  = document.getElementById('judet')?.value || '';
       const oras   = document.getElementById('oras')?.value || '';
@@ -635,23 +446,16 @@
         const { children = [] } = await ajx(url);
         if (!children.length){ wrap.hidden = true; cont.innerHTML = ''; return; }
         wrap.hidden = false;
-        cont.innerHTML = '';
-        children.forEach(kid=>{
-          const b = document.createElement('button');
-          b.type='button';
-          b.textContent = kid.name + (kid.count?` (${kid.count})`:``);
-          b.style.cssText='padding:6px 10px;border:1px solid #ccc;border-radius:999px;background:#fff;cursor:pointer;';
-          b.onclick = () => { hidKid.value = kid.id || kid.name; };
-          cont.appendChild(b);
-        });
+        renderChips(cont, children, (kid) => { hidKid.value = kid.id || kid.name; });
       }catch(e){
         console.error(e);
         wrap.hidden = true;
       }
     }
+
     const _oldToggleAdvanced = window.toggleAdvanced;
     window.toggleAdvanced = function(){
-      _oldToggleAdvanced();
+      if (typeof _oldToggleAdvanced === 'function') _oldToggleAdvanced();
       const panelEl = document.getElementById('advanced-panel');
       const panelNowOpen = panelEl && !panelEl.hasAttribute('hidden');
       if (panelNowOpen) loadSubcatsForSelectedService();
@@ -665,57 +469,241 @@
     });
   </script>
 
+  <!-- Goto furnizori din selector -->
   <script>
-    async function reloadActiveServicesByArea({ preserveSelection = true } = {}) {
-      const judet   = document.getElementById('judet')?.value || '';
-      const oras    = document.getElementById('oras')?.value || '';
-      const selServ = document.getElementById('serviciu');
-      if (!selServ) return;
+    function gotoFurnizori() {
+      const judet    = document.getElementById('judet')?.value || '';
+      const oras     = document.getElementById('oras')?.value || '';
+      const serviciu = document.getElementById('serviciu')?.value || '';
+      const subcat   = document.getElementById('subcat')?.value || '';
+      const subsub   = document.getElementById('subsub')?.value || '';
 
-      const prev = preserveSelection ? selServ.value : '';
-      selServ.disabled = true;
-      selServ.innerHTML = '<option value="">Se încarcă…</option>';
+      const priceMax = document.getElementById('price_max')?.value?.trim() || '';
+      const ratingMin= document.getElementById('rating_min')?.value || '';
+      const today    = document.getElementById('available_today')?.checked || false;
+      const photos   = document.getElementById('has_photos')?.checked || false;
 
-      try {
-        const url = '/.netlify/functions/taxonomy?mode=categories'
-                  + (judet ? '&judet=' + encodeURIComponent(judet) : '')
-                  + (oras  ? '&oras='  + encodeURIComponent(oras)  : '');
-        const { services = [] } = await ajx(url);
+      const params = new URLSearchParams();
+      if (judet)    params.set('judet', judet);
+      if (oras)     params.set('oras', oras);
+      if (serviciu) params.set('service', serviciu);
+      if (subcat)   params.set('subcat', subcat);
+      if (subsub)   params.set('subsub', subsub);
+      if (priceMax) params.set('pmax', priceMax);
+      if (ratingMin)params.set('rmin', ratingMin);
+      if (today)    params.set('today', '1');
+      if (photos)   params.set('photos', '1');
 
-        selServ.innerHTML = '<option value="">Alege serviciul</option>';
-        services.forEach(s => {
-          const val = (typeof s === 'string') ? s : (s.name || '');
-          if (!val) return;
-          const opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = val;
-          selServ.appendChild(opt);
-        });
-
-        if (prev && [...selServ.options].some(o => o.value === prev)) {
-          selServ.value = prev;
-        } else {
-          selServ.value = '';
-          document.getElementById('subcat').value = '';
-          document.getElementById('subsub').value = '';
-          document.getElementById('subcat-wrap').hidden = true;
-          document.getElementById('child-wrap').hidden  = true;
-          document.getElementById('subcats').innerHTML  = '';
-          document.getElementById('children').innerHTML = '';
-        }
-
-        const panelOpen = !document.getElementById('advanced-panel').hasAttribute('hidden');
-        if (panelOpen && selServ.value) await loadSubcatsForSelectedService();
-      } catch (e) {
-        console.error('taxonomy categories error', e);
-        selServ.innerHTML = '<option value="">Alege serviciul</option>';
-      } finally {
-        selServ.disabled = false;
-      }
+      window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
     }
+    ['price_max','rating_min','judet','oras','serviciu'].forEach(id=>{
+      document.getElementById(id)?.addEventListener('keydown', e=>{
+        if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
+      });
+    });
   </script>
 
-  <!-- Slider + modal logic (se bazează pe clasele din style.css) -->
-  <script src="script.js" defer></script>
+  <!-- ================== AUTH INIT + GATING „Oferă servicii” ================== -->
+  <script>
+    // global
+    window.supa = null;
+
+    function rememberRedirect(to) {
+      try { localStorage.setItem('__va_after_login_redirect', to); } catch {}
+    }
+    function consumeRedirect() {
+      try {
+        const to = localStorage.getItem('__va_after_login_redirect');
+        if (to) { localStorage.removeItem('__va_after_login_redirect'); return to; }
+      } catch {}
+      return null;
+    }
+
+    (async () => {
+      // 1) ENV din Netlify
+      try {
+        const r = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
+        window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      } catch(e) {
+        console.error('ENV load failed', e);
+      }
+
+      // 2) Header: „Salut, email” + Ieșire
+      try {
+        const { data:{ user } } = await window.supa.auth.getUser();
+        if (user) {
+          const box = document.querySelector('.auth-buttons');
+          if (box) {
+            document.getElementById('btnLogin')?.remove();
+            document.getElementById('btnRegister')?.remove();
+
+            const hi = document.createElement('div');
+            hi.style.fontSize = '13px'; hi.style.opacity = '.9';
+            hi.textContent = `Salut, ${user.email}`;
+
+            const out = document.createElement('button');
+            out.textContent = 'Ieșire';
+            out.style.padding = '6px 10px';
+            out.onclick = async () => { await window.supa.auth.signOut(); location.reload(); };
+
+            box.append(hi, out);
+          }
+        }
+      } catch(e){ console.warn(e); }
+
+      // 3) Interceptează link-urile protejate (ofera-servicii)
+      document.querySelectorAll('a.requires-auth,[data-requires-auth="true"]').forEach(a=>{
+        a.addEventListener('click', async (ev)=>{
+          try {
+            const { data:{ session } } = await window.supa.auth.getSession();
+            if (!session?.access_token) {
+              ev.preventDefault();
+              rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
+              openRegister(); // sau openLogin(); alegem Register ca default
+            }
+          } catch(e) {
+            // dacă supa nu e gata, tot protejez: deschid modalul
+            ev.preventDefault();
+            rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
+            openRegister();
+          }
+        });
+      });
+
+      // 4) Dacă venim dintr-un flux de login care a setat redirect-ul
+      const pending = consumeRedirect();
+      if (pending) {
+        // dacă deja suntem logați, du-ne acum
+        try {
+          const { data:{ session } } = await window.supa.auth.getSession();
+          if (session?.access_token) location.replace(pending);
+        } catch {}
+      }
+    })();
+  </script>
+
+  <!-- ================== Email/parolă + Social (cu redirect spre ofera-servicii) ================== -->
+  <script>
+    // Mesaj mic în modal
+    function toastMsg(t, ok=false){
+      try{
+        const el = document.getElementById('authTitle');
+        el.textContent = t;
+        setTimeout(()=>{ el.textContent='Autentificare sau înregistrare'; }, 2000);
+      }catch{}
+    }
+    const validPass = (p)=> /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||'');
+
+    // Social OAuth: mereu cu redirect către ofera-servicii.html
+    async function startOAuth(provider){
+      if (!window.supa) return;
+      try{
+        rememberRedirect('/ofera-servicii.html');
+        await window.supa.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: window.location.origin + '/auth-callback.html' }
+          // Notă: auth-callback.html va face exchange și apoi te întoarce pe /
+          // iar în onload mai sus te ducem înapoi către redirectul reținut
+        });
+      }catch(e){ toastMsg(e.message || 'Nu am putut porni autentificarea.'); }
+    }
+    // Hook butoane social din ambele tab-uri
+    document.getElementById('loginGoogle')   ?.addEventListener('click', ()=> startOAuth('google'));
+    document.getElementById('loginApple')    ?.addEventListener('click', ()=> startOAuth('apple'));
+    document.getElementById('loginFacebook') ?.addEventListener('click', ()=> startOAuth('facebook'));
+    document.getElementById('registerGoogle')?.addEventListener('click', ()=> startOAuth('google'));
+    document.getElementById('registerApple') ?.addEventListener('click', ()=> startOAuth('apple'));
+    document.getElementById('registerFacebook')?.addEventListener('click', ()=> startOAuth('facebook'));
+
+    // Înregistrare cu email/parolă -> după confirmarea emailului redirect spre ofera-servicii.html
+    async function inregistrare(){
+      const email = document.getElementById('register_email')?.value?.trim();
+      const pass  = document.getElementById('register_password')?.value||'';
+      const okA   = document.getElementById('register_agree')?.checked;
+
+      if (!window.supa) return alert('Auth indisponibil');
+      if (!email) return alert('Completează email-ul');
+      if (!validPass(pass)) return alert('Parola nu respectă regulile (min 9 caractere, literă mare, literă mică, cifră).');
+      if (!okA) return alert('Trebuie să accepți termenii.');
+
+      rememberRedirect('/ofera-servicii.html');
+      try{
+        const { error } = await window.supa.auth.signUp({
+          email, password: pass,
+          options:{ emailRedirectTo: location.origin + '/auth-callback.html' }
+        });
+        if (error) throw error;
+        alert('Ți-am trimis un email de confirmare. După confirmare te vom duce la Oferă servicii.');
+        inchideModal();
+      }catch(e){ alert('Eroare: ' + (e.message || 'nu s-a putut crea contul')); }
+    }
+
+    // Autentificare cu email/parolă -> redirect imediat către ofera-servicii.html
+    async function autentificare(){
+      const email = document.getElementById('login_email')?.value?.trim();
+      const pass  = document.getElementById('login_password')?.value||'';
+      if (!window.supa) return alert('Auth indisponibil');
+      if (!email || !pass) return alert('Completează email + parolă');
+
+      try{
+        const { error } = await window.supa.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+        inchideModal();
+        location.href = '/ofera-servicii.html';
+      }catch(e){ alert('Eroare: ' + (e.message || 'nu te-am putut autentifica')); }
+    }
+
+    // expunem pe window pentru butoanele din HTML
+    window.inregistrare = inregistrare;
+    window.autentificare = autentificare;
+  </script>
+
+  <!-- AjutorBot – widget (apel API prin Netlify redirect) -->
+  <script>
+    const AJB_API = new URLSearchParams(location.search).get('api') || '/chat';
+
+    function toggleAjb(){
+      const w = document.getElementById('ajb-widget');
+      const header = w.querySelector('.ajb-header');
+      w.classList.toggle('minimized');
+      const expanded = !w.classList.contains('minimized');
+      header.setAttribute('aria-expanded', String(expanded));
+      if (expanded) setTimeout(() => document.getElementById('ajb-input').focus(), 0);
+    }
+    window.toggleAjb = toggleAjb;
+
+    function ajbAppend(sender, text){
+      const box = document.getElementById('ajb-messages');
+      const d = document.createElement('div');
+      d.style.margin = '6px 0';
+      d.innerHTML = '<strong>' + sender + ':</strong> ' + (text || '');
+      box.appendChild(d);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function ajbSend(){
+      const inp = document.getElementById('ajb-input');
+      const txt = (inp.value || '').trim();
+      if(!txt) return;
+      ajbAppend('Tu', txt);
+      inp.value = '';
+      try{
+        const r = await fetch(AJB_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: txt })
+        });
+        if (!r.ok) throw new Error('Request failed: ' + r.status + ' ' + r.statusText);
+        const data = await r.json();
+        ajbAppend('AjutorBot', data.reply ?? 'Răspuns gol de la server.');
+      }catch(e){
+        console.error(e);
+        ajbAppend('AjutorBot', 'Nu pot contacta serverul. Verifică dacă rulează backend-ul și cheile.');
+      }
+    }
+    window.ajbSend = ajbSend;
+  </script>
 </body>
 </html>
+```0
