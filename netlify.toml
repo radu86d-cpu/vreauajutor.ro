@@ -3,38 +3,30 @@
   functions = "netlify/functions"
 
 [functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["twilio","@supabase/supabase-js"]
+  # folosim esbuild pentru bundle
+  node_bundler          = "esbuild"
+  external_node_modules = ["twilio", "@supabase/supabase-js"]
 
-# ===== Securitate: Content-Security-Policy + alte headere
-[[headers]]
-  for = "/*"
-  [headers.values]
-    # IMPORTANT: nu mai pune surse relative (ex: "/api/*") în CSP.
-    # 'self' acoperă toate apelurile către /.netlify/functions/*.
-    Content-Security-Policy = """
-      default-src 'self';
-      script-src  'self' https://cdn.jsdelivr.net https://cdn.jsdelivr.net/npm/@supabase/supabase-js https://unpkg.com;
-      connect-src 'self' https://*.supabase.co https://api.netlify.com https://verify.twilio.com https://*.twilio.com data: blob:;
-      style-src   'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
-      font-src    'self' https://fonts.gstatic.com data:;
-      img-src     'self' data: blob:;
-      frame-ancestors 'self';
-      base-uri 'self';
-      form-action 'self';
-    """
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy        = "strict-origin-when-cross-origin"
-    Permissions-Policy     = "geolocation=(), microphone=(), camera=()"
-    X-Frame-Options        = "SAMEORIGIN"
+# ---------- Redirects API → Functions ----------
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/:splat"
+  status = 200
 
-# Proxy API -> Functions (poți folosi /api/* dacă vrei, dar nu-l include în CSP)
+# ---------- SPA fallback ----------
+# Toate rutele ne-rezolvate merg către index.html,
+# dar exclude explicit folderele statice /api și /assets
 [[redirects]]
   from = "/api/*"
   to   = "/.netlify/functions/:splat"
   status = 200
+  force  = true
 
-# (opțional) fallback pentru SPA — păstrează doar dacă site-ul e 100% SPA
+[[redirects]]
+  from = "/assets/*"
+  to   = "/assets/:splat"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to   = "/index.html"
