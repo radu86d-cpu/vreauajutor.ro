@@ -5,16 +5,26 @@
    =========================== */
 
 :root{
-  --auth-bg: #ffffff;
-  --auth-text: #0f172a;
+  --auth-bg:#ffffff;
+  --auth-text:#0f172a;
   --auth-muted:#64748b;
   --auth-border:#e6e8ec;
-  --auth-shadow: 0 24px 60px rgba(16,24,40,.18);
+  --auth-shadow:0 24px 60px rgba(16,24,40,.18);
   /* OLX-ish accent (turquoise) */
   --auth-primary:#23e5db;
   --auth-primary-600:#12cfc4;
   --auth-pills:#f3f4f6;
-  --auth-focus: rgba(35,229,219,.35);
+  --auth-focus:rgba(35,229,219,.35);
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --auth-bg:#0b1220;
+    --auth-text:#e5e7eb;
+    --auth-muted:#94a3b8;
+    --auth-border:#1f2937;
+    --auth-pills:#111827;
+  }
 }
 
 /* ====== MODAL WRAPPER (folosește markup-ul existent: #authModal) ====== */
@@ -22,17 +32,24 @@
   display:none;
   position:fixed; inset:0;
   background:rgba(6,11,21,.55);
-  z-index: 9999;
+  z-index:9999;
+  -webkit-backdrop-filter:saturate(140%) blur(2px);
+  backdrop-filter:saturate(140%) blur(2px);
 }
+#authModal[aria-hidden="true"]{ display:none; }
+
 #authModal .modal-content{
   width:min(540px, 92vw);
-  margin: min(8vh,64px) auto;
+  margin:min(8vh,64px) auto;
   background:var(--auth-bg);
   color:var(--auth-text);
   border-radius:18px;
   border:1px solid var(--auth-border);
   box-shadow:var(--auth-shadow);
   padding:18px 18px 20px;
+  max-height:calc(100vh - 96px);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
 }
 
 /* close */
@@ -43,6 +60,7 @@
   background:#fff; color:#334155; cursor:pointer;
 }
 #authModal .close:hover{ background:#f8fafc; }
+#authModal .close:focus-visible{ outline:2px solid #0ea5b7; outline-offset:2px; }
 
 /* ====== TAB STRIP ca la OLX (pastile) ====== */
 #authModal .tab-buttons{
@@ -50,6 +68,8 @@
   border-radius:999px;
   padding:6px;
   gap:6px;
+  display:flex;
+  justify-content:space-between;
 }
 #authModal .tab-buttons button{
   border:0;
@@ -59,17 +79,21 @@
   border-radius:999px;
   font-weight:800;
   letter-spacing:.2px;
+  cursor:pointer;
 }
 #authModal .tab-buttons button.active{
   background:#fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
   border:1px solid var(--auth-border);
+}
+#authModal .tab-buttons button:focus-visible{
+  outline:2px solid #0ea5b7; outline-offset:2px;
 }
 
 /* ====== FORM ====== */
-#authModal .tab-content{
-  margin-top:12px;
-}
+#authModal .tab-content{ margin-top:12px; }
+#authModal .tab-content[aria-hidden="true"]{ display:none !important; }
+
 #authModal input[type="text"],
 #authModal input[type="email"],
 #authModal input[type="password"]{
@@ -78,14 +102,16 @@
   border:1px solid #dfe3ea;
   border-radius:12px;
   background:#fff;
+  color:#111827;
   font-size:16px;
   margin-bottom:10px;
-  transition:border-color .18s, box-shadow .18s;
+  transition:border-color .18s, box-shadow .18s, background .18s;
 }
+#authModal input::placeholder{ color:#94a3b8; }
 #authModal input:focus{
   outline:none;
-  border-color: var(--auth-primary);
-  box-shadow: 0 0 0 4px var(--auth-focus);
+  border-color:var(--auth-primary);
+  box-shadow:0 0 0 4px var(--auth-focus);
 }
 
 /* ====== CTA (accent turcoaz) ====== */
@@ -99,13 +125,18 @@
   cursor:pointer;
   background:var(--auth-primary);
   color:#002f34; /* contrast plăcut pe turcoaz (OLX-ish) */
-  transition: filter .15s ease, transform .03s ease;
+  transition:filter .15s ease, transform .03s ease, opacity .15s ease;
 }
 #authModal .tab-content button:hover{ filter:brightness(1.02); }
 #authModal .tab-content button:active{ transform:translateY(1px); }
+#authModal .tab-content button:disabled{
+  opacity:.6; cursor:not-allowed;
+}
 
-/* ====== Google button ====== */
-#authModal .google-btn{
+/* ====== Google / Apple / Facebook ====== */
+#authModal .google-btn,
+#authModal #registerGoogle,
+#authModal #loginGoogle{
   margin-top:10px;
   background:#fff !important;
   color:#111827 !important;
@@ -115,6 +146,23 @@
   font-weight:800;
 }
 #authModal .google-btn .google-icon{ width:18px; height:18px; }
+
+#authModal #loginApple,
+#authModal #registerApple,
+#authModal #loginFacebook,
+#authModal #registerFacebook{
+  background:#fff;
+  color:#111827;
+  border:1px solid #dfe3ea;
+  display:flex; align-items:center; justify-content:center;
+  gap:10px; padding:12px 14px; border-radius:12px; font-weight:800;
+}
+#authModal #loginApple:hover,
+#authModal #registerApple:hover,
+#authModal #loginFacebook:hover,
+#authModal #registerFacebook:hover{
+  background:#f8fafc;
+}
 
 /* ====== Separator „SAU” ====== */
 #authModal .or{
@@ -135,6 +183,7 @@
   #authModal .modal-content{
     border-radius:16px;
     padding:16px 14px 18px;
+    margin:12vh 12px;
   }
 }
 
@@ -142,3 +191,9 @@
 #authModal .hint{ font-size:12px; color:var(--auth-muted); }
 #authModal .small-link{ font-size:13px; color:#0369a1; text-decoration:none; }
 #authModal .small-link:hover{ text-decoration:underline; }
+
+/* ====== Respectă setările de mișcare ale utilizatorului ====== */
+@media (prefers-reduced-motion: reduce){
+  #authModal *{ transition:none !important; }
+}
+```0
