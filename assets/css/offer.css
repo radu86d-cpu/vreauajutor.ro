@@ -49,6 +49,15 @@
 .offer .grid{
   display:grid;grid-template-columns: 1fr 380px;gap:20px;align-items:start;
 }
+/* folosit în ofera-servicii.html pentru 3 coloane */
+.offer .grid-3{
+  display:grid;grid-template-columns: repeat(3, 1fr);gap:20px;align-items:start;
+}
+@media (max-width:1080px){
+  .offer .grid{grid-template-columns:1fr}
+  .offer .grid-3{grid-template-columns:1fr}
+}
+
 .offer .card{
   background:var(--card);border:1px solid var(--line);border-radius:16px;
   box-shadow:0 8px 28px rgba(16,24,40,.08);padding:16px;
@@ -96,15 +105,26 @@
 .offer .btn-ghost:hover{background:#f7f9ff}
 .offer .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
 
+/* --- butoane mici (folosite la OTP, reset, expand/collapse) --- */
+.offer .btn-chip{
+  width:auto;display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#111;
+  cursor:pointer;font-weight:700;transition:background .15s,border-color .15s,transform .05s;
+}
+.offer .btn-chip:hover{background:#f7faff}
+.offer .btn-chip:active{transform:translateY(1px)}
+.offer .btn-chip[disabled]{opacity:.6;cursor:not-allowed}
+
 /* ---------- OTP ---------- */
 .offer .otp-wrap{display:flex;gap:10px;align-items:center;margin-top:6px}
-.offer .otp-code{flex:0 0 140px;text-align:center;letter-spacing:.2em}
+.offer .otp-code,
+.offer .code6{flex:0 0 140px;text-align:center;letter-spacing:.2em}
 .offer .status-dot{width:10px;height:10px;border-radius:50%}
 .offer .st-red{background:#e5484d}.offer .st-green{background:#2fb344}.offer .st-amber{background:#f59f00}
 .offer .hint{font-size:12px;color:var(--muted);margin-top:4px}
 .offer .hint-danger{color:#b00020;font-weight:700}
 .offer .hint-ok{color:#1ea759;font-weight:700}
-.offer .hint-warn{color:#b08900;font-weight:700}
+.offer .hint-warn{color:var(--amber);font-weight:700}
 
 /* ---------- Subcategorii (chip-uri) ---------- */
 .offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-height:70vh;overflow:auto}
@@ -138,6 +158,10 @@
 .offer .child-item input{margin:0;width:18px;height:18px;accent-color:var(--primary)}
 .offer .child-item.on{background:#f4f7ff;border-color:#99b7ff;box-shadow:0 8px 20px rgba(23,59,206,.10);font-weight:800}
 
+/* grup expandat (creat din JS) */
+.offer .child-group{border:1px solid #e6e8ec;border-radius:14px;padding:10px;margin-top:10px;background:#fff}
+.offer .child-group .child-title{margin:-2px 0 8px;border-bottom:1px solid #eef0f3}
+
 /* ---------- Rezumat lateral ---------- */
 .offer .summary{
   display:flex;flex-direction:column;gap:10px;font-size:14px;color:#111827
@@ -149,7 +173,6 @@
 
 /* ---------- Mobile tweaks ---------- */
 @media (max-width:1080px){
-  .offer .grid{grid-template-columns:1fr}
   .offer .sticky{position:static}
   .offer #subcats{max-height:none}
 }
@@ -162,6 +185,7 @@
 .offer .btn-bar{display:flex;gap:8px}
 .offer .btn-sm{padding:8px 10px;border-radius:999px;font-weight:700;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
 .offer .btn-sm:hover{background:#f7faff}
+.offer .btn-sm[disabled]{opacity:.6;cursor:not-allowed}
 
 /* ---------- Sticky submit pe mobil ---------- */
 @media (max-width:720px){
