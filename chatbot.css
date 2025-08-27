@@ -1,217 +1,107 @@
-/* ===========================
-   AjutorBot – stylesheet revamp
-   Compatibil cu chatbot.html existent (fără schimbări în markup)
-   =========================== */
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AjutorBot – Chat AI</title>
 
-/* ---- Variabile & teme ---- */
-:root{
-  --ajb-bg:#f4f4f4;
-  --ajb-card:#ffffff;
-  --ajb-text:#0f172a;
-  --ajb-muted:#64748b;
-  --ajb-border:#e5e7eb;
-  --ajb-primary:#0066cc;
-  --ajb-primary-600:#0054a6;
-  --ajb-focus: rgba(0,102,204,.25);
-  --ajb-radius:16px;
-  --ajb-shadow:0 10px 30px rgba(2,6,23,.12);
-  --ajb-bubble:#f9fafb;
-  --ajb-bubble-alt:#eef5ff;
-}
+  <!-- Stiluri locale -->
+  <link rel="stylesheet" href="chatbot.css" />
 
-@media (prefers-color-scheme: dark){
-  :root{
-    --ajb-bg:#0f172a;
-    --ajb-card:#0b1220;
-    --ajb-text:#e5e7eb;
-    --ajb-muted:#9aa4b2;
-    --ajb-border:#1f2937;
-    --ajb-primary:#4ea8ff;
-    --ajb-primary-600:#3a8ee6;
-    --ajb-focus: rgba(78,168,255,.3);
-    --ajb-bubble:#0e1627;
-    --ajb-bubble-alt:#0f1c33;
-  }
-}
+  <!-- Permite setarea endpoint-ului prin ?api=... sau window.CHATBOT_API_URL -->
+  <script>
+    (function () {
+      const fromQS = new URL(location.href).searchParams.get('api');
+      if (fromQS) window.CHATBOT_API_URL = fromQS;
+    })();
+  </script>
+</head>
+<body>
+  <div class="ajb-container" role="application" aria-label="Interfață chat AjutorBot">
+    <div class="ajb-header">
+      <h1 class="ajb-title">AjutorBot 🤖</h1>
+    </div>
 
-/* ---- Reset de bază pentru pagină single-app ---- */
-*,
-*::before,
-*::after { box-sizing: border-box; }
+    <div class="chat-container">
+      <div id="chat-box" class="chat-box" aria-live="polite" aria-atomic="false"></div>
 
-html, body { height: 100%; }
+      <form class="input-area" id="chat-form" autocomplete="off">
+        <label for="user-input" class="sr-only">Mesaj</label>
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Scrie mesajul tău..."
+          aria-label="Scrie mesajul tău"
+          required
+        />
+        <button id="send-btn" type="submit" aria-label="Trimite mesaj">Trimite</button>
+      </form>
+    </div>
+  </div>
 
-body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-  background: var(--ajb-bg);
-  color: var(--ajb-text);
-  margin: 0;
-  display: grid;
-  place-items: center;
-  padding: 12px;
-}
+  <script>
+    // Ordinea de prioritate: window.CHATBOT_API_URL → ?api=… → implicit Netlify Function
+    const API_URL =
+      window.CHATBOT_API_URL ||
+      new URLSearchParams(location.search).get('api') ||
+      '/.netlify/functions/chat';
 
-/* ---- Container / card ---- */
-.ajb-container{
-  width: min(920px, 100%);
-}
+    const chatBox   = document.getElementById('chat-box');
+    const input     = document.getElementById('user-input');
+    const form      = document.getElementById('chat-form');
+    const sendBtn   = document.getElementById('send-btn');
 
-.ajb-header{
-  text-align: center;
-  margin-bottom: 12px;
-}
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const message = (input.value || '').trim();
+      if (!message) return;
 
-.ajb-title{
-  font-size: clamp(22px, 3vw, 28px);
-  margin: 0;
-}
+      appendMessage('Tu', message);
+      input.value = '';
+      input.focus();
+      setSending(true);
 
-/* Cardul principal (folosește .chat-container existent) */
-.chat-container{
-  width: min(720px, 100%);
-  margin: 0 auto;
-  background: var(--ajb-card);
-  border: 1px solid var(--ajb-border);
-  border-radius: var(--ajb-radius);
-  box-shadow: var(--ajb-shadow);
-  padding: 16px;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 12px;
-}
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
 
-/* ---- Zona de mesaje ---- */
-.chat-box{
-  border: 1px solid var(--ajb-border);
-  border-radius: 12px;
-  height: min(52vh, 460px);
-  overflow-y: auto;
-  padding: 12px;
-  background: var(--ajb-bubble);
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
+        if (!response.ok) {
+          throw new Error('Request failed: ' + response.status + ' ' + response.statusText);
+        }
 
-/* Mesaj generic (markup existent: <div class="message"><strong>Tu:</strong> text) */
-.message{
-  margin: 10px 0;
-  line-height: 1.5;
-  word-wrap: break-word;
-}
+        const data = await response.json();
+        const botReply = data.reply ?? data.echo ?? 'Răspuns gol de la server.';
+        appendMessage('AjutorBot', botReply);
+      } catch (err) {
+        console.error(err);
+        appendMessage('AjutorBot', 'Nu pot contacta serverul. Verifică endpoint-ul și configurația.');
+      } finally {
+        setSending(false);
+      }
+    });
 
-/* Bule simple bazate pe cine a trimis – fără a cere clase noi
-   (ne folosim de <strong>Tu</strong> / <strong>AjutorBot</strong>) */
-.message strong{
-  display: inline-block;
-  min-width: 96px;
-  font-weight: 700;
-  color: var(--ajb-muted);
-}
+    function appendMessage(sender, text) {
+      const div = document.createElement('div');
+      div.className = 'message ajb-message';
+      div.innerHTML = '<strong>' + escapeHTML(sender) + ':</strong> ' + escapeHTML(text);
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
-/* Evidențiere discretă pe rând: Tu / AjutorBot */
-.message:has(strong:first-child:contains("Tu")){
-  background: var(--ajb-card);
-  border: 1px solid var(--ajb-border);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
-.message:has(strong:first-child:contains("AjutorBot")){
-  background: var(--ajb-bubble-alt);
-  border: 1px solid var(--ajb-border);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
+    function setSending(sending) {
+      sendBtn.disabled = sending;
+      sendBtn.textContent = sending ? 'Se trimite…' : 'Trimite';
+    }
 
-/* Fallback pentru browsere fără :has() / :contains() – alternăm ușor */
-@supports not (selector(:has(*))){
-  .message:nth-child(2n){
-    background: var(--ajb-bubble-alt);
-    border: 1px solid var(--ajb-border);
-    border-radius: 12px;
-    padding: 8px 10px;
-  }
-}
-
-/* Scrollbar subtil */
-.chat-box::-webkit-scrollbar{ width: 10px; }
-.chat-box::-webkit-scrollbar-thumb{
-  background: rgba(120, 144, 156, .35);
-  border-radius: 10px;
-}
-.chat-box::-webkit-scrollbar-track{ background: transparent; }
-
-/* ---- Input & buton ---- */
-.input-area{
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.input-area input{
-  flex: 1;
-  padding: 12px 14px;
-  border: 1px solid var(--ajb-border);
-  border-radius: 12px;
-  background: #fff;
-  color: #0f172a;
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
-}
-@media (prefers-color-scheme: dark){
-  .input-area input{
-    background: #0e1627;
-    color: var(--ajb-text);
-  }
-}
-.input-area input:focus{
-  outline: none;
-  border-color: var(--ajb-primary);
-  box-shadow: 0 0 0 4px var(--ajb-focus);
-}
-
-.input-area button{
-  padding: 12px 16px;
-  background: var(--ajb-primary);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: filter .15s ease, transform .03s ease, opacity .15s ease;
-}
-.input-area button:hover{ filter: brightness(1.02); }
-.input-area button:active{ transform: translateY(1px); }
-.input-area button:disabled{ opacity: .6; cursor: not-allowed; }
-
-/* ---- Titluri & spacing moale ---- */
-h1{ text-align: center; margin: 0; }
-
-/* ---- Responsive / mobile full-height ---- */
-@media (max-width: 600px){
-  body{
-    padding: 8px;
-    min-height: 100dvh;
-  }
-  .chat-container{
-    width: 100%;
-    border-radius: 14px;
-    padding: 12px;
-  }
-  .chat-box{
-    height: 52dvh;
-  }
-}
-
-/* ---- Respectă preferința de mișcare ---- */
-@media (prefers-reduced-motion: reduce){
-  *{ transition: none !important; scroll-behavior: auto !important; }
-}
-
-/* ---- Compat cu stilurile vechi (pentru siguranță) ---- */
-.ajb-message{ margin: 8px 0; line-height: 1.45; }
-.ajb-message strong{ display: inline-block; min-width: 88px; }
-
-/* ====== Versiunea inițială păstrată ca fallback (ordonată la final) ====== */
-/* (Se aplică doar dacă ceva de mai sus lipsește; nu dăunează) */
-
-.chat-container{ box-shadow: var(--ajb-shadow); }
-```0
+    function escapeHTML(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
