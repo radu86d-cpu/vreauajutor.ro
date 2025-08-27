@@ -7,54 +7,37 @@ if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SID) {
   console.warn("WARN: Twilio env vars missing (TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_VERIFY_SID)");
 }
 
-const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+const client = (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) : null;
 
-// --- helpers ---
-const strip = (s="") => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-const norm  = (s="") => strip(String(s).trim()).toLowerCase();
-const isEmail = (v="") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-const toE164RO = (raw="") => {
-  const s = String(raw).replace(/\s+/g,"");
-  if (/^07\d{8}$/.test(s)) return "+4" + s;          // 07xxxxxxxx -> +407xxxxxxxx
-  if (/^\+?\d{8,15}$/.test(s)) return s.startsWith("+") ? s : "+" + s;
-  return s;
-};
+function isEmail(v=""){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function isE164(v=""){ return /^\+?[1-9]\d{7,14}$/.test(v); } // validare simplă E.164
 
 export default async (req) => {
   const opt = handleOptions(req); if (opt) return opt;
+  const m = method(req, ["POST"]); if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
+  if (!rateLimit(req, { windowSec: 60, max: 5 })) return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
+  if (!client || !TWILIO_VERIFY_SID) return bad("Twilio Verify nu este configurat pe server.", 500);
 
-  const m = method(req, ["POST"]);
-  if (m === "METHOD_NOT_ALLOWED") return bad("Method Not Allowed", 405);
+  const { channel = "sms", to } = await bodyJSON(req);
+  if (!to) return bad("Lipsește destinatarul (to).");
 
-  if (!rateLimit(req, { windowSec: 60, max: 5 })) {
-    return bad("Prea multe încercări. Reîncearcă în 1 minut.", 429);
-  }
-
-  const { channel = "sms", to: rawTo } = await bodyJSON(req);
-  const ch = String(channel).toLowerCase();
-  if (!rawTo) return bad("Lipsește destinatarul (to).");
-
-  // validăm în funcție de canal
-  let to = rawTo;
-  if (ch === "sms" || ch === "call") {
-    to = toE164RO(rawTo);
-    if (!/^\+\d{8,15}$/.test(to)) return bad("Număr de telefon invalid (așteptat E.164).");
-  } else if (ch === "email") {
-    if (!isEmail(rawTo)) return bad("Email invalid.");
+  // Validare în funcție de canal
+  if (channel === "sms" || channel === "call") {
+    if (!isE164(to)) return bad("Telefon invalid. Folosește format E.164 (ex: +407... ).");
+  } else if (channel === "email") {
+    if (!isEmail(to)) return bad("Email invalid.");
   } else {
-    return bad("Canal invalid. Folosește sms, call sau email.");
+    return bad("Canal invalid. Folosește 'sms', 'call' sau 'email'.");
   }
-
-  if (!TWILIO_VERIFY_SID) return bad("Twilio Verify neconfigurat.", 500);
 
   try {
     const resp = await client.verify.v2
       .services(TWILIO_VERIFY_SID)
       .verifications
-      .create({ to, channel: ch });
+      .create({ to, channel });
 
     // status tipic: "pending"
-    return json({ ok: true, status: resp.status, channel: ch });
+    return json({ ok: true, status: resp.status });
   } catch (e) {
     return bad(e?.message || "Eroare Twilio", 500);
   }
