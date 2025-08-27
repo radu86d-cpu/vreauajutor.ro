@@ -10,27 +10,49 @@
   <!-- CSS scoped pentru pagina aceasta -->
   <link rel="stylesheet" href="./assets/css/offer.css?v=3"/>
 
-  <!-- Supabase -->
+  <!-- Supabase lib -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- GATE: blochează accesul dacă nu ești autentificat -->
+  <!-- Loader ENV + client Supabase (sigur, o singură dată) -->
   <script>
-    (async () => {
+    window.supa = null;
+    window.supabaseReady = (async function loadEnvAndInit() {
       try {
-        // luăm cheile în siguranță din funcția Netlify
-        const envRes = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        if (!res.ok) {
+          console.error('ENV endpoint failed', res.status);
+          return false;
+        }
+        const env = await res.json().catch(()=> ({}));
+        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+          console.error('ENV invalid', env);
+          return false;
+        }
+        window.supa = supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+        return true;
+      } catch (e) {
+        console.error('ENV load failed', e);
+        return false;
+      }
+    })();
 
-        const { data:{ session } } = await supa.auth.getSession();
+    // GATE: blochează accesul dacă nu ești autentificat
+    (async () => {
+      const ok = await window.supabaseReady;
+      if (!ok || !window.supa) {
+        // fallback: du-te oricum la index cu cerere de login
+        const back = encodeURIComponent(location.pathname + location.search);
+        location.replace('/index.html?authRequired=1&redirect=' + back);
+        return;
+      }
+      try {
+        const { data:{ session } } = await window.supa.auth.getSession();
         if (!session) {
-          // nu e logat → redirecționează către homepage și cere login
           const back = encodeURIComponent(location.pathname + location.search);
           location.replace('/index.html?authRequired=1&redirect=' + back);
         }
       } catch (e) {
         console.error('Auth gate error:', e);
-        // fallback: oricum nu arătăm pagina neautentificat
         const back = encodeURIComponent(location.pathname + location.search);
         location.replace('/index.html?authRequired=1&redirect=' + back);
       }
@@ -151,10 +173,18 @@
       });
     }
 
+    async function ajx(url){
+      const r = await fetch(url, { cache:'no-store' });
+      if(!r.ok){
+        const t = await r.text().catch(()=> '');
+        throw new Error(`HTTP ${r.status} ${t}`);
+      }
+      return r.json().catch(()=> { throw new Error('Răspuns invalid (nu e JSON)'); });
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        const r = await fetch('/.netlify/functions/lists?mode=signup', { cache:'no-store' });
-        const { services=[], judete=[] } = await r.json();
+        const { services=[], judete=[] } = await ajx('/.netlify/functions/lists?mode=signup');
 
         const selServ = document.getElementById('service_name');
         const selJ = document.getElementById('reg_judet');
@@ -169,8 +199,7 @@
           const judet=ev.target.value;
           fillSelect(selO, [], 'Alege orașul'); selO.disabled=true;
           if (judet) {
-            const rr = await fetch('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet), {cache:'no-store'});
-            const { orase=[] } = await rr.json();
+            const { orase=[] } = await ajx('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet));
             fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
           }
           updateSubmitState();
@@ -186,12 +215,18 @@
     });
   </script>
 
-  <!-- ======================== Submit înscriere (Supabase token) ======================== -->
+  <!-- ======================== Submit înscriere (folosește window.supa) ======================== -->
   <script>
   (async () => {
-    const envRes = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Așteaptă inițializarea sigură
+    const ok = await window.supabaseReady;
+    if (!ok || !window.supa) {
+      // Dacă nu avem client, nu putem trimite formularul
+      const btn = document.getElementById('submitBtn');
+      if (btn) btn.disabled = true;
+      console.error('Supabase indisponibil – submit dezactivat.');
+      return;
+    }
 
     document.getElementById('f').addEventListener('submit', async (ev)=>{
       ev.preventDefault();
@@ -202,7 +237,14 @@
       btn.disabled=true; btn.textContent='Se trimite...';
       const msg=document.getElementById('msg'); msg.className='msg'; msg.textContent='Trimit...';
 
-      const { data:{session} } = await supa.auth.getSession();
+      let session;
+      try {
+        const res = await window.supa.auth.getSession();
+        session = res?.data?.session || null;
+      } catch (e) {
+        session = null;
+      }
+
       if (!session?.access_token){
         msg.classList.add('hint-danger'); msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
         btn.disabled=false; btn.textContent=originalLabel; return;
@@ -235,7 +277,7 @@
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
           body:JSON.stringify(payload)
         });
-        const data = await r.json();
+        const data = await r.json().catch(()=> ({}));
         if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
         msg.classList.add('hint-ok'); msg.textContent='Înscriere reușită! Mulțumim.';
         form.reset(); document.getElementById('reg_oras').disabled=true;
@@ -249,7 +291,7 @@
         const go = p.get('redirectTo');
         if (go) location.href = go;
       }catch(e){
-        msg.classList.add('hint-danger'); msg.textContent='Eroare: '+e.message;
+        msg.classList.add('hint-danger'); msg.textContent='Eroare: '+(e.message || 'request fail');
       }finally{
         btn.disabled=false; btn.textContent=originalLabel;
       }
@@ -265,7 +307,6 @@
     const __cacheChildren = new Map();    // subId -> children[]
 
     // --- Utils ---
-    async function ajx(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
     function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
     function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
 
@@ -415,8 +456,7 @@
       if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
       const meta = __subMeta.get(subId) || {};
       const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
-      const url = '/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam);
-      const { children=[] } = await ajx(url);
+      const { children=[] } = await ajx('/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam));
       __cacheChildren.set(subId, children);
       return children;
     }
@@ -433,17 +473,12 @@
         updateSubmitState(); return;
       }
 
-      const url = '/.netlify/functions/taxonomy?mode=subcategories'
-                + '&service=' + encodeURIComponent(service);
-
-      try{
-        const { subcategories=[] } = await ajx(url);
-        if (!subcategories.length){
-          cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
-          updateSubmitState(); return;
-        }
-        renderChips(cont, subcategories);
-      }catch(e){ console.error(e); cont.innerHTML=''; }
+      const { subcategories=[] } = await ajx('/.netlify/functions/taxonomy?mode=subcategories&service=' + encodeURIComponent(service));
+      if (!subcategories.length){
+        cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
+        updateSubmitState(); return;
+      }
+      renderChips(cont, subcategories);
       updateSubmitState();
     }
 
