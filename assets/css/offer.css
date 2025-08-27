@@ -1,101 +1,78 @@
 /* ===========================
-   VreauAjutor.ro — offer.css
+   VreauAjutor.ro — offer.css (revamp)
    Stiluri SCOPED pe pagina "Oferă servicii"
-   (nu afectează alte pagini)
    =========================== */
 
 /* ---------- Layout & tipografie ---------- */
-.offer .wrap{
-  max-width:1180px;margin:2rem auto;background:#fff;padding:22px;
-  border:1px solid #e6e8ec;border-radius:14px;box-shadow:0 10px 28px rgba(16,24,40,.08)
+.offer {
+  --bg: #f6f8fb;
+  --fg: #0f172a;          /* slate-900 */
+  --muted: #64748b;       /* slate-500 */
+  --card: #ffffff;
+  --line: #e6e8ec;
+  --ring: #1a73e8;        /* blue-600 (focus) */
+  --primary: #0f62fe;     /* IBM blue */
+  --primary-600: #0b4fd3;
+  --green: #16a34a;
+  --amber: #b08900;
+  --red: #e11d48;
+
+  color: var(--fg);
+  background: var(--bg);
 }
-.offer h1{margin:0 0 10px;font-size:clamp(24px,3vw,32px);letter-spacing:-.02em}
-.offer .subtitle{color:#64748b;margin-bottom:18px}
+
+.offer .wrap{
+  max-width:1180px;margin:2rem auto;background:transparent;padding:0 12px;
+}
+
+.offer h1{margin:0 0 8px;font-size:clamp(24px,3vw,32px);letter-spacing:-.02em}
+.offer .subtitle{color:var(--muted);margin-bottom:16px}
+
+/* ---------- Stepper ---------- */
+.offer .stepper{
+  display:flex;gap:12px;align-items:center;margin:10px 0 18px;
+}
+.offer .step{
+  display:flex;align-items:center;gap:10px;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  box-shadow:0 4px 14px rgba(16,24,40,.06);
+  font-weight:700;color:#1f2937;
+}
+.offer .step .dot{
+  width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;
+  background:#eef2ff;color:#173bce;font-size:12px;font-weight:800;
+}
+.offer .step.active{border-color:#93c5fd;background:#eef5ff;color:#173bce}
+.offer .step.done .dot{background:#dcfce7;color:#065f46}
 
 /* ---------- Grid principal ---------- */
-.offer .grid-3{
-  display:grid;grid-template-columns:340px 1fr 1.3fr;gap:16px;align-items:start;margin-top:10px
+.offer .grid{
+  display:grid;grid-template-columns: 1fr 380px;gap:20px;align-items:start;
 }
 .offer .card{
-  background:#fff;border:1px solid #e6e8ec;border-radius:16px;
-  box-shadow:0 5px 16px rgba(16,24,40,.06);padding:14px
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 8px 28px rgba(16,24,40,.08);padding:16px;
+}
+.offer .sticky{
+  position:sticky;top:14px;
 }
 
 /* ---------- Form controls ---------- */
-.offer label{display:block;margin:.6rem 0 .35rem;font-weight:600}
+.offer label{display:block;margin:.6rem 0 .35rem;font-weight:700;font-size:14px;color:#111827}
 .offer input,.offer select,.offer textarea,.offer button{
-  width:100%;border-radius:12px;font-size:16px
+  width:100%;border-radius:12px;font-size:16px;
 }
 .offer input,.offer select,.offer textarea{
-  padding:12px;border:1px solid #dfe3ea;background:#fff;transition:border-color .18s,box-shadow .18s
+  padding:12px;border:1px solid #dfe3ea;background:#fff;
+  transition:border-color .18s,box-shadow .18s,background .18s;
 }
+.offer input::placeholder,.offer textarea::placeholder{color:#94a3b8}
 .offer input:focus,.offer select:focus,.offer textarea:focus{
-  outline:none;border-color:#0f62fe;box-shadow:0 0 0 4px rgba(15,98,254,.08)
+  outline:none;border-color:var(--ring);box-shadow:0 0 0 4px rgba(26,115,232,.14)
 }
-.offer button{
-  padding:12px 18px;border:0;cursor:pointer;font-weight:700;background:#0f62fe;color:#fff;
-  box-shadow:0 5px 16px rgba(16,24,40,.06);transition:filter .15s,transform .05s
-}
-.offer button:hover{filter:brightness(1.02)}
-.offer button:active{transform:translateY(1px)}
-.offer button[disabled]{opacity:.55;cursor:not-allowed}
-.offer .btn-outline{background:#fff;color:#111;border:1px solid #dfe3ea}
-.offer .btn-chip{background:#fff;color:#111;border:1px solid #dfe3ea;padding:10px 12px;border-radius:999px;font-size:12px}
-.offer .row{display:flex;gap:10px;align-items:center}
-.offer .grow{flex:1}
-.offer .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-.offer .msg{margin-top:12px}
+.offer textarea{min-height:110px;resize:vertical}
 
-/* ---------- Hints / status ---------- */
-.offer .hint-danger{color:#b00020;font-weight:700}
-.offer .hint-ok{color:#1ea759;font-weight:700}
-.offer .hint-warn{color:#b08900;font-weight:700}
-.offer #submitBtn{background:#8592a3} /* devine albastru când e valid */
-
-/* ---------- OTP ---------- */
-.offer .otp-wrap{display:flex;gap:8px;align-items:center;margin-top:6px}
-.offer .code6{width:140px;text-align:center;letter-spacing:.2em}
-.offer .status-dot{width:10px;height:10px;border-radius:50%}
-.offer .st-red{background:#e5484d}.offer .st-green{background:#2fb344}.offer .st-amber{background:#f59f00}
-
-/* =======================
-   Subcategorii (chip-uri)
-   ======================= */
-.offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-height:70vh;overflow:auto}
-.offer #subcats .chip{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;background:#fff;color:#111827;
-  font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.02);
-  transition:background .18s,border-color .18s,box-shadow .18s
-}
-.offer #subcats .chip:hover{background:#f9fbff;border-color:#cfe0ff;box-shadow:0 4px 12px rgba(16,24,40,.08)}
-.offer #subcats .chip .badge{
-  background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800;min-width:20px;text-align:center
-}
-/* selectat = are >=1 copil bifat (JS adaugă .blue și/sau .active) */
-.offer #subcats .chip.blue,
-.offer #subcats .chip.active{
-  background:#eef5ff!important;border-color:#93c5fd!important;color:#173bce!important
-}
-
-/* ==========================
-   Copii (sub-subcategorii)
-   ========================== */
-.offer .child-title{
-  display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;
-  border-bottom:1px solid #eef0f3;font-weight:700;font-size:14px
-}
-.offer .child-title .tools{display:flex;gap:8px;align-items:center}
-.offer .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding-top:10px}
-.offer .child-item{
-  display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;
-  font-size:14px;box-shadow:0 1px 0 rgba(0,0,0,.02);transition:background .18s,border-color .18s,box-shadow .18s;cursor:pointer
-}
-.offer .child-item:hover{border-color:#cfe0ff;background:#fafcff;box-shadow:0 6px 16px rgba(16,24,40,.06)}
-.offer .child-item input{margin:0;width:18px;height:18px;accent-color:#0f62fe}
-.offer .child-item.on{background:#f4f7ff;border-color:#99b7ff;box-shadow:0 8px 20px rgba(23,59,206,.10);font-weight:700}
-
-/* ---------- Valid/invalid decorate ---------- */
+/* valid/invalid */
 .offer input.valid{
   border-color:#059669;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px
@@ -105,28 +82,96 @@
   background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px
 }
 
-/* ---------- Status telefon (opțional) ---------- */
-.offer #phoneStatus{font-weight:600}
-.offer #phoneStatus.pending{color:#d97706}
-.offer #phoneStatus.verified{color:#059669}
-.offer #phoneStatus.error{color:#dc2626}
+/* ---------- Butoane ---------- */
+.offer .btn{
+  padding:12px 18px;border:0;cursor:pointer;font-weight:800;border-radius:12px;
+  transition:filter .15s,transform .05s, background .15s, border-color .15s;
+}
+.offer .btn:active{transform:translateY(1px)}
+.offer .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+.offer .btn-primary{background:var(--primary);color:#fff;box-shadow:0 5px 16px rgba(16,24,40,.08)}
+.offer .btn-primary:hover{background:var(--primary-600)}
+.offer .btn-ghost{background:#fff;color:#111;border:1px solid #dfe3ea}
+.offer .btn-ghost:hover{background:#f7f9ff}
+.offer .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+
+/* ---------- OTP ---------- */
+.offer .otp-wrap{display:flex;gap:10px;align-items:center;margin-top:6px}
+.offer .otp-code{flex:0 0 140px;text-align:center;letter-spacing:.2em}
+.offer .status-dot{width:10px;height:10px;border-radius:50%}
+.offer .st-red{background:#e5484d}.offer .st-green{background:#2fb344}.offer .st-amber{background:#f59f00}
+.offer .hint{font-size:12px;color:var(--muted);margin-top:4px}
+.offer .hint-danger{color:#b00020;font-weight:700}
+.offer .hint-ok{color:#1ea759;font-weight:700}
+.offer .hint-warn{color:#b08900;font-weight:700}
+
+/* ---------- Subcategorii (chip-uri) ---------- */
+.offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-height:70vh;overflow:auto}
+.offer #subcats .chip{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border:1px solid #e5e7eb;padding:10px 12px;border-radius:12px;background:#fff;color:#111827;
+  font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.02);
+  transition:background .18s,border-color .18s,box-shadow .18s, transform .12s
+}
+.offer #subcats .chip:hover{background:#f9fbff;border-color:#cfe0ff;box-shadow:0 4px 12px rgba(16,24,40,.08);transform:translateY(-1px)}
+.offer #subcats .chip .badge{
+  background:#eef2ff;color:#173bce;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800;min-width:20px;text-align:center
+}
+.offer #subcats .chip.blue,
+.offer #subcats .chip.active{
+  background:#eef5ff!important;border-color:#93c5fd!important;color:#173bce!important
+}
+
+/* ---------- Copii (nivel 3) ---------- */
+.offer .child-title{
+  display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;
+  border-bottom:1px solid #eef0f3;font-weight:800;font-size:14px
+}
+.offer .child-title .tools{display:flex;gap:8px;align-items:center}
+.offer .child-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;padding-top:10px}
+.offer .child-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;
+  font-size:14px;box-shadow:0 1px 0 rgba(0,0,0,.02);transition:background .18s,border-color .18s,box-shadow .18s,transform .12s;cursor:pointer
+}
+.offer .child-item:hover{border-color:#cfe0ff;background:#fafcff;box-shadow:0 6px 16px rgba(16,24,40,.06);transform:translateY(-1px)}
+.offer .child-item input{margin:0;width:18px;height:18px;accent-color:var(--primary)}
+.offer .child-item.on{background:#f4f7ff;border-color:#99b7ff;box-shadow:0 8px 20px rgba(23,59,206,.10);font-weight:800}
+
+/* ---------- Rezumat lateral ---------- */
+.offer .summary{
+  display:flex;flex-direction:column;gap:10px;font-size:14px;color:#111827
+}
+.offer .summary .row{display:flex;justify-content:space-between;gap:10px}
+.offer .summary .pill{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:6px 10px;font-weight:700
+}
 
 /* ---------- Mobile tweaks ---------- */
 @media (max-width:1080px){
-  .offer .grid-3{grid-template-columns:1fr}
+  .offer .grid{grid-template-columns:1fr}
+  .offer .sticky{position:static}
   .offer #subcats{max-height:none}
 }
 @media (max-width:560px){
   .offer .child-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
-  /* mărim hit-area pentru checkbox */
   .offer .child-item input{width:22px;height:22px}
 }
-@media (prefers-reduced-motion:reduce){
-  .offer .child-item,.offer #subcats .chip{transition:none!important}
+
+/* ---------- Buttons group (dreapta sus în „Subcategorii”) ---------- */
+.offer .btn-bar{display:flex;gap:8px}
+.offer .btn-sm{padding:8px 10px;border-radius:999px;font-weight:700;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+.offer .btn-sm:hover{background:#f7faff}
+
+/* ---------- Sticky submit pe mobil ---------- */
+@media (max-width:720px){
+  .offer .footer-sticky{
+    position:sticky;bottom:0;background:rgba(255,255,255,.9);backdrop-filter:saturate(140%) blur(4px);
+    border-top:1px solid #e5e7eb;padding:10px;display:flex;gap:10px;z-index:5
+  }
 }
 
-.offer #subcats .chip.blue {
-  background: #eef5ff !important;
-  border-color: #93c5fd !important;
-  color: #173bce !important;
+/* ---------- Preferințe de mișcare ---------- */
+@media (prefers-reduced-motion:reduce){
+  .offer *{transition:none!important}
 }
