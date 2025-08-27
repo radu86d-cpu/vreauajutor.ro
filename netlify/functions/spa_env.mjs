@@ -1,29 +1,34 @@
-// netlify/functions/spa_env.mjs
+// netlify/functions/spa_env.js
+import { json, handleOptions } from "./_shared/utils.js";
+
+// Acceptă mai multe denumiri posibile pentru chei, ca să nu depinzi de cum sunt setate în Netlify
+function pickEnv(...keys) {
+  for (const k of keys) {
+    const v = process.env[k];
+    if (v) return v;
+  }
+  return "";
+}
+
 export default async (req) => {
-  const headers = {
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,OPTIONS",
-    "access-control-allow-headers": "Content-Type",
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-  };
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
+  // CORS preflight
+  const opt = handleOptions(req);
+  if (opt) return opt;
 
-  // Acceptă mai multe nume posibile, ca să nu depindem de cum sunt setate în Netlify
-  const SUPABASE_URL =
-    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const SUPABASE_ANON_KEY =
-    process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const SUPABASE_URL = pickEnv("SUPABASE_URL", "VITE_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const SUPABASE_ANON_KEY = pickEnv("SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-  const payload = { SUPABASE_URL, SUPABASE_ANON_KEY };
+  // Răspuns JSON + no-store (e configurat și în utils.json să pună CORS)
+  const extraHeaders = { "Cache-Control": "no-store" };
 
-  // Dacă lipsesc, întoarcem tot JSON valid, dar cu status 500 și motiv clar
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return new Response(JSON.stringify({ ok: false, error: "Missing Supabase envs", ...payload }), {
-      status: 500,
-      headers,
-    });
+    // întoarce JSON valid + status 500, dar include ce s-a găsit (util pentru debug)
+    return json(
+      { ok: false, error: "Missing Supabase envs", SUPABASE_URL, SUPABASE_ANON_KEY },
+      500,
+      extraHeaders
+    );
   }
 
-  return new Response(JSON.stringify({ ok: true, ...payload }), { status: 200, headers });
+  return json({ ok: true, SUPABASE_URL, SUPABASE_ANON_KEY }, 200, extraHeaders);
 };
