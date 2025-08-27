@@ -9,49 +9,76 @@
     .adv-wrap{max-width:1200px;margin:24px auto;padding:0 12px}
     .tabs{display:flex;gap:8px;flex-wrap:wrap}
     .tab{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
-    .tab.active{border-color:#004080}
+    .tab.active{border-color:#004080; box-shadow:0 2px 8px rgba(0,0,0,.06)}
     .panel{margin-top:14px;border:1px solid #eee;border-radius:12px;background:#fff;padding:12px}
     .chips{display:flex;gap:8px;flex-wrap:wrap}
     .chip{padding:6px 10px;border:1px solid #ddd;border-radius:999px;background:#fafafa;cursor:pointer}
-    .chip.active{border-color:#004080}
+    .chip.active{border-color:#004080; background:#eef5ff}
     .filters{display:grid;gap:10px;margin-top:10px}
+    .filters label{display:block}
+    .filters select,.filters input[type="text"]{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px}
     .cta-row{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
     .btn{padding:10px 16px;border:0;border-radius:10px;background:#004080;color:#fff;cursor:pointer}
     .btn.secondary{background:#fff;color:#004080;border:1px solid #ccc}
+    .meta-row{display:flex;gap:8px;align-items:center;color:#6b7280;font-size:14px;margin:10px 0}
+    .msg{margin-top:8px;color:#6b7280}
+    .error{color:#b00020;font-weight:700}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
 
-  <!-- header + hero bandă pot fi copiate din index -->
-  <section class="hero-search-band"><form class="hero-search" onsubmit="go();return false;">
-    <input id="q" type="search" placeholder="ex: curățenie Cluj-Napoca" />
-    <button type="submit">Caută</button>
-  </form></section>
+  <!-- bandă căutare (reutilizează stilurile globale) -->
+  <section class="hero-search-band">
+    <form class="hero-search" onsubmit="go();return false;" role="search" aria-label="Căutare rapidă">
+      <input id="q" type="search" placeholder="ex: curățenie Cluj-Napoca" enterkeyhint="search" />
+      <button type="submit">Caută</button>
+    </form>
+  </section>
 
   <main class="adv-wrap">
-    <h2>Alege categoria → subcategoria → filtre</h2>
+    <h2 id="title">Alege categoria → subcategoria → filtre</h2>
 
-    <div id="cats" class="tabs" aria-label="Categorii"></div>
+    <div class="meta-row" aria-live="polite" id="meta"></div>
+
+    <div id="cats" class="tabs" aria-label="Categorii" role="tablist"></div>
+
     <div id="subs" class="panel" hidden>
-      <div class="chips" id="subs-chips"></div>
+      <h3 class="sr-only" id="subs-title">Subcategorii</h3>
+      <div class="chips" id="subs-chips" role="tablist" aria-labelledby="subs-title"></div>
     </div>
-    <div id="filters" class="panel" hidden></div>
+
+    <div id="filters" class="panel" hidden aria-live="polite">
+      <div class="filters" id="filters-box"></div>
+      <div class="cta-row" style="margin-top:10px">
+        <button class="btn secondary" type="button" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
 
     <div class="cta-row">
-      <button class="btn secondary" onclick="location.href='furnizori.html'">Renunță</button>
-      <button class="btn" onclick="apply()">Aplică</button>
+      <button class="btn secondary" type="button" onclick="location.href='furnizori.html'">Renunță</button>
+      <button class="btn" type="button" onclick="apply()">Aplică</button>
     </div>
+
+    <div id="status" class="msg" role="status" aria-live="polite"></div>
   </main>
 
   <script>
+    'use strict';
+
+    // ====== State ======
     let S = { services:[], subs:[], filters:[] };
     let sel = { service_id:null, subcat_id:null, filterVals:{} };
 
+    // ====== Utilities ======
     function h(tag, attrs={}, children=[]){
       const el = document.createElement(tag);
-      Object.entries(attrs||{}).forEach(([k,v])=>{
-        if (k==='class') el.className = v; else el.setAttribute(k,v);
-      });
+      for (const [k,v] of Object.entries(attrs||{})){
+        if (k === 'class') el.className = v;
+        else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+        else el.setAttribute(k, v);
+      }
       (Array.isArray(children)?children:[children]).forEach(c=>{
         if (typeof c === 'string') el.appendChild(document.createTextNode(c));
         else if (c) el.appendChild(c);
@@ -59,18 +86,80 @@
       return el;
     }
 
-    async function boot(){
-      const r = await fetch('/.netlify/functions/categories');
-      const json = await r.json();
-      S = json;
-      renderCats();
+    const statusEl = () => document.getElementById('status');
+    const metaEl   = () => document.getElementById('meta');
+
+    function setStatus(msg, cls=''){
+      const el = statusEl();
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'msg ' + (cls || '');
     }
 
+    function syncUrl(){
+      const params = new URLSearchParams();
+      if (sel.service_id){
+        const svc = S.services.find(s=>s.id===sel.service_id);
+        if (svc) params.set('service', svc.name);
+      }
+      if (sel.subcat_id) params.set('subcat', String(sel.subcat_id));
+      // filtre
+      Object.entries(sel.filterVals).forEach(([k,v])=>{
+        if (v !== undefined && v !== null && String(v).trim() !== '') params.set('f_'+k, String(v));
+      });
+      const qs = params.toString();
+      history.replaceState(null, '', qs ? ('?'+qs) : location.pathname);
+    }
+
+    function loadFromUrl(){
+      const p = new URLSearchParams(location.search);
+      const serviceName = p.get('service') || '';
+      const subcatStr   = p.get('subcat') || '';
+
+      // filtre f_*
+      const f = {};
+      p.forEach((val, key)=>{ if (key.startsWith('f_')) f[key.slice(2)] = val; });
+
+      return { serviceName, subcatId: subcatStr ? Number(subcatStr) : null, filters: f };
+    }
+
+    function setMeta(){
+      const svc = S.services.find(s=>s.id===sel.service_id);
+      const sc  = S.subs.find(x=>x.id===sel.subcat_id);
+      const bits = [];
+      if (svc) bits.push('Categorie: ' + svc.name);
+      if (sc)  bits.push('Subcategorie: ' + sc.name);
+      const anyFilters = Object.values(sel.filterVals).some(v => String(v).trim() !== '');
+      if (anyFilters) bits.push('Filtre: ' + Object.entries(sel.filterVals)
+        .filter(([,v])=> String(v).trim()!=='')
+        .map(([k,v])=> `${k}=${v}`).join(', '));
+      metaEl().textContent = bits.join(' • ') || 'Selectează o categorie.';
+    }
+
+    // ====== Rendering ======
     function renderCats(){
       const wrap = document.getElementById('cats'); wrap.innerHTML='';
-      S.services.forEach(s=>{
-        const b = h('button',{class: 'tab'+(sel.service_id===s.id?' active':''), type:'button'}, s.name);
-        b.onclick = ()=>{ sel.service_id = s.id; sel.subcat_id=null; sel.filterVals={}; renderCats(); renderSubs(); };
+      if (!S.services.length){
+        wrap.appendChild(h('span', { class:'msg' }, 'Nu există categorii.'));
+        return;
+      }
+      S.services.forEach((s, idx)=>{
+        const active = sel.service_id === s.id;
+        const b = h('button', {
+          class: 'tab' + (active ? ' active' : ''),
+          type: 'button',
+          role: 'tab',
+          'aria-selected': String(active),
+          'aria-controls': 'subs',
+          onClick: () => {
+            sel.service_id = s.id; sel.subcat_id=null; sel.filterVals={};
+            renderCats(); renderSubs(); renderFilters();
+            setMeta(); syncUrl();
+            // focus feedback
+            document.getElementById('subs')?.scrollIntoView({behavior:'smooth',block:'start'});
+          }
+        }, s.name);
+        if (!sel.service_id && idx===0) sel.service_id = s.id; // default prima
         wrap.appendChild(b);
       });
     }
@@ -78,50 +167,82 @@
     function renderSubs(){
       const box = document.getElementById('subs');
       const chips = document.getElementById('subs-chips'); chips.innerHTML='';
+      if (!sel.service_id){ box.hidden = true; return; }
+
       const subs = S.subs.filter(x=>x.service_id===sel.service_id);
       box.hidden = subs.length===0;
+
       subs.forEach(sc=>{
-        const c = h('button',{class:'chip'+(sel.subcat_id===sc.id?' active':''), type:'button'}, sc.name);
-        c.onclick = ()=>{ sel.subcat_id=sc.id; sel.filterVals={}; renderSubs(); renderFilters(); };
+        const active = sel.subcat_id === sc.id;
+        const c = h('button', {
+          class: 'chip' + (active ? ' active' : ''),
+          type: 'button',
+          role: 'tab',
+          'aria-selected': String(active),
+          onClick: () => {
+            sel.subcat_id = sc.id; sel.filterVals={};
+            renderSubs(); renderFilters(); setMeta(); syncUrl();
+          }
+        }, sc.name);
         chips.appendChild(c);
       });
-      renderFilters();
     }
 
     function renderFilters(){
-      const box = document.getElementById('filters'); box.innerHTML='';
-      if (!sel.subcat_id){ box.hidden=true; return; }
-      const flts = S.filters.filter(f=>f.subcategory_id===sel.subcat_id);
-      if (!flts.length){ box.hidden=true; return; }
-      box.hidden = false;
+      const panel = document.getElementById('filters');
+      const cont  = document.getElementById('filters-box');
+      cont.innerHTML = '';
+      if (!sel.subcat_id){ panel.hidden = true; return; }
 
-      const cont = h('div',{class:'filters'});
+      const flts = S.filters.filter(f=>f.subcategory_id===sel.subcat_id);
+      if (!flts.length){ panel.hidden = true; return; }
+      panel.hidden = false;
+
       flts.forEach(f=>{
         let ctrl;
-        if (f.type==='bool'){
-          ctrl = h('label',{},[
-            h('input',{type:'checkbox', onchange:(e)=> sel.filterVals[f.key]=e.target.checked }),
+        // read current value from sel.filterVals
+        const currentVal = sel.filterVals[f.key];
+
+        if (f.type === 'bool'){
+          const id = 'f_' + f.key;
+          ctrl = h('label', {}, [
+            h('input', {
+              id, type: 'checkbox',
+              ...(currentVal !== undefined ? { checked: (String(currentVal) === 'true') } : {}),
+              onChange: (e)=> { sel.filterVals[f.key]=e.target.checked; setMeta(); syncUrl(); }
+            }),
             ' ', f.label
           ]);
-        } else if (f.type==='enum'){
-          ctrl = h('label',{},[
-            f.label, h('br'),
-            (()=>{ const s = h('select',{onchange:(e)=> sel.filterVals[f.key]=e.target.value});
-              s.appendChild(h('option',{value:''},'Indiferent'));
-              (f.options||[]).forEach(opt=> s.appendChild(h('option',{value:opt}, opt)));
-              return s;})()
-          ]);
-        } else { // text/range simplificat
-          ctrl = h('label',{},[
-            f.label, h('br'),
-            h('input',{type:'text', placeholder:'Valoare...', oninput:(e)=> sel.filterVals[f.key]=e.target.value})
-          ]);
+        } else if (f.type === 'enum'){
+          const s = h('select', {
+            onChange: (e)=> { sel.filterVals[f.key] = e.target.value; setMeta(); syncUrl(); }
+          });
+          s.appendChild(h('option',{value:''},'Indiferent'));
+          (f.options||[]).forEach(opt=>{
+            const o = h('option', { value: opt }, opt);
+            if (currentVal === opt) o.selected = true;
+            s.appendChild(o);
+          });
+          ctrl = h('label', {}, [ f.label, h('br'), s ]);
+        } else { // text / range / custom simplificat
+          const inp = h('input', {
+            type: 'text',
+            placeholder: 'Valoare...',
+            value: currentVal ?? '',
+            onInput: (e)=> { sel.filterVals[f.key] = e.target.value; setMeta(); syncUrl(); }
+          });
+          ctrl = h('label', {}, [ f.label, h('br'), inp ]);
         }
         cont.appendChild(ctrl);
       });
-      box.appendChild(cont);
     }
 
+    function resetFilters(){
+      sel.filterVals = {};
+      renderFilters(); setMeta(); syncUrl();
+    }
+
+    // ====== Apply -> navighează la furnizori ======
     function apply(){
       const params = new URLSearchParams();
       const svc = S.services.find(s=>s.id===sel.service_id);
@@ -133,8 +254,51 @@
       location.href = 'furnizori.html' + (params.toString()?('?'+params.toString()):'');
     }
 
-    function go(){ /* optional: folosește căutarea din bandă */ }
+    // ====== Hero quick search (opțional) ======
+    async function go(){
+      const q = (document.getElementById('q').value || '').trim();
+      if (!q) return;
+      // lăsăm furnizori.html să rezolve maparea (ai logică similară acolo)
+      location.href = 'furnizori.html?service=' + encodeURIComponent(q);
+    }
+
+    // ====== Boot ======
+    async function boot(){
+      try{
+        setStatus('Se încarcă taxonomia…');
+        const r = await fetch('/.netlify/functions/categories', { cache: 'no-store' });
+        if (!r.ok) throw new Error(await r.text());
+        S = await r.json();
+
+        // inițializare din URL
+        const init = loadFromUrl();
+
+        // selectează service după nume, dacă există
+        if (init.serviceName){
+          const svc = S.services.find(s => (s.name||'').toLowerCase() === init.serviceName.toLowerCase());
+          if (svc) sel.service_id = svc.id;
+        }
+        // subcat
+        if (init.subcatId && S.subs.some(x => x.id === init.subcatId)){
+          sel.subcat_id = init.subcatId;
+        }
+        // filtre
+        sel.filterVals = init.filters || {};
+
+        renderCats();
+        renderSubs();
+        renderFilters();
+        setMeta();
+        syncUrl();
+        setStatus('');
+      }catch(e){
+        console.error(e);
+        setStatus('Nu am putut încărca taxonomia. Reîncearcă.', 'error');
+      }
+    }
+
     boot();
   </script>
 </body>
 </html>
+```0
