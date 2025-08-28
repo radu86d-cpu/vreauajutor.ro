@@ -1,192 +1,192 @@
-// assets/js/categories-ui.js  (cascader 2 coloane)
-// DEPENDINȚE UI: se bazează pe CSS-ul din offer.css și pe id-urile #subcats / #children
+// assets/js/categories-ui.js
+// Helperi de UI pentru selectarea Serviciu → Subcategorie → Copii
+// Folosește funcțiile Netlify existente:
+//  - /.netlify/functions/lists?mode=categories&judet=&oras=
+//  - /.netlify/functions/taxonomy?mode=subcategories&service=&judet=&oras=
+//  - /.netlify/functions/taxonomy?mode=children&subcat=  (id SAU nume)
 
-// utilitar mic
-async function fetchJSON(url, options) {
-  const r = await fetch(url, options);
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
-}
+export async function initServiceSelect(
+  selectSelector = "#serviceSelect",
+  { judet = "", oras = "", onChange = null } = {}
+) {
+  const sel = document.querySelector(selectSelector);
+  if (!sel) return;
 
-// Populează dropdown-ul de servicii (categorii) deja existent în formularul de înscriere
-export async function initServiceSelect(selectSelector = "#service_name") {
-  const select = document.querySelector(selectSelector);
-  if (!select) return;
+  sel.disabled = true;
+  sel.innerHTML = `<option value="">Se încarcă...</option>`;
 
-  // servicii pentru înscriere (lists?mode=signup) – safe cu fetchJSON
   try {
-    const { services = [] } = await fetchJSON("/.netlify/functions/lists?mode=signup", { cache: "no-store" });
+    // ia serviciile disponibile pentru (judet, oras) – dacă nu trimiți filtre, ia globale
+    const url = new URL("/.netlify/functions/lists", location.origin);
+    url.searchParams.set("mode", "categories");
+    if (judet) url.searchParams.set("judet", judet);
+    if (oras)  url.searchParams.set("oras",  oras);
 
-    select.innerHTML = '<option value="">Alege serviciul</option>';
-    (services || []).forEach(s => {
-      // în /lists?mode=signup ai { name, label }
+    const { services = [] } = await fetchJSON(url.toString());
+
+    sel.innerHTML = `<option value="">Alege serviciul...</option>`;
+    (services || []).forEach(name => {
       const opt = document.createElement("option");
-      opt.value = s.name;             // exact numele din DB (valoarea folosită de backend)
-      opt.textContent = s.label || s.name;
-      select.appendChild(opt);
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+
+    sel.disabled = false;
+
+    sel.addEventListener("change", async () => {
+      const serviceName = sel.value || "";
+      // goliți zonele dependente (dacă există în pagină)
+      const subsBox = document.querySelector("#subcats");
+      const kidsBox = document.querySelector("#children");
+      if (subsBox) subsBox.innerHTML = "";
+      if (kidsBox) kidsBox.innerHTML = "";
+
+      if (typeof onChange === "function") onChange(serviceName);
     });
   } catch (e) {
-    console.error("Nu pot încărca serviciile:", e);
-    select.innerHTML = '<option value="">Eroare la încărcare</option>';
-  }
-
-  // când se schimbă categoria -> încarcă subcategoriile
-  select.addEventListener("change", async () => {
-    const serviceName = select.value || "";
-    await renderSubcategories("#subcats", serviceName);
-    await renderChildren("#children", null); // golește nivelul 2
-  });
-
-  // dacă aveai o valoare presetată, declanșează încărcarea
-  if (select.value) {
-    await renderSubcategories("#subcats", select.value);
+    console.error("initServiceSelect error:", e);
+    sel.innerHTML = `<option value="">Eroare încărcare servicii</option>`;
   }
 }
 
-/** Reține ce subcategorie e activă (pentru highlight + reîncărcări) */
-let __activeSubcatId = null;
-let __activeSubcatName = null;
-
-// Încarcă subcategoriile (nivel 1) după numele serviciului
-export async function renderSubcategories(containerSelector, serviceName) {
+/**
+ * Randează subcategoriile ca „chips”.
+ * containerSelector: elementul unde apar butoanele
+ * serviceName: numele categoriei selectate
+ * options:
+ *   - judet, oras (filtrare pentru numărări / context)
+ *   - onSelect(idSauNume) – se apelează când utilizatorul alege o subcategorie
+ *   - activeId (numeric) – marchează chip-ul ca selectat
+ */
+export async function renderSubcategories(
+  containerSelector,
+  serviceName,
+  { judet = "", oras = "", onSelect = null, activeId = null } = {}
+) {
   const el = document.querySelector(containerSelector);
   if (!el) return;
   el.innerHTML = "";
-
-  __activeSubcatId = null;
-  __activeSubcatName = null;
-  document.getElementById("subcat")?.setAttribute("value", "");
-  document.getElementById("subcat_name")?.setAttribute("value", "");
-  document.getElementById("subsub")?.setAttribute("value", "");
 
   if (!serviceName) {
-    el.textContent = "Alege un serviciu mai sus.";
+    el.textContent = "Alege mai întâi un serviciu.";
     return;
   }
 
-  let items = [];
   try {
-    const resp = await fetchJSON(
-      "/.netlify/functions/taxonomy?mode=subcategories&service=" + encodeURIComponent(serviceName)
-    );
-    items = resp.subcategories;
-  } catch (e) {
-    console.error("Nu pot încărca subcategoriile:", e);
-    el.textContent = "Eroare la încărcarea subcategoriilor.";
-    return;
-  }
+    const url = new URL("/.netlify/functions/taxonomy", location.origin);
+    url.searchParams.set("mode", "subcategories");
+    url.searchParams.set("service", serviceName);
+    if (judet) url.searchParams.set("judet", judet);
+    if (oras)  url.searchParams.set("oras",  oras);
 
-  if (!items?.length) {
-    el.textContent = "Nu există subcategorii pentru acest serviciu.";
-    return;
-  }
+    const { subcategories = [] } = await fetchJSON(url.toString());
 
-  // Randare: listă verticală de “chips”
-  items.forEach((it) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "chip";
-    btn.title = it.name;
-    btn.innerHTML = `
-      <span>${it.name}</span>
-      <span class="badge">${it.count || 0}</span>
-    `;
-    btn.addEventListener("click", async () => {
-      // marchează activ
-      el.querySelectorAll(".chip").forEach(b => b.classList.remove("active", "blue"));
-      btn.classList.add("active", "blue");
+    if (!subcategories.length) {
+      el.textContent = "Nu există subcategorii pentru această categorie.";
+      return;
+    }
 
-      // setează hidden-urile L1
-      __activeSubcatId = (it.id != null) ? Number(it.id) : null;
-      __activeSubcatName = it.name;
-      document.getElementById("subcat")?.setAttribute("value", __activeSubcatId ? String(__activeSubcatId) : "");
-      document.getElementById("subcat_name")?.setAttribute("value", __activeSubcatName || "");
-
-      // goleşte primul copil implicit
-      document.getElementById("subsub")?.setAttribute("value", "");
-
-      // încarcă nivelul 2 în coloana din dreapta
-      await renderChildren("#children", __activeSubcatId ?? __activeSubcatName);
-      scrollActiveIntoView("#subcats");
+    el.classList.add("service-list");
+    subcategories.forEach(sc => {
+      // sc: { id (poate fi null), name, count? }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "service-chip";
+      b.textContent = sc.name + (sc.count ? ` (${sc.count})` : "");
+      if (activeId != null && String(activeId) === String(sc.id)) {
+        b.classList.add("active");
+      }
+      b.addEventListener("click", () => {
+        el.querySelectorAll(".service-chip").forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        if (typeof onSelect === "function") {
+          // Trimitem prioritar id-ul; dacă e null, trimitem numele (fallback)
+          onSelect(sc.id ?? sc.name);
+        }
+      });
+      el.appendChild(b);
     });
-
-    el.appendChild(btn);
-  });
+  } catch (e) {
+    console.error("renderSubcategories error:", e);
+    el.textContent = "Eroare la încărcarea subcategoriilor.";
+  }
 }
 
-// Încarcă copiii (nivel 2) pentru subcategoria aleasă (id numeric sau nume – suportă fallback)
-export async function renderChildren(containerSelector, subcatKey) {
+/**
+ * Randează copiii (nivelul 3) pentru o subcategorie (id sau nume).
+ * containerSelector: elementul unde apar butoanele
+ * subcat: poate fi numeric (id) sau string (nume)
+ * options:
+ *   - judet, oras (nu sunt folosite în endpoint-ul children, dar le păstrăm pentru paritate)
+ *   - onToggle(item) – se apelează la click; poți decide single/multi select în pagina ta
+ *   - selected (Set sau Array de id/nume) – marchează cele bifate
+ */
+export async function renderChildren(
+  containerSelector,
+  subcat,
+  { judet = "", oras = "", onToggle = null, selected = [] } = {}
+) {
   const el = document.querySelector(containerSelector);
   if (!el) return;
   el.innerHTML = "";
 
-  if (!subcatKey) { el.textContent = "Alege o subcategorie în stânga."; return; }
+  if (!subcat) {
+    el.textContent = "";
+    return;
+  }
 
-  const param = encodeURIComponent(String(subcatKey));
-  let items = [];
+  const selSet = toSet(selected);
+
   try {
-    const resp = await fetchJSON("/.netlify/functions/taxonomy?mode=children&subcat=" + param);
-    items = resp.children;
-  } catch (e) {
-    console.error("Nu pot încărca nivelul 2:", e);
-    el.textContent = "Eroare la încărcarea elementelor de pe nivelul următor.";
-    return;
-  }
+    const url = new URL("/.netlify/functions/taxonomy", location.origin);
+    url.searchParams.set("mode", "children");
+    url.searchParams.set("subcat", String(subcat));
 
-  if (!items?.length) {
-    el.textContent = "Nu există elemente pe nivelul următor.";
-    return;
-  }
+    const { children = [] } = await fetchJSON(url.toString());
+    if (!children.length) {
+      el.textContent = "Nu există sub-subcategorii.";
+      return;
+    }
 
-  // pentru selecții multiple vom păstra într-un Set pe subcategorie
-  if (!window.__sel) window.__sel = { bySub: new Map() };
-  const subKey = __activeSubcatId ?? __activeSubcatName;
-  const set = window.__sel.bySub.get(subKey) || new Set();
+    el.classList.add("service-list");
+    children.forEach(kid => {
+      // kid: { id (poate fi null), name, count? }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "service-chip";
+      b.textContent = kid.name + (kid.count ? ` (${kid.count})` : "");
 
-  items.forEach((it) => {
-    const idVal = (it.id != null) ? String(it.id) : String(it.name);
-    const inputId = `kid_${(__activeSubcatId ?? 'n')}_${idVal.replace(/[^a-z0-9_\-]/gi,'_')}`;
+      const key = kid.id ?? kid.name;
+      if (selSet.has(String(key))) b.classList.add("active");
 
-    const lab = document.createElement("label");
-    lab.className = "child-item";
-    lab.setAttribute("for", inputId);
+      b.addEventListener("click", () => {
+        b.classList.toggle("active");
+        if (typeof onToggle === "function") {
+          onToggle(kid);
+        }
+      });
 
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.id = inputId;
-    cb.value = idVal;
-    cb.checked = set.has(idVal);
-    if (cb.checked) lab.classList.add("on");
-
-    cb.addEventListener("change", () => {
-      let cur = window.__sel.bySub.get(subKey);
-      if (!cur) { cur = new Set(); window.__sel.bySub.set(subKey, cur); }
-
-      if (cb.checked) cur.add(idVal); else cur.delete(idVal);
-      if (cur.size === 0) window.__sel.bySub.delete(subKey);
-
-      lab.classList.toggle("on", cb.checked);
-
-      // setează primul copil selectat în hidden #subsub (compat)
-      const firstKid = Array.from(window.__sel.bySub.values()).flatMap(s=>Array.from(s))[0];
-      document.getElementById("subsub")?.setAttribute("value", firstKid ? String(firstKid) : "");
-
-      // ascunde/afișează hintul „minim unul”
-      const hasAny = Array.from(window.__sel.bySub.values()).some(s=>s.size>0);
-      const hint = document.getElementById("min1-hint");
-      if (hint) hint.style.display = hasAny ? "none" : "";
+      el.appendChild(b);
     });
-
-    lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(it.name + (it.count ? ` (${it.count})` : "")));
-    el.appendChild(lab);
-  });
+  } catch (e) {
+    console.error("renderChildren error:", e);
+    el.textContent = "Eroare la încărcarea sub-subcategoriilor.";
+  }
 }
 
-// helper opțional pentru focus/scroll la elementul activ
-function scrollActiveIntoView(containerSel){
-  const c = document.querySelector(containerSel);
-  if (!c) return;
-  const a = c.querySelector(".active");
-  if (a) a.scrollIntoView({ block:"nearest", behavior:"smooth" });
+/* ---------- Utils ---------- */
+async function fetchJSON(url, options) {
+  const r = await fetch(url, options);
+  if (!r.ok) {
+    const txt = await r.text().catch(() => "");
+    throw new Error(`HTTP ${r.status} ${r.statusText} – ${txt}`);
+  }
+  return r.json();
+}
+function toSet(v) {
+  if (!v) return new Set();
+  if (v instanceof Set) return v;
+  if (Array.isArray(v)) return new Set(v.map(x => String(x)));
+  return new Set([String(v)]);
 }
