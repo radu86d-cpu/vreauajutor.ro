@@ -1,38 +1,47 @@
 [build]
-  publish = "."
+  publish   = "."
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["twilio", "@supabase/supabase-js"]
+  external_node_modules = ["twilio","@supabase/supabase-js"]
 
-# Proxy API -> Functions
+# -------- Redirecturi --------
+# API -> Functions
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to   = "/.netlify/functions/:splat"
   status = 200
 
-# Fallback pentru SPA (React-style routing sau navigare client-side)
+# Assets (JS/CSS/etc) servite direct
+[[redirects]]
+  from = "/assets/*"
+  to   = "/assets/:splat"
+  status = 200
+
+# SPA fallback (ține-l ultimul)
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
 
-# Security headers
+# -------- Headere globale (CSP & co) --------
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = '''
+    # ⚠️ Am adăugat 'unsafe-inline' la script-src ca să funcționeze scripturile inline existente.
+    # Când vei muta JS-ul inline în fișiere, putem elimina 'unsafe-inline'.
+    Content-Security-Policy = """
       default-src 'self';
-      script-src 'self' https://cdn.jsdelivr.net https://cdn.jsdelivr.net/npm/@supabase/supabase-js https://unpkg.com;
+      script-src  'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.jsdelivr.net/npm/@supabase/supabase-js https://unpkg.com;
       connect-src 'self' https://*.supabase.co https://api.netlify.com https://verify.twilio.com https://*.twilio.com data: blob:;
-      style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com data:;
-      img-src 'self' data: blob:;
+      style-src   'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com;
+      font-src    'self' https://fonts.gstatic.com data:;
+      img-src     'self' data: blob:;
       frame-ancestors 'self';
       base-uri 'self';
       form-action 'self';
-    '''
+    """
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Content-Type-Options = "nosniff"
