@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Autentificare • VreauAjutor.ro</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/assets/js/auth-basic.js"></script>
+  <style>
+    .auth-card{max-width:520px;margin:32px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+    label{display:block;font-weight:700;margin:.5rem 0 .35rem}
+    input{width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px}
+    button{width:100%;padding:12px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:800;cursor:pointer}
+    .muted{color:#64748b;font-size:14px}
+  </style>
+</head>
+<body>
+  <main class="auth-card">
+    <h1>Autentificare</h1>
+    <p class="muted">Introdu emailul și parola setate la înscriere.</p>
+
+    <form id="auth-form" novalidate>
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="email" required />
+
+      <label>Parolă</label>
+      <input id="password" type="password" autocomplete="current-password" required />
+
+      <button type="submit">Intră în cont</button>
+      <div id="auth-msg" style="min-height:20px;margin-top:8px"></div>
+    </form>
+
+    <p class="muted" style="margin-top:10px">
+      Nu ai cont? <a href="/inscriere.html">Înregistrează-te</a>
+    </p>
+  </main>
+
+  <script>
+    // Inițializează în mod "login"
+    initAuthBasic({ mode: 'login' });
+  </script>
+</body>
+</html>
