@@ -2,7 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * ENV necesare (Netlify → Site settings → Environment):
+ * ENV necesare:
  *  - SUPABASE_URL
  *  - SUPABASE_ANON_KEY
  *  - (opțional) SUPABASE_SERVICE_ROLE_KEY
