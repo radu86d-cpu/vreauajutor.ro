@@ -3,63 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Înregistrare • VreauAjutor.ro</title>
-
+  <title>Înscriere cont • VreauAjutor.ro</title>
   <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="/assets/css/auth.css" />
+  <!-- Scriptul simplu de auth -->
+  <script src="/assets/js/auth-basic.js"></script>
+  <style>
+    .auth-card{max-width:520px;margin:32px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+    label{display:block;font-weight:700;margin:.5rem 0 .35rem}
+    input{width:100%;padding:12px;border:1px solid #dfe3ea;border-radius:12px}
+    button{width:100%;padding:12px;border:0;border-radius:12px;background:#0f62fe;color:#fff;font-weight:800;cursor:pointer}
+    .muted{color:#64748b;font-size:14px}
+  </style>
 </head>
 <body>
-  <main class="auth-wrap">
-    <section class="card" role="dialog" aria-labelledby="title">
-      <h1 id="title">Creează un cont</h1>
-      <p class="subtitle">Alege o opțiune rapidă sau înscrie-te cu email și parolă.</p>
+  <main class="auth-card">
+    <h1>Crează un cont</h1>
+    <p class="muted">Folosește email și parolă. Vei primi un link de confirmare.</p>
 
-      <div class="stack">
-        <button id="btnFb" class="btn" type="button" aria-label="Continuă cu Facebook">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12.07C22 6.49 17.52 2 11.93 2S2 6.49 2 12.07C2 17.08 5.66 21.2 10.44 22v-7.04H7.9v-2.89h2.54V9.41c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.48h-1.27c-1.25 0-1.64.78-1.64 1.57v1.88h2.79l-.45 2.89h-2.34V22C18.34 21.2 22 17.08 22 12.07z"/></svg>
-          Continuă cu Facebook
-        </button>
-        <div class="row" style="margin-top:10px">
-          <button id="btnApple" class="btn" type="button" aria-label="Continuă cu Apple" style="flex:1">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.42 2.1-1.1 2.86-.88.98-2.33 1.74-3.75 1.63-.1-1.13.49-2.32 1.22-3.07.84-.85 2.3-1.48 3.63-1.42zM20.5 17.2c-.68 1.58-1 2.28-1.88 3.68-1.22 1.88-2.94 4.22-5.13 4.24-1.2.01-2.02-.79-3.42-.79-1.42 0-2.28.78-3.48.8-2.17.04-3.84-2.03-5.07-3.9C-.05 18.7-.7 14.6 1.54 11.9c1.05-1.26 2.7-2.08 4.29-2.1 1.34-.03 2.6.86 3.42.86.82 0 2.35-1.07 3.97-.91 1.52.15 2.94.77 3.95 1.86-3.1 1.68-2.62 6.15.33 7.49z"/></svg>
-            Apple
-          </button>
-          <button id="btnGoogle" class="btn" type="button" aria-label="Continuă cu Google" style="flex:1">
-            <svg viewBox="0 0 24 24" fill="none"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.8-6-6.2s2.7-6.2 6-6.2c1.9 0 3.2.8 3.9 1.4l2.7-2.6C16.9 2.6 14.6 1.6 12 1.6 6.9 1.6 2.8 5.7 2.8 10.8s4.1 9.2 9.2 9.2c5.3 0 8.8-3.7 8.8-8.9 0-.6-.1-1-.2-1.4H12z"/></svg>
-            Google
-          </button>
-        </div>
-      </div>
+    <form id="auth-form" novalidate>
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="email" required placeholder="ex: nume@domeniu.ro" />
 
-      <div class="or">SAU</div>
+      <label>Parolă</label>
+      <input id="password" type="password" autocomplete="new-password" required placeholder="Minim 9 caractere" />
 
-      <form id="form" novalidate>
-        <label for="email">Adresa ta de e-mail</label>
-        <input id="email" type="email" autocomplete="email" required placeholder="ex. nume@domeniu.ro" />
+      <button type="submit">Creează cont</button>
+      <div id="auth-msg" style="min-height:20px;margin-top:8px"></div>
+    </form>
 
-        <label for="pass">Parolă</label>
-        <input id="pass" type="password" autocomplete="new-password" required placeholder="Minim 9 caractere" />
-
-        <ul class="rules">
-          <li>9 sau mai multe caractere</li>
-          <li>Cel puțin o literă mare și una mică</li>
-          <li>Cel puțin o cifră</li>
-        </ul>
-
-        <label class="agree">
-          <input id="agree" type="checkbox" />
-          <span>Sunt de acord cu <a href="/termeni.html" target="_blank" rel="noopener">Termenii și condițiile</a> și <a href="/confidentialitate.html" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
-        </label>
-
-        <button id="createBtn" class="btn btn-primary" type="submit">Creează un cont</button>
-        <div id="msg" role="status" aria-live="polite" style="min-height:20px;margin-top:8px"></div>
-      </form>
-
-      <p class="foot">Ai deja cont? <a href="/auth-callback.html?next=%2Fofera-servicii.html">Autentifică-te</a></p>
-    </section>
+    <p class="muted" style="margin-top:10px">
+      Ai deja cont? <a href="/autentificare.html">Autentifică-te</a>
+    </p>
   </main>
 
-  <!-- JS extern (CSP friendly) -->
-  <script type="module" src="/assets/js/inscriere.js"></script>
+  <script>
+    // Inițializează în mod "signup"
+    initAuthBasic({ mode: 'signup' });
+  </script>
 </body>
 </html>
