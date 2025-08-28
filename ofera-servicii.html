@@ -8,45 +8,20 @@
   <!-- CSS global site -->
   <link rel="stylesheet" href="./style.css"/>
   <!-- CSS scoped pentru pagina aceasta -->
-  <link rel="stylesheet" href="./assets/css/offer.css?v=3"/>
+  <link rel="stylesheet" href="./assets/css/offer.css?v=4"/>
 
-  <!-- Supabase lib -->
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Loader ENV + client Supabase (sigur, o singură dată) -->
+  <!-- GATE: blochează accesul dacă nu ești autentificat -->
   <script>
-    window.supa = null;
-    window.supabaseReady = (async function loadEnvAndInit() {
-      try {
-        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        if (!res.ok) {
-          console.error('ENV endpoint failed', res.status);
-          return false;
-        }
-        const env = await res.json().catch(()=> ({}));
-        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-          console.error('ENV invalid', env);
-          return false;
-        }
-        window.supa = supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-        return true;
-      } catch (e) {
-        console.error('ENV load failed', e);
-        return false;
-      }
-    })();
-
-    // GATE: blochează accesul dacă nu ești autentificat
     (async () => {
-      const ok = await window.supabaseReady;
-      if (!ok || !window.supa) {
-        // fallback: du-te oricum la index cu cerere de login
-        const back = encodeURIComponent(location.pathname + location.search);
-        location.replace('/index.html?authRequired=1&redirect=' + back);
-        return;
-      }
       try {
-        const { data:{ session } } = await window.supa.auth.getSession();
+        const envRes = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const { data:{ session } } = await supa.auth.getSession();
         if (!session) {
           const back = encodeURIComponent(location.pathname + location.search);
           location.replace('/index.html?authRequired=1&redirect=' + back);
@@ -60,7 +35,6 @@
   </script>
 </head>
 <body>
-  <!-- Wrapper pentru stiluri scoped: tot conținutul paginii stă în .offer -->
   <div class="offer">
     <main class="wrap">
       <h1>Înscriere furnizor</h1>
@@ -94,7 +68,7 @@
 
             <label>Telefon *</label>
             <div class="row">
-              <input id="phone" class="grow" placeholder="07..." inputmode="tel"/>
+              <input id="phone" class="grow" placeholder="07..." inputmode="tel" autocomplete="tel"/>
               <button type="button" id="smsSend" class="btn-chip" disabled>Trimite cod</button>
             </div>
             <div class="otp-wrap">
@@ -106,7 +80,7 @@
 
             <label style="margin-top:12px;">Email *</label>
             <div class="row">
-              <input id="email" class="grow" type="email" placeholder="contact@..."/>
+              <input id="email" class="grow" type="email" placeholder="contact@..." autocomplete="email"/>
               <button type="button" id="emlSend" class="btn-chip" disabled>Trimite cod</button>
             </div>
             <div class="otp-wrap">
@@ -120,13 +94,13 @@
             <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
 
             <div class="actions">
-              <button type="button" class="btn-outline" onclick="history.back()">Înapoi</button>
-              <button id="submitBtn" type="submit" disabled>Trimite</button>
+              <button type="button" class="btn-ghost" onclick="history.back()">Înapoi</button>
+              <button id="submitBtn" type="submit" class="btn btn-primary" disabled>Trimite</button>
             </div>
             <div class="msg" id="msg" role="status" aria-live="polite"></div>
           </div>
 
-          <!-- 2) Subcategorii (tab în stânga → copii apar în dreapta, logică neschimbată) -->
+          <!-- 2) Subcategorii -->
           <div class="card">
             <div class="row" style="justify-content:space-between;">
               <h3 style="margin:4px 0;">Subcategorii</h3>
@@ -142,7 +116,7 @@
             <input type="hidden" id="subsub">
           </div>
 
-          <!-- 3) Copii din subcategoriile alese -->
+          <!-- 3) Copii -->
           <div class="card" id="child-wrap" hidden aria-live="polite">
             <div class="child-title">
               <span>Sub-subcategorii (bifează minim 1)</span>
@@ -159,484 +133,7 @@
     </main>
   </div> <!-- end .offer -->
 
-  <!-- ======================== Helpers liste (services/judete/orase) ======================== -->
-  <script>
-    function fillSelect(sel, arr, firstLabel) {
-      sel.innerHTML = '';
-      const first = document.createElement('option');
-      first.value = ''; first.textContent = firstLabel; sel.appendChild(first);
-      (arr||[]).forEach(v=>{
-        const name  = typeof v==='string' ? v : (v.name||v.label||v.text||'');
-        const value = typeof v==='string' ? v : (v.value||v.name||v.id||'');
-        if (!name) return;
-        const o=document.createElement('option'); o.value=value; o.textContent=name; sel.appendChild(o);
-      });
-    }
-
-    async function ajx(url){
-      const r = await fetch(url, { cache:'no-store' });
-      if(!r.ok){
-        const t = await r.text().catch(()=> '');
-        throw new Error(`HTTP ${r.status} ${t}`);
-      }
-      return r.json().catch(()=> { throw new Error('Răspuns invalid (nu e JSON)'); });
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const { services=[], judete=[] } = await ajx('/.netlify/functions/lists?mode=signup');
-
-        const selServ = document.getElementById('service_name');
-        const selJ = document.getElementById('reg_judet');
-        const selO = document.getElementById('reg_oras');
-
-        fillSelect(selServ, services, 'Alege serviciul');
-        fillSelect(selJ, judete,  'Alege județul');
-        fillSelect(selO, [],      'Alege orașul'); selO.disabled=true;
-
-        // NU mai resetăm selecțiile la schimbarea județ/oras
-        selJ.addEventListener('change', async (ev)=>{
-          const judet=ev.target.value;
-          fillSelect(selO, [], 'Alege orașul'); selO.disabled=true;
-          if (judet) {
-            const { orase=[] } = await ajx('/.netlify/functions/lists?mode=signup&judet='+encodeURIComponent(judet));
-            fillSelect(selO, orase, 'Alege orașul'); selO.disabled=false;
-          }
-          updateSubmitState();
-        });
-
-        selO.addEventListener('change', ()=>{ updateSubmitState(); });
-
-        // Reset DOAR când se schimbă serviciul
-        selServ.addEventListener('change', ()=>{ resetForServiceChange(); loadSubcatsForSignup(); updateSubmitState(); });
-
-        if (!selServ.value && services.length){ selServ.value = services[0].name || services[0]; loadSubcatsForSignup(); }
-      } catch(e){ console.error(e); }
-    });
-  </script>
-
-  <!-- ======================== Submit înscriere (folosește window.supa) ======================== -->
-  <script>
-  (async () => {
-    // Așteaptă inițializarea sigură
-    const ok = await window.supabaseReady;
-    if (!ok || !window.supa) {
-      // Dacă nu avem client, nu putem trimite formularul
-      const btn = document.getElementById('submitBtn');
-      if (btn) btn.disabled = true;
-      console.error('Supabase indisponibil – submit dezactivat.');
-      return;
-    }
-
-    document.getElementById('f').addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      if (document.getElementById('submitBtn').disabled) return;
-
-      const form=ev.target, btn=document.getElementById('submitBtn');
-      const originalLabel=btn.textContent;
-      btn.disabled=true; btn.textContent='Se trimite...';
-      const msg=document.getElementById('msg'); msg.className='msg'; msg.textContent='Trimit...';
-
-      let session;
-      try {
-        const res = await window.supa.auth.getSession();
-        session = res?.data?.session || null;
-      } catch (e) {
-        session = null;
-      }
-
-      if (!session?.access_token){
-        msg.classList.add('hint-danger'); msg.textContent='Trebuie să fii autentificat (butonul „Autentificare”).';
-        btn.disabled=false; btn.textContent=originalLabel; return;
-      }
-
-      const selectedChildIds = Array.from(__sel.bySub.values())
-        .flatMap(s => Array.from(s))
-        .map(v => Number(v))
-        .filter(n => Number.isFinite(n));
-
-      const payload = {
-        company_name: document.getElementById('company_name').value.trim(),
-        service_name: document.getElementById('service_name').value,
-        judet:        document.getElementById('reg_judet').value,
-        oras:         document.getElementById('reg_oras').value,
-        phone:        document.getElementById('phone').value,
-        email:        document.getElementById('email').value,
-        description:  document.getElementById('description').value,
-        subcat:       document.getElementById('subcat').value || null,
-        subcat_name:  document.getElementById('subcat_name').value || null,
-        subsub:       document.getElementById('subsub').value || null,
-        subsubs:      selectedChildIds,
-        phone_verified: window.__otp?.phoneVerified || false,
-        email_verified: window.__otp?.emailVerified || false
-      };
-
-      try{
-        const r = await fetch('/.netlify/functions/register_provider', {
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-          body:JSON.stringify(payload)
-        });
-        const data = await r.json().catch(()=> ({}));
-        if (!r.ok) throw new Error(data.error || 'Eroare necunoscută');
-        msg.classList.add('hint-ok'); msg.textContent='Înscriere reușită! Mulțumim.';
-        form.reset(); document.getElementById('reg_oras').disabled=true;
-        document.getElementById('child-wrap').hidden=true;
-        __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-        resetOtpUI();
-        updateSubmitState();
-
-        // după succes, dacă am primit un redirect din query, mergem acolo
-        const p = new URLSearchParams(location.search);
-        const go = p.get('redirectTo');
-        if (go) location.href = go;
-      }catch(e){
-        msg.classList.add('hint-danger'); msg.textContent='Eroare: '+(e.message || 'request fail');
-      }finally{
-        btn.disabled=false; btn.textContent=originalLabel;
-      }
-    });
-  })();
-  </script>
-
-  <!-- ======================== Taxonomy (subcategorii & copii) + OTP ======================== -->
-  <script>
-    // --- State central ---
-    const __sel = { bySub: new Map() };   // subId -> Set(childIds as strings)
-    const __subMeta = new Map();          // subId -> {btn, name, badge}
-    const __cacheChildren = new Map();    // subId -> children[]
-
-    // --- Utils ---
-    function childGroupId(subId){ return 'cg_'+String(subId).replace(/[^a-z0-9_\-]/gi,'_'); }
-    function ensureChildWrapVisible(){ document.getElementById('child-wrap').hidden=false; }
-
-    // setează vizualul pt un singur subId
-    function updateChipVisuals(subId){
-      const meta = __subMeta.get(subId);
-      if (!meta) return;
-      const size = (__sel.bySub.get(subId)?.size || 0);
-      meta.btn.classList.toggle('blue', size > 0);
-      if (meta.badge) meta.badge.textContent = String(size);
-    }
-
-    // reface vizualul pentru TOATE chip-urile
-    function applyBlueFromState(){
-      for (const [subId, meta] of __subMeta.entries()){
-        const size = (__sel.bySub.get(subId)?.size || 0);
-        meta.btn.classList.toggle('blue', size > 0);
-        if (meta.badge) meta.badge.textContent = String(size);
-      }
-    }
-
-    function syncHiddenFromState(){
-      const ids=[], names=[];
-      for (const [key,set] of __sel.bySub.entries()){
-        if (!set.size) continue;
-        const meta = __subMeta.get(key) || {};
-        if (Number.isInteger(key)) ids.push(String(key));
-        else names.push(meta.name || String(key));
-      }
-      document.getElementById('subcat').value = ids.join(',');
-      document.getElementById('subcat_name').value = names.join(',');
-      const firstKid = Array.from(__sel.bySub.values()).flatMap(s=>Array.from(s))[0];
-      document.getElementById('subsub').value = firstKid ? String(firstKid) : '';
-      updateSubmitState();
-    }
-
-    function renderChips(container, items){
-      container.innerHTML=''; __subMeta.clear();
-      items.forEach(it=>{
-        const id = (it.id!=null) ? Number(it.id) : (it.subcat_id!=null ? Number(it.subcat_id) : String(it.name||it.subcat_name||''));
-        const name = it.name ?? it.subcat_name ?? '';
-
-        const btn = document.createElement('button');
-        btn.type='button'; btn.className='chip'; btn.setAttribute('role','tab');
-        const title = document.createElement('span'); title.textContent=name;
-        const badge = document.createElement('span'); badge.className='badge'; badge.textContent='0';
-        btn.appendChild(title); btn.appendChild(badge);
-
-        __subMeta.set(id,{btn,name,badge});
-        btn.addEventListener('click', ()=>toggleChildGroup(id));
-        container.appendChild(btn);
-      });
-
-      // colorează corect pe baza selecțiilor existente
-      applyBlueFromState();
-    }
-
-    function resyncGroupCheckboxes(subId){
-      const group = document.getElementById(childGroupId(subId));
-      if (!group) return;
-      const set = __sel.bySub.get(subId) || new Set();
-      group.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.checked = set.has(String(cb.value));
-        cb.closest('.child-item')?.classList.toggle('on', cb.checked);
-      });
-      updateChipVisuals(subId);
-      applyBlueFromState();
-      updateSubmitState();
-    }
-
-    async function toggleChildGroup(subId){
-      ensureChildWrapVisible();
-      const container = document.getElementById('children');
-      const groupId = childGroupId(subId);
-      let group = document.getElementById(groupId);
-
-      const isOpen = !!group && !group.hidden;
-      if (isOpen){ group.hidden = true; return; }
-
-      if (!group){
-        const kids = await loadChildren(subId);
-        const meta = __subMeta.get(subId) || {};
-
-        group = document.createElement('section'); group.className = 'child-group'; group.id = groupId;
-
-        const title = document.createElement('div'); title.className = 'child-title';
-        const tspan = document.createElement('span'); tspan.textContent = meta.name || ('Subcategorie ' + subId);
-        const ttools = document.createElement('div'); ttools.className = 'tools';
-        const tbtn = document.createElement('button'); tbtn.type='button'; tbtn.className='btn-chip'; tbtn.textContent='Ascunde';
-        tbtn.addEventListener('click', ()=>{ group.hidden = true; });
-        ttools.appendChild(tbtn);
-        title.appendChild(tspan); title.appendChild(ttools);
-        group.appendChild(title);
-
-        const grid = document.createElement('div'); grid.className = 'child-grid';
-        const selectedSet = __sel.bySub.get(subId) || new Set();
-
-        kids.forEach(kid=>{
-          const safeKey = (kid.id != null) ? String(kid.id) : ('n_' + (kid.name || '').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
-          const inputId = `kid_${subId}_${safeKey}`;
-
-          const lab = document.createElement('label'); lab.className = 'child-item'; lab.setAttribute('for', inputId);
-
-          const cb  = document.createElement('input'); cb.type='checkbox'; cb.id=inputId;
-          cb.value  = (kid.id != null) ? String(kid.id) : (kid.name || '');
-          cb.checked = selectedSet.has(String(cb.value));
-          if (cb.checked) lab.classList.add('on');
-
-          cb.addEventListener('change', ()=>{
-            let set = __sel.bySub.get(subId);
-            if (!set){ set = new Set(); __sel.bySub.set(subId, set); }
-
-            const val = String(cb.value);
-            if (cb.checked) set.add(val); else set.delete(val);
-            if (set.size === 0) __sel.bySub.delete(subId);
-
-            lab.classList.toggle('on', cb.checked);
-
-            // reflectă chip-ul + badge
-            updateChipVisuals(subId);
-            // sincronizează hidden fields
-            syncHiddenFromState();
-            // forțează culoarea pe toate chip-urile
-            applyBlueFromState();
-
-            if (Array.from(__sel.bySub.values()).some(s => s.size > 0)){
-              document.getElementById('min1-hint').style.display = 'none';
-            }
-          });
-
-          lab.appendChild(cb);
-          lab.appendChild(document.createTextNode(kid.name + (kid.count ? ` (${kid.count})` : '')));
-          grid.appendChild(lab);
-        });
-
-        group.appendChild(grid);
-        container.appendChild(group);
-      }
-
-      document.querySelectorAll('#children .child-group').forEach(g=>{ g.hidden = (g.id !== groupId) ? true : false; });
-      group.hidden = false;
-      resyncGroupCheckboxes(subId);
-    }
-
-    // Fără filtrare pe judet/oras (furnizorul vede toți copiii posibili)
-    async function loadChildren(subId){
-      if (__cacheChildren.has(subId)) return __cacheChildren.get(subId);
-      const meta = __subMeta.get(subId) || {};
-      const subParam = Number.isInteger(subId) ? String(subId) : (meta.name || String(subId));
-      const { children=[] } = await ajx('/.netlify/functions/taxonomy?mode=children&subcat=' + encodeURIComponent(subParam));
-      __cacheChildren.set(subId, children);
-      return children;
-    }
-
-    // Încarcă subcategoriile DOAR după serviciu (fără judet/oras)
-    async function loadSubcatsForSignup(){
-      const service = document.getElementById('service_name')?.value || '';
-      const cont    = document.getElementById('subcats');
-      const childW  = document.getElementById('child-wrap');
-      const childC  = document.getElementById('children');
-
-      if (!service){
-        cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
-        updateSubmitState(); return;
-      }
-
-      const { subcategories=[] } = await ajx('/.netlify/functions/taxonomy?mode=subcategories&service=' + encodeURIComponent(service));
-      if (!subcategories.length){
-        cont.innerHTML=''; childW.hidden=true; childC.innerHTML='';
-        updateSubmitState(); return;
-      }
-      renderChips(cont, subcategories);
-      updateSubmitState();
-    }
-
-    // Reset DOAR când se schimbă serviciul
-    function resetForServiceChange(){
-      document.getElementById('subcat').value='';
-      document.getElementById('subcat_name').value='';
-      document.getElementById('subsub').value='';
-      __sel.bySub.clear(); __subMeta.clear(); __cacheChildren.clear();
-      const childW  = document.getElementById('child-wrap');
-      const childC  = document.getElementById('children');
-      childW.hidden = true; childC.innerHTML = '';
-      const cont = document.getElementById('subcats');
-      cont.innerHTML = '';
-    }
-
-    // --- OTP + gating buton Trimite ---
-    window.__otp = { phoneVerified:false, emailVerified:false };
-
-    const el = {
-      phone:   document.getElementById('phone'),
-      email:   document.getElementById('email'),
-      smsSend: document.getElementById('smsSend'),
-      smsCode: document.getElementById('smsCode'),
-      smsVerify: document.getElementById('smsVerify'),
-      smsState: document.getElementById('smsState'),
-      smsDot:   document.getElementById('smsDot'),
-      emlSend: document.getElementById('emlSend'),
-      emlCode: document.getElementById('emlCode'),
-      emlVerify: document.getElementById('emlVerify'),
-      emlState: document.getElementById('emlState'),
-      emlDot:   document.getElementById('emlDot'),
-      submit: document.getElementById('submitBtn'),
-      company: document.getElementById('company_name'),
-      service: document.getElementById('service_name'),
-      judet: document.getElementById('reg_judet'),
-      oras: document.getElementById('reg_oras'),
-    };
-
-    function normalizeRO(p){ const s=(p||'').replace(/\s+/g,''); if(/^07\d{8}$/.test(s)) return '+4'+s; if(/^\+?4\d{9,12}$/.test(s)) return s.startsWith('+')?s:'+'+s; return s; }
-    function validPhone(p){ return /^07\d{8}$/.test((p||'').replace(/\s+/g,'')) || /^\+4\d{9,12}$/.test((p||'').replace(/\s+/g,'')); }
-    function validEmail(x){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x||''); }
-
-    function setSmsState(t, kind='warn'){
-      el.smsState.textContent=t;
-      el.smsDot.className='status-dot '+(kind==='ok'?'st-green':kind==='err'?'st-red':'st-amber');
-    }
-    function setEmlState(t, kind='warn'){
-      el.emlState.textContent=t;
-      el.emlDot.className='status-dot '+(kind==='ok'?'st-green':kind==='err'?'st-red':'st-amber');
-    }
-
-    async function startOtp(channel, to){
-      const r = await fetch('/.netlify/functions/otp_start', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ channel, to })
-      });
-      let data={}; try{ data = await r.json(); }catch(_){}
-      if (!r.ok || data.ok!==true) throw new Error(data.error||'Nu am putut trimite codul');
-      return true;
-    }
-    async function verifyOtp(channel, to, code){
-      const r = await fetch('/.netlify/functions/otp_verify', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ channel, to, code })
-      });
-      let data={}; try{ data = await r.json(); }catch(_){}
-      if (!r.ok || data.ok!==true) throw new Error(data.error||'Cod invalid');
-      return true;
-    }
-
-    function resetOtpUI(){
-      __otp.phoneVerified=false; __otp.emailVerified=false;
-      el.smsSend.disabled = !validPhone(el.phone.value);
-      el.smsCode.value=''; el.smsCode.disabled=true; el.smsVerify.disabled=true; setSmsState('Neînceput','warn');
-      el.emlSend.disabled = !validEmail(el.email.value);
-      el.emlCode.value=''; el.emlCode.disabled=true; el.emlVerify.disabled=true; setEmlState('Neînceput','warn');
-      updateSubmitState();
-    }
-
-    el.phone.addEventListener('input', ()=>{
-      __otp.phoneVerified=false;
-      el.smsSend.disabled = !validPhone(el.phone.value);
-      el.smsCode.disabled = true; el.smsVerify.disabled = true; setSmsState('Neînceput','warn');
-      updateSubmitState();
-    });
-    el.email.addEventListener('input', ()=>{
-      __otp.emailVerified=false;
-      el.emlSend.disabled = !validEmail(el.email.value);
-      el.emlCode.disabled = true; el.emlVerify.disabled = true; setEmlState('Neînceput','warn');
-      updateSubmitState();
-    });
-
-    el.smsSend.addEventListener('click', async ()=>{
-      try{
-        el.smsSend.disabled=true;
-        setSmsState('Trimit...', 'warn');
-        await startOtp('sms', normalizeRO(el.phone.value));
-        setSmsState('Trimis. Verifică SMS.', 'warn');
-        el.smsCode.disabled=false; el.smsVerify.disabled=false; el.smsCode.focus();
-      }catch(e){ setSmsState(e.message||'Eroare trimitere', 'err'); }
-      finally{ el.smsSend.disabled = !validPhone(el.phone.value); }
-    });
-
-    el.emlSend.addEventListener('click', async ()=>{
-      try{
-        el.emlSend.disabled=true;
-        setEmlState('Trimit...', 'warn');
-        await startOtp('email', (el.email.value||'').trim());
-        setEmlState('Trimis. Verifică email.', 'warn');
-        el.emlCode.disabled=false; el.emlVerify.disabled=false; el.emlCode.focus();
-      }catch(e){ setEmlState('Eroare trimitere', 'err'); }
-      finally{ el.emlSend.disabled = !validEmail(el.email.value); }
-    });
-
-    el.smsVerify.addEventListener('click', async ()=>{
-      try{
-        el.smsVerify.disabled=true;
-        setSmsState('Verific...', 'warn');
-        await verifyOtp('sms', normalizeRO(el.phone.value), (el.smsCode.value||'').trim());
-        __otp.phoneVerified=true; setSmsState('Verificat', 'ok'); el.smsCode.disabled=true;
-      }catch(e){ setSmsState(e.message||'Cod invalid', 'err'); }
-      finally{ el.smsVerify.disabled=false; updateSubmitState(); }
-    });
-
-    el.emlVerify.addEventListener('click', async ()=>{
-      try{
-        el.emlVerify.disabled=true;
-        setEmlState('Verific...', 'warn');
-        await verifyOtp('email', (el.email.value||'').trim(), (el.emlCode.value||'').trim());
-        __otp.emailVerified=true; setEmlState('Verificat', 'ok'); el.emlCode.disabled=true;
-      }catch(e){ setEmlState(e.message||'Cod invalid', 'err'); }
-      finally{ el.emlVerify.disabled=false; updateSubmitState(); }
-    });
-
-    // gating buton Trimite
-    function hasAnyKid(){ return Array.from(__sel.bySub.values()).some(s=>s.size>0); }
-    function updateSubmitState(){
-      const okCompany = (el.company.value||'').trim().length>1;
-      const okService = !!el.service.value;
-      const okJudet   = !!el.judet.value;
-      const okOras    = !!el.oras.value;
-      const okKids    = hasAnyKid();
-      const okPhoneV  = validPhone(el.phone.value) && __otp.phoneVerified;
-      const okEmailV  = validEmail(el.email.value) && __otp.emailVerified;
-      const allOk = okCompany && okService && okJudet && okOras && okKids && okPhoneV && okEmailV;
-
-      el.submit.disabled = !allOk;
-      el.submit.style.background = allOk ? 'var(--va-primary)' : '#8592a3';
-    }
-
-    ['input','change'].forEach(evt=>{
-      document.getElementById('company_name').addEventListener(evt, updateSubmitState);
-      document.getElementById('service_name').addEventListener(evt, updateSubmitState);
-      document.getElementById('reg_judet').addEventListener(evt, updateSubmitState);
-      document.getElementById('reg_oras').addEventListener(evt, updateSubmitState);
-    });
-
-    // init OTP buttons
-    resetOtpUI();
-  </script>
+  <!-- ========== Scripturi logice (lists.js, taxonomy.js, OTP) ========== -->
+  <script src="./assets/js/ofera-servicii.js"></script>
 </body>
 </html>
