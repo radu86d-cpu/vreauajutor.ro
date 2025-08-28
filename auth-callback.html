@@ -1,45 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ro">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Se finalizează autentificarea…</title>
-  <link rel="stylesheet" href="/style.css" />
-  <style>
-    body {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f9fafb;
-      margin: 0;
-    }
-    .box {
-      padding: 24px;
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      max-width: 480px;
-      text-align: center;
-      background: #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    h1 {
-      font-size: 1.25rem;
-      margin-bottom: 0.5rem;
-      color: #111827;
-    }
-    #state {
-      font-size: 1rem;
-      color: #374151;
-      margin-top: 0.25rem;
-    }
-  </style>
+  <title>Conectare...</title>
 </head>
 <body>
-  <div class="box">
-    <h1>Se finalizează autentificarea…</h1>
-    <p id="state">Te rugăm așteaptă 1–2 secunde.</p>
-  </div>
-  <script type="module" src="/assets/js/auth-callback.js"></script>
+  <p>Se finalizează autentificarea...</p>
+  <script src="/assets/js/auth-basic.js"></script>
+  <script>
+    (async () => {
+      // Dacă vii dintr-un flux OAuth, Supabase finalizează sesiunea automat.
+      const next = new URLSearchParams(location.search).get('next') || '/';
+      setTimeout(()=> location.replace(next), 500);
+    })();
+  </script>
 </body>
 </html>
