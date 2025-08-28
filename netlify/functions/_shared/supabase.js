@@ -2,7 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * În Netlify → Site settings → Environment:
+ * ENV necesare (Netlify → Site settings → Environment):
  *  - SUPABASE_URL
  *  - SUPABASE_ANON_KEY
  *  - (opțional) SUPABASE_SERVICE_ROLE_KEY
@@ -15,18 +15,23 @@ if (!SUPABASE_URL) throw new Error("Missing SUPABASE_URL");
 if (!SUPABASE_ANON_KEY) console.warn("WARN: Missing SUPABASE_ANON_KEY");
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn("WARN: Missing SUPABASE_SERVICE_ROLE_KEY (optional)");
 
-// Clienți reutilizabili
+// Client anonim reutilizabil
 export const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+// Client service-role (dacă există cheia)
 export const sbAdmin = SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
   : null;
 
-// Extrage tokenul de auth din request (Authorization sau cookies)
+/**
+ * Extrage tokenul de auth din request:
+ * - Header: Authorization: Bearer <token>
+ * - Cookie: sb-access-token | sb:token | supabase-auth-token (poate fi JSON)
+ */
 export function getAuthTokenFromRequest(req) {
   const auth = req.headers.get?.("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
@@ -41,8 +46,7 @@ export function getAuthTokenFromRequest(req) {
 
     try {
       const dec = decodeURIComponent(v);
-      // Uneori Supabase pune un JSON în cookie
-      if (dec.startsWith("{") || dec.startsWith("%7B")) {
+      if (dec.startsWith("{")) {
         const obj = JSON.parse(dec);
         const tok =
           obj?.currentSession?.access_token ||
@@ -52,11 +56,9 @@ export function getAuthTokenFromRequest(req) {
       }
       return dec;
     } catch {
-      // dacă nu e JSON, îl întoarcem brut
       return v;
     }
   }
-
   return null;
 }
 
@@ -67,10 +69,10 @@ function getCookie(cookieHeader, name) {
 }
 
 /**
- * supabaseFromRequest(req, { asAdmin })
- *  - Dacă asAdmin:true și există SERVICE_ROLE → întoarce sbAdmin
- *  - Dacă există Bearer token → client cu tokenul atașat pe header
- *  - Altfel → client anonim
+ * Creează un client Supabase pe baza requestului:
+ *  - asAdmin:true → returnează sbAdmin (dacă există)
+ *  - Dacă găsește Bearer token → atașează token-ul pe header
+ *  - Altfel → folosește sbAnon
  */
 export function supabaseFromRequest(req, { asAdmin = false } = {}) {
   if (asAdmin && sbAdmin) return sbAdmin;
