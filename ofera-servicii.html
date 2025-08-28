@@ -1,139 +1,165 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ro">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Înscriere furnizor • VreauAjutor.ro</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Oferă servicii • VreauAjutor.ro</title>
 
-  <!-- CSS global site -->
-  <link rel="stylesheet" href="./style.css"/>
-  <!-- CSS scoped pentru pagina aceasta -->
-  <link rel="stylesheet" href="./assets/css/offer.css?v=4"/>
+  <!-- CSS global + stiluri pagină -->
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/assets/css/offer.css" />
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- GATE: blochează accesul dacă nu ești autentificat -->
-  <script>
-    (async () => {
-      try {
-        const envRes = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await envRes.json();
-        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const { data:{ session } } = await supa.auth.getSession();
-        if (!session) {
-          const back = encodeURIComponent(location.pathname + location.search);
-          location.replace('/index.html?authRequired=1&redirect=' + back);
-        }
-      } catch (e) {
-        console.error('Auth gate error:', e);
-        const back = encodeURIComponent(location.pathname + location.search);
-        location.replace('/index.html?authRequired=1&redirect=' + back);
-      }
-    })();
-  </script>
+  <!-- (opțional) fonturi; poți șterge dacă le gestionezi altfel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 </head>
-<body>
-  <div class="offer">
-    <main class="wrap">
-      <h1>Înscriere furnizor</h1>
-      <div class="subtitle">Completează datele, verifică telefonul și emailul, apoi trimite.</div>
+<body class="offer">
 
-      <form id="f" novalidate>
-        <section class="grid-3">
-          <!-- 1) Detalii furnizor -->
-          <div class="card">
-            <h3 style="margin:4px 0 10px;">Detalii furnizor</h3>
+  <!-- Header simplu (poți folosi header-ul tău global) -->
+  <header>
+    <div class="logo">
+      <a href="/"><img src="/assets/img/logo.svg" alt="VreauAjutor.ro" height="40" /></a>
+    </div>
+    <nav>
+      <a href="/">Acasă</a>
+      <a href="/furnizori.html">Furnizori</a>
+      <a href="/ofera-servicii.html" aria-current="page">Oferă servicii</a>
+      <a href="/contact.html">Contact</a>
+    </nav>
+  </header>
 
-            <label for="company_name">Companie *</label>
-            <input id="company_name" required/>
+  <main class="wrap">
+    <h1>Inscriere furnizor</h1>
+    <p class="subtitle">Completează datele, verifică telefonul și emailul, apoi trimite.</p>
 
-            <label for="service_name">Serviciu *</label>
-            <select id="service_name" required>
-              <option value="">Alege serviciul</option>
-            </select>
+    <div class="stepper" aria-label="Pași">
+      <div class="step active"><span class="dot">1</span> Detalii</div>
+      <div class="step"><span class="dot">2</span> Categorii</div>
+      <div class="step"><span class="dot">3</span> Confirmare</div>
+    </div>
 
-            <label for="reg_judet">Județ *</label>
-            <select id="reg_judet" required>
-              <option value="">Alege județul</option>
-            </select>
+    <div class="grid">
+      <!-- Col stânga: formular -->
+      <section class="card">
+        <form id="offerForm" novalidate>
+          <!-- Detalii furnizor -->
+          <label for="company">Companie *</label>
+          <input id="company" name="company" type="text" placeholder="Numele firmei" required />
 
-            <label for="reg_oras">Oraș *</label>
-            <select id="reg_oras" required disabled>
-              <option value="">Alege orașul</option>
-            </select>
+          <label for="serviceSelect">Serviciu *</label>
+          <select id="serviceSelect" name="service" required>
+            <option value="">Se încarcă...</option>
+          </select>
 
-            <div style="margin-top:6px"></div>
-
-            <label>Telefon *</label>
-            <div class="row">
-              <input id="phone" class="grow" placeholder="07..." inputmode="tel" autocomplete="tel"/>
-              <button type="button" id="smsSend" class="btn-chip" disabled>Trimite cod</button>
-            </div>
-            <div class="otp-wrap">
-              <input id="smsCode" class="code6" maxlength="6" placeholder="cod 6 cifre" inputmode="numeric" disabled/>
-              <button type="button" id="smsVerify" class="btn-chip" disabled>Verifică</button>
-              <span id="smsState" class="hint-warn">Neînceput</span>
-              <span id="smsDot" class="status-dot st-amber" aria-hidden="true"></span>
-            </div>
-
-            <label style="margin-top:12px;">Email *</label>
-            <div class="row">
-              <input id="email" class="grow" type="email" placeholder="contact@..." autocomplete="email"/>
-              <button type="button" id="emlSend" class="btn-chip" disabled>Trimite cod</button>
-            </div>
-            <div class="otp-wrap">
-              <input id="emlCode" class="code6" maxlength="6" placeholder="cod 6 cifre" inputmode="numeric" disabled/>
-              <button type="button" id="emlVerify" class="btn-chip" disabled>Verifică</button>
-              <span id="emlState" class="hint-warn">Neînceput</span>
-              <span id="emlDot" class="status-dot st-amber" aria-hidden="true"></span>
-            </div>
-
-            <label for="description" style="margin-top:12px;">Descriere</label>
-            <textarea id="description" rows="4" placeholder="Ce servicii oferiți, zone acoperite..."></textarea>
-
-            <div class="actions">
-              <button type="button" class="btn-ghost" onclick="history.back()">Înapoi</button>
-              <button id="submitBtn" type="submit" class="btn btn-primary" disabled>Trimite</button>
-            </div>
-            <div class="msg" id="msg" role="status" aria-live="polite"></div>
-          </div>
-
-          <!-- 2) Subcategorii -->
-          <div class="card">
-            <div class="row" style="justify-content:space-between;">
-              <h3 style="margin:4px 0;">Subcategorii</h3>
-              <div class="row">
-                <button type="button" id="subcat-toggle" class="btn-chip">Restrânge</button>
-                <button type="button" id="subcat-reset" class="btn-chip">Reset</button>
+          <div class="cascader" style="margin-top:10px">
+            <div class="pane">
+              <div class="pane-title">Subcategorii</div>
+              <div id="subcats" class="pane-body">
+                <!-- se populează din JS -->
               </div>
             </div>
-            <div id="subcats"></div>
-            <!-- hidden pentru backend -->
-            <input type="hidden" id="subcat">
-            <input type="hidden" id="subcat_name">
-            <input type="hidden" id="subsub">
-          </div>
-
-          <!-- 3) Copii -->
-          <div class="card" id="child-wrap" hidden aria-live="polite">
-            <div class="child-title">
-              <span>Sub-subcategorii (bifează minim 1)</span>
-              <div class="tools">
-                <button type="button" class="btn-chip" id="children-collapse-all">Restrânge toate</button>
-                <button type="button" class="btn-chip" id="children-expand-all">Extinde toate</button>
-                <small id="min1-hint" class="hint-danger" style="display:none;margin-left:6px;">Selectează cel puțin una</small>
+            <div class="pane">
+              <div class="pane-title">Sub-subcategorii</div>
+              <div id="children" class="pane-body">
+                <!-- se populează din JS -->
               </div>
             </div>
-            <div id="children"></div>
           </div>
-        </section>
-      </form>
-    </main>
-  </div> <!-- end .offer -->
 
-  <!-- ========== Scripturi logice (lists.js, taxonomy.js, OTP) ========== -->
-  <script src="./assets/js/ofera-servicii.js"></script>
+          <label for="judet" style="margin-top:12px">Județ *</label>
+          <select id="judet" name="judet" required>
+            <option value="">Alege județul</option>
+          </select>
+
+          <label for="oras">Oraș *</label>
+          <select id="oras" name="oras" required>
+            <option value="">Alege orașul</option>
+          </select>
+
+          <label for="phone">Telefon *</label>
+          <div class="otp-wrap">
+            <input id="phone" name="phone" type="tel" placeholder="07..." />
+            <button id="btnSendOtp" class="btn btn-ghost" type="button" style="flex:0 0 auto">Trimite cod</button>
+          </div>
+
+          <label for="otp">Cod SMS</label>
+          <div class="otp-wrap">
+            <input id="otp" name="otp" class="otp-code" type="text" inputmode="numeric" placeholder="6 cifre" />
+            <button id="btnVerifyOtp" class="btn btn-ghost" type="button" style="flex:0 0 auto">Verifică</button>
+          </div>
+          <div class="hint">După verificare, vei vedea confirmarea „Telefon verificat ✓”.</div>
+
+          <label for="email" style="margin-top:12px">Email</label>
+          <input id="email" name="email" type="email" placeholder="nume@domeniu.ro" />
+
+          <label for="descriere">Descriere</label>
+          <textarea id="descriere" name="descriere" placeholder="Despre firmă, servicii, acoperire, etc."></textarea>
+
+          <div id="formMsg" role="status" aria-live="polite" style="min-height:22px;margin-top:6px"></div>
+
+          <div class="actions">
+            <button type="reset" class="btn btn-ghost">Renunță</button>
+            <button type="submit" class="btn btn-primary">Trimite</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Col dreapta: sumar -->
+      <aside class="card sticky">
+        <h3 style="margin-top:0">Rezumat</h3>
+        <div class="summary" id="liveSummary">
+          <div class="row"><span>Companie</span><strong id="sum-company">—</strong></div>
+          <div class="row"><span>Serviciu</span><strong id="sum-service">—</strong></div>
+          <div class="row"><span>Județ</span><strong id="sum-judet">—</strong></div>
+          <div class="row"><span>Oraș</span><strong id="sum-oras">—</strong></div>
+          <div class="row"><span>Telefon</span><strong id="sum-phone">—</strong></div>
+          <div class="row"><span>Subcategorie</span><strong id="sum-subcat">—</strong></div>
+          <div class="row"><span>Sub-subcategorii</span><strong id="sum-children">—</strong></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- sticky footer pe mobil (opțional) -->
+    <div class="footer-sticky">
+      <button type="button" class="btn btn-ghost" onclick="history.back()">Înapoi</button>
+      <button type="submit" form="offerForm" class="btn btn-primary">Trimite</button>
+    </div>
+  </main>
+
+  <!-- Script global (dacă îl folosești în restul site-ului) -->
+  <script defer src="/script.js"></script>
+
+  <!-- Logica paginii: modulul pe care tocmai l-ai creat -->
+  <script type="module" src="/assets/js/ofera-servicii.js"></script>
+
+  <!-- Mic update live pentru panoul „Rezumat” (fără inline JS în stil blocant) -->
+  <script type="module">
+    const $ = (s) => document.querySelector(s);
+    const fields = [
+      ["#company", "#sum-company"],
+      ["#serviceSelect", "#sum-service"],
+      ["#judet", "#sum-judet"],
+      ["#oras", "#sum-oras"],
+      ["#phone", "#sum-phone"],
+    ];
+    function sync() {
+      for (const [src, dst] of fields) {
+        const el = document.querySelector(src);
+        const out = document.querySelector(dst);
+        if (!el || !out) continue;
+        const val = el.tagName === "SELECT" ? el.options[el.selectedIndex]?.text || "" : el.value || "";
+        out.textContent = val || "—";
+      }
+      // subcat + children sunt umplute din ofera-servicii.js (dacă vrei live, expune-le global)
+    }
+    document.addEventListener("input", sync, { passive: true });
+    document.addEventListener("change", sync, { passive: true });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", sync);
+    } else {
+      sync();
+    }
+  </script>
 </body>
 </html>
