@@ -1,9 +1,9 @@
 /* ===========================
-   VreauAjutor.ro — offer.css (revamp)
+   VreauAjutor.ro — offer.css
    Stiluri SCOPED pe pagina "Oferă servicii"
    =========================== */
 
-/* ---------- Layout & tipografie ---------- */
+/* ---------- Theme & base ---------- */
 .offer {
   --bg: #f6f8fb;
   --fg: #0f172a;          /* slate-900 */
@@ -22,7 +22,10 @@
 }
 
 .offer .wrap{
-  max-width:1180px;margin:2rem auto;background:transparent;padding:0 12px;
+  max-width:1180px;
+  margin:2rem auto;
+  background:transparent;
+  padding:0 12px;
 }
 
 .offer h1{margin:0 0 8px;font-size:clamp(24px,3vw,32px);letter-spacing:-.02em}
@@ -49,22 +52,11 @@
 .offer .grid{
   display:grid;grid-template-columns: 1fr 380px;gap:20px;align-items:start;
 }
-/* folosit în ofera-servicii.html pentru 3 coloane */
-.offer .grid-3{
-  display:grid;grid-template-columns: repeat(3, 1fr);gap:20px;align-items:start;
-}
-@media (max-width:1080px){
-  .offer .grid{grid-template-columns:1fr}
-  .offer .grid-3{grid-template-columns:1fr}
-}
-
 .offer .card{
   background:var(--card);border:1px solid var(--line);border-radius:16px;
   box-shadow:0 8px 28px rgba(16,24,40,.08);padding:16px;
 }
-.offer .sticky{
-  position:sticky;top:14px;
-}
+.offer .sticky{ position:sticky; top:14px; }
 
 /* ---------- Form controls ---------- */
 .offer label{display:block;margin:.6rem 0 .35rem;font-weight:700;font-size:14px;color:#111827}
@@ -81,17 +73,19 @@
 }
 .offer textarea{min-height:110px;resize:vertical}
 
-/* valid/invalid */
+/* valid/invalid ticks */
 .offer input.valid{
-  border-color:#059669;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  border-color:#059669;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 13l4 4L19 7' stroke='%23059669' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px
 }
 .offer input.invalid{
-  border-color:#dc2626;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 6l12 12M18 6L6 18' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  border-color:#dc2626;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 6l12 12M18 6L6 18' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:20px 20px;padding-right:36px
 }
 
-/* ---------- Butoane ---------- */
+/* ---------- Buttons ---------- */
 .offer .btn{
   padding:12px 18px;border:0;cursor:pointer;font-weight:800;border-radius:12px;
   transition:filter .15s,transform .05s, background .15s, border-color .15s;
@@ -105,26 +99,15 @@
 .offer .btn-ghost:hover{background:#f7f9ff}
 .offer .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
 
-/* --- butoane mici (folosite la OTP, reset, expand/collapse) --- */
-.offer .btn-chip{
-  width:auto;display:inline-flex;align-items:center;gap:8px;
-  padding:8px 12px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#111;
-  cursor:pointer;font-weight:700;transition:background .15s,border-color .15s,transform .05s;
-}
-.offer .btn-chip:hover{background:#f7faff}
-.offer .btn-chip:active{transform:translateY(1px)}
-.offer .btn-chip[disabled]{opacity:.6;cursor:not-allowed}
-
 /* ---------- OTP ---------- */
-.offer .otp-wrap{display:flex;gap:10px;align-items:center;margin-top:6px}
-.offer .otp-code,
-.offer .code6{flex:0 0 140px;text-align:center;letter-spacing:.2em}
+.offer .otp-wrap{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.offer .otp-code{flex:0 0 140px;text-align:center;letter-spacing:.2em}
 .offer .status-dot{width:10px;height:10px;border-radius:50%}
 .offer .st-red{background:#e5484d}.offer .st-green{background:#2fb344}.offer .st-amber{background:#f59f00}
 .offer .hint{font-size:12px;color:var(--muted);margin-top:4px}
 .offer .hint-danger{color:#b00020;font-weight:700}
 .offer .hint-ok{color:#1ea759;font-weight:700}
-.offer .hint-warn{color:var(--amber);font-weight:700}
+.offer .hint-warn{color:#b08900;font-weight:700}
 
 /* ---------- Subcategorii (chip-uri) ---------- */
 .offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:6px;max-height:70vh;overflow:auto}
@@ -158,10 +141,6 @@
 .offer .child-item input{margin:0;width:18px;height:18px;accent-color:var(--primary)}
 .offer .child-item.on{background:#f4f7ff;border-color:#99b7ff;box-shadow:0 8px 20px rgba(23,59,206,.10);font-weight:800}
 
-/* grup expandat (creat din JS) */
-.offer .child-group{border:1px solid #e6e8ec;border-radius:14px;padding:10px;margin-top:10px;background:#fff}
-.offer .child-group .child-title{margin:-2px 0 8px;border-bottom:1px solid #eef0f3}
-
 /* ---------- Rezumat lateral ---------- */
 .offer .summary{
   display:flex;flex-direction:column;gap:10px;font-size:14px;color:#111827
@@ -173,6 +152,7 @@
 
 /* ---------- Mobile tweaks ---------- */
 @media (max-width:1080px){
+  .offer .grid{grid-template-columns:1fr}
   .offer .sticky{position:static}
   .offer #subcats{max-height:none}
 }
@@ -181,11 +161,12 @@
   .offer .child-item input{width:22px;height:22px}
 }
 
-/* ---------- Buttons group (dreapta sus în „Subcategorii”) ---------- */
+/* ---------- Buttons group în „Subcategorii” ---------- */
 .offer .btn-bar{display:flex;gap:8px}
-.offer .btn-sm{padding:8px 10px;border-radius:999px;font-weight:700;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+.offer .btn-sm{
+  padding:8px 10px;border-radius:999px;font-weight:700;border:1px solid #e5e7eb;background:#fff;cursor:pointer
+}
 .offer .btn-sm:hover{background:#f7faff}
-.offer .btn-sm[disabled]{opacity:.6;cursor:not-allowed}
 
 /* ---------- Sticky submit pe mobil ---------- */
 @media (max-width:720px){
@@ -218,13 +199,36 @@
   padding:10px;overflow:auto;max-height:60vh;
 }
 
-/* butoanele/“chips” existente arată bine deja; doar mic tuning la layout în coloană */
+/* butoanele/“chips” în coloană */
 .offer #subcats{display:flex;flex-direction:column;gap:8px;margin-top:0;max-height:none;overflow:visible}
 .offer #children{display:flex;flex-direction:column;gap:8px}
 .offer #subcats .chip,
 .offer .child-item{width:100%}
 
-/* pe ecrane mici, trece pe 1 coloană */
+/* pe ecrane mici, 1 coloană */
 @media (max-width:900px){
   .offer .cascader{grid-template-columns:1fr}
+}
+
+/* ---------- Focus vizibil pe elemente interactive ---------- */
+.offer .btn:focus-visible,
+.offer .btn-sm:focus-visible,
+.offer #subcats .chip:focus-visible,
+.offer .child-item:focus-within{
+  outline:2px solid var(--ring);
+  outline-offset:2px;
+}
+
+/* ---------- Mică protecție pentru skeleton text (dacă există) ---------- */
+.offer #subcats .skeleton,
+.offer #children .skeleton {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+/* ---------- Stări subtile pentru elemente dezactivate ---------- */
+.offer #subcats button[disabled],
+.offer #children label[aria-disabled="true"] {
+  opacity:.6;
+  cursor:not-allowed;
 }
