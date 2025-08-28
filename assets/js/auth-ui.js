@@ -1,112 +1,85 @@
 // assets/js/auth-ui.js
-const emailInput = document.querySelector("#email");
-const phoneInput = document.querySelector("#phone");
-const otpBtn = document.querySelector("#btnSendOtp");
-const submitBtn = document.querySelector("#btnSubmit");
-const statusEl = document.querySelector("#phoneStatus");
+// Control pentru modalul de autentificare (login/register)
 
-let phoneVerified = false;
-let otpToken = null;
+(() => {
+  const modal          = document.getElementById("authModal");
+  const btnTabLogin    = document.getElementById("tab-login");
+  const btnTabRegister = document.getElementById("tab-register");
+  const loginPanel     = document.getElementById("loginForm");
+  const registerPanel  = document.getElementById("registerForm");
+  let lastFocused      = null;
+  let trapHandler      = null;
 
-/* === Helpers === */
-// TLD minim 2 caractere, doar litere; restul părților: clasica validare pragmatică.
-function validEmail(v) {
-  return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test((v || "").trim());
-}
-
-function markValid(el, isValid) {
-  if (!el) return;
-  el.classList.toggle("valid", !!isValid);
-  el.classList.toggle("invalid", !isValid && (el.value || "").trim().length > 0);
-}
-
-function refreshSubmitState() {
-  const emailOk = validEmail(emailInput?.value || "");
-  if (submitBtn) submitBtn.disabled = !(emailOk && phoneVerified);
-  markValid(emailInput, emailOk);
-}
-
-function normalizePhone(raw) {
-  let v = (raw || "").trim();
-  if (!v) return v;
-  if (/^0\d{8,}$/.test(v)) v = "+40" + v.slice(1);
-  if (!v.startsWith("+")) v = "+" + v;
-  return v;
-}
-
-function setStatus(msg, cls) {
-  if (!statusEl) return;
-  statusEl.textContent = msg;
-  statusEl.className = "offer-hint " + (cls || "");
-}
-
-/* === Email live validate === */
-emailInput?.addEventListener("input", refreshSubmitState);
-emailInput?.addEventListener("blur", refreshSubmitState);
-
-/* === Dacă utilizatorul schimbă telefonul după verificare -> resetăm === */
-phoneInput?.addEventListener("input", () => {
-  if (phoneVerified) {
-    phoneVerified = false;
-    otpToken = null;
-    localStorage.removeItem("_va_otp");
-    setStatus("Neconfirmat", "");
-    markValid(phoneInput, false);
-    refreshSubmitState();
+  function setTab(isLogin) {
+    btnTabLogin?.classList.toggle("active",  isLogin);
+    btnTabRegister?.classList.toggle("active", !isLogin);
+    btnTabLogin?.setAttribute("aria-selected", String(isLogin));
+    btnTabRegister?.setAttribute("aria-selected", String(!isLogin));
+    loginPanel?.setAttribute("aria-hidden", String(!isLogin));
+    registerPanel?.setAttribute("aria-hidden", String(isLogin));
   }
-});
 
-/* === OTP flow === */
-otpBtn?.addEventListener("click", async () => {
-  let phone = normalizePhone(phoneInput?.value || "");
-  if (!phone) { alert("Introdu numărul de telefon"); return; }
-
-  try {
-    setStatus("Cod trimis... verifică SMS-ul", "pending");
-
-    const r = await fetch("/api/otp_start", {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ phone })
-    }).then(r => r.json());
-
-    if (!r?.ok) {
-      setStatus("Eroare la trimiterea SMS-ului", "error");
-      alert(r?.error || "Eroare la trimiterea codului");
-      return;
+  function trapFocus(e) {
+    if (e.key !== "Tab" || !modal) return;
+    const focusables = modal.querySelectorAll(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
+    );
+    const arr = Array.from(focusables).filter(el => !el.disabled && el.offsetParent !== null);
+    if (!arr.length) return;
+    const first = arr[0], last = arr[arr.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
     }
-
-    const code = prompt("Introdu codul primit prin SMS:");
-    if (!code) { setStatus("Neconfirmat", ""); return; }
-
-    const v = await fetch("/api/otp_verify", {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ phone, code })
-    }).then(r => r.json());
-
-    phoneVerified = !!v?.ok;
-    otpToken = v?.otpToken || null;
-    if (otpToken) localStorage.setItem("_va_otp", otpToken);
-
-    if (phoneVerified) {
-      setStatus("✅ Telefon verificat", "verified");
-      markValid(phoneInput, true);
-    } else {
-      setStatus("Cod invalid sau expirat", "error");
-      markValid(phoneInput, false);
-      alert("Cod invalid");
-    }
-
-    refreshSubmitState();
-  } catch (e) {
-    setStatus("Eroare rețea", "error");
-    alert("Eroare rețea");
   }
-});
 
-/* === Expose token pentru submit === */
-window.__getOtpToken = () => otpToken || localStorage.getItem("_va_otp") || null;
+  function openModal(defaultTab = "login") {
+    lastFocused = document.activeElement;
+    modal.style.display = "block";
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    trapHandler = trapFocus;
+    document.addEventListener("keydown", trapHandler);
+    if (defaultTab === "register") openRegister(); else openLogin();
+  }
 
-/* Init */
-refreshSubmitState();
+  function closeModal() {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", trapHandler);
+    trapHandler = null;
+    lastFocused?.focus?.();
+  }
+
+  function openLogin() {
+    if (!modal) return;
+    loginPanel.style.display    = "block";
+    registerPanel.style.display = "none";
+    setTab(true);
+    document.getElementById("login_email")?.focus();
+  }
+
+  function openRegister() {
+    if (!modal) return;
+    loginPanel.style.display    = "none";
+    registerPanel.style.display = "block";
+    setTab(false);
+    document.getElementById("register_email")?.focus();
+  }
+
+  // expunem global
+  window.openLogin    = () => openModal("login");
+  window.openRegister = () => openModal("register");
+  window.closeAuth    = closeModal;
+
+  // butoane tab
+  btnTabLogin?.addEventListener("click", openLogin);
+  btnTabRegister?.addEventListener("click", openRegister);
+
+  // închidere cu Escape
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+  // click pe overlay
+  modal?.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+})();
