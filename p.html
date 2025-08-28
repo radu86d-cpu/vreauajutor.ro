@@ -1,212 +1,115 @@
 <!doctype html>
 <html lang="ro">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Furnizor</title>
-<link rel="stylesheet" href="style.css">
-<style>
-  .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
-  .hero{display:flex;gap:16px;align-items:center;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px}
-  .cov{width:140px;height:140px;background:#f2f4f8;border-radius:12px;flex:0 0 140px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
-  .prod{background:#fff;border:1px solid #eee;border-radius:12px;padding:10px}
-  .msgbox{margin-top:12px;display:flex;gap:8px}
-  .btn{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#004080;color:#fff;cursor:pointer}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Furnizor - VreauAjutor.ro</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .wrap { max-width:1100px; margin:16px auto; padding:0 12px }
+    .hero { display:flex; gap:16px; align-items:center; background:#fff; border:1px solid #eee; border-radius:12px; padding:12px }
+    .cov { width:140px; height:140px; background:#f2f4f8; border-radius:12px; flex:0 0 140px; object-fit:cover }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-top:12px }
+    .prod { background:#fff; border:1px solid #eee; border-radius:12px; padding:10px }
+    .msgbox { margin-top:12px; display:flex; gap:8px }
+    .btn { padding:8px 12px; border:1px solid #ddd; border-radius:10px; background:#004080; color:#fff; cursor:pointer }
+  </style>
 </head>
 <body>
-  <main class="wrap" id="app">
-    <div class="hero" id="hero" hidden>
-      <div class="cov" id="cover" aria-hidden="true"></div>
+  <main class="wrap">
+    <div class="hero">
+      <img id="cover" class="cov" alt="Cover"/>
       <div>
         <h1 id="title"></h1>
         <div id="meta" style="color:#555"></div>
         <p id="desc"></p>
         <div class="msgbox">
           <input id="msg" placeholder="Scrie un mesaj furnizorului..." style="flex:1;padding:8px;border:1px solid #ccc;border-radius:8px">
-          <button class="btn" id="btnSend" type="button">Trimite</button>
+          <button class="btn" onclick="send()">Trimite</button>
         </div>
       </div>
     </div>
 
-    <div id="empty" class="prod" style="display:none">Nu am găsit furnizorul cerut.</div>
-
-    <h3 id="prodTitle" style="margin-top:16px;display:none">Servicii/produse</h3>
+    <h3>Servicii / produse</h3>
     <div id="prods" class="grid"></div>
   </main>
 
-  <!-- Supabase lib -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- Loader ENV + client Supabase (sigur, reutilizabil) -->
   <script>
-    window.supa = window.supa || null;
-    window.supabaseReady = window.supabaseReady || (async function loadEnvAndInit() {
-      try {
-        const res = await fetch('/.netlify/functions/spa_env', { cache: 'no-store' });
-        if (!res.ok) {
-          console.error('ENV endpoint failed', res.status);
-          return false;
-        }
-        const env = await res.json().catch(()=> ({}));
-        if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-          console.error('ENV invalid', env);
-          return false;
-        }
-        window.supa = window.supa || supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-        return true;
-      } catch (e) {
-        console.error('ENV load failed', e);
-        return false;
-      }
-    })();
-  </script>
+    let provider = null;
 
-  <script>
-    // === Helpers robuste ===
-    async function ajx(url){
-      const r = await fetch(url, { cache:'no-store' });
-      if (!r.ok) {
-        const t = await r.text().catch(()=> '');
-        throw new Error(`HTTP ${r.status} ${t}`);
-      }
-      return r.json().catch(()=> { throw new Error('Răspuns invalid (nu e JSON)'); });
-    }
-    function normalizeRO(s){
-      return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-    }
-    function slugify(name, loc){
-      const n = normalizeRO(name).replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
-      const l = normalizeRO(loc||'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
-      return l ? `${n}-${l}` : n;
-    }
-
-    // === State ===
-    let page = null, provider = null;
-
-    async function boot(){
-      // 1) slug obligatoriu
+    async function boot() {
       const p = new URLSearchParams(location.search);
       const slug = p.get('slug');
-      if (!slug) {
-        document.getElementById('empty').style.display = 'block';
-        document.getElementById('empty').textContent = 'Lipsește parametrul "slug".';
-        return;
+      if (!slug) return;
+
+      try {
+        const r = await fetch('/.netlify/functions/provider_page?slug=' + encodeURIComponent(slug));
+        if (!r.ok) throw new Error("Eroare " + r.status);
+        const json = await r.json();
+
+        provider = json.provider || {};
+        const page = json.page || {};
+        const prods = json.products || [];
+
+        document.getElementById('title').textContent = provider.company_name || "Furnizor";
+        document.getElementById('meta').textContent =
+          `${provider.judet || ''}${provider.oras ? ', ' + provider.oras : ''} · ${provider.service_name || ''}`;
+        document.getElementById('desc').textContent = page.long_description || provider.description || '';
+        if (page.cover_url) {
+          document.getElementById('cover').src = page.cover_url;
+        }
+
+        document.getElementById('prods').innerHTML = prods.map(pr => `
+          <article class="prod">
+            ${pr.image_url ? `<img src="${pr.image_url}" alt="${pr.name}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>` 
+                           : `<div style="height:120px;background:#f7f9fc;border-radius:8px;margin-bottom:6px"></div>`}
+            <strong>${pr.name}</strong><br>
+            <small>${pr.description || ''}</small><br>
+            <b>${pr.price || '-'} ${pr.currency || ''}</b>
+          </article>
+        `).join('');
+      } catch (e) {
+        console.error('Eroare boot:', e);
       }
-
-      // 2) încarcă pagina furnizorului
-      let json;
-      try{
-        json = await ajx('/.netlify/functions/provider_page?slug='+encodeURIComponent(slug));
-      }catch(e){
-        console.error(e);
-        document.getElementById('empty').style.display = 'block';
-        return;
-      }
-
-      page = json.page || {};
-      provider = json.provider || null;
-
-      if (!provider) {
-        document.getElementById('empty').style.display = 'block';
-        return;
-      }
-
-      // 3) Populează UI
-      document.getElementById('hero').hidden = false;
-      const title = provider.company_name || provider.name || 'Furnizor';
-      document.getElementById('title').textContent = title;
-      document.getElementById('meta').textContent = `${provider.judet || ''}${provider.oras ? ', ' + provider.oras : ''} · ${provider.service_name || ''}`;
-      document.getElementById('desc').textContent = page.long_description || provider.description || '';
-
-      // cover
-      const coverUrl = page.cover_url || provider.cover_url || provider.photo_url || provider.logo || 'imagini-chatgpt/no-photo.png';
-      const cov = document.getElementById('cover');
-      cov.style.background = `#f2f4f8 url('${coverUrl}') center/cover no-repeat`;
-
-      // produse/servicii
-      const prodsArr = json.products || [];
-      const prodsEl = document.getElementById('prods');
-      const prodTitle = document.getElementById('prodTitle');
-      prodsEl.innerHTML = '';
-      if (prodsArr.length) {
-        prodTitle.style.display = '';
-        prodsArr.forEach(pr=>{
-          const item = document.createElement('article');
-          item.className = 'prod';
-          const price = (pr.price != null ? pr.price : '-');
-          const cur = pr.currency || '';
-          item.innerHTML = `
-            <div style="height:100px;background:#f7f9fc;border-radius:8px;margin-bottom:6px"></div>
-            <strong>${pr.name || 'Serviciu'}</strong><br>
-            <small>${pr.description ? String(pr.description) : ''}</small><br>
-            <b>${price} ${cur}</b>
-          `;
-          prodsEl.appendChild(item);
-        });
-      } else {
-        prodTitle.style.display = 'none';
-      }
-
-      // 4) Hook mesagerie
-      const btn = document.getElementById('btnSend');
-      const txt = document.getElementById('msg');
-      btn.addEventListener('click', send);
-      txt.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { e.preventDefault(); send(); }});
     }
 
-    async function send(){
-      const body = (document.getElementById('msg').value || '').trim();
+    async function send() {
+      const body = document.getElementById('msg').value.trim();
       if (!body) return;
 
-      // Așteaptă clientul Supabase
-      const ok = await window.supabaseReady;
-      if (!ok || !window.supa) {
-        // Dacă ai modalul din index expus global, îl chemăm
-        if (window.openLogin) { window.openLogin(); return; }
-        alert('Te rugăm autentifică-te înainte să trimiți un mesaj.');
-        return;
-      }
+      try {
+        const env = await fetch('/.netlify/functions/spa_env',{cache:'no-store'}).then(r=>r.json());
+        const supa = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+        const { data:{ session } } = await supa.auth.getSession();
 
-      // Verifică sesiunea
-      let session = null;
-      try{
-        const { data:{ session: s } } = await window.supa.auth.getSession();
-        session = s || null;
-      }catch(e){
-        session = null;
-      }
-      if (!session?.access_token){
-        if (window.openLogin) { window.openLogin(); return; }
-        alert('Te rugăm autentifică-te înainte să trimiți un mesaj.');
-        return;
-      }
+        if (!session?.access_token) {
+          window.openLogin?.(); // deschide modalul global
+          return;
+        }
 
-      // Trimite mesajul către proprietarul provider-ului
-      const btn = document.getElementById('btnSend');
-      const orig = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Se trimite…';
-
-      try{
         const r = await fetch('/.netlify/functions/messages', {
           method: 'POST',
-          headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
-          body: JSON.stringify({ to_provider_id: provider.id, body })
+          headers: {
+            'Content-Type':'application/json',
+            'Authorization':'Bearer '+session.access_token
+          },
+          body: JSON.stringify({ chat_id: provider.id, text: body })
         });
-        const data = await r.json().catch(()=> ({}));
-        if (!r.ok) throw new Error(data.error || 'Eroare la trimitere');
 
-        document.getElementById('msg').value = '';
-        alert('Mesaj trimis!');
-      }catch(e){
-        console.error(e);
-        alert('Eroare: ' + (e.message || 'nu am putut trimite mesajul'));
-      }finally{
-        btn.disabled = false; btn.textContent = orig;
+        if (r.ok) {
+          document.getElementById('msg').value = '';
+          alert('Mesaj trimis!');
+        } else {
+          const err = await r.json().catch(()=>({}));
+          alert('Eroare la trimitere: ' + (err.error || r.status));
+        }
+      } catch (e) {
+        console.error('Send error:', e);
+        alert('Eroare la trimitere.');
       }
     }
 
-    // Start
     boot();
   </script>
 </body>
