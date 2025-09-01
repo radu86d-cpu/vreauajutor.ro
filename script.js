@@ -17,9 +17,7 @@
     showSlide(slideIndex);
   };
 
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)"
-  );
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let autoplay = null;
   const start = () => {
@@ -46,14 +44,10 @@
   }
 
   if (typeof prefersReducedMotion.addEventListener === "function") {
-    prefersReducedMotion.addEventListener("change", (e) =>
-      e.matches ? stop() : start()
-    );
+    prefersReducedMotion.addEventListener("change", (e) => (e.matches ? stop() : start()));
   }
 
-  document.addEventListener("visibilitychange", () =>
-    document.hidden ? stop() : start()
-  );
+  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
   container?.addEventListener("mouseenter", stop);
   container?.addEventListener("mouseleave", start);
 
@@ -95,16 +89,16 @@
 
   window.openLogin = function () {
     openModal();
-    loginPanel.style.display = "block";
-    registerPanel.style.display = "none";
+    if (loginPanel) loginPanel.style.display = "block";
+    if (registerPanel) registerPanel.style.display = "none";
     setTabState(true);
     document.getElementById("login_email")?.focus();
   };
 
   window.openRegister = function () {
     openModal();
-    loginPanel.style.display = "none";
-    registerPanel.style.display = "block";
+    if (loginPanel) loginPanel.style.display = "none";
+    if (registerPanel) registerPanel.style.display = "block";
     setTabState(false);
     document.getElementById("register_email")?.focus();
   };
@@ -120,38 +114,78 @@
   });
 
   // ============================================================
-  //  GARD AUTENTIFICARE pentru „Oferă servicii”
+  //  SUPABASE helpers (client + auth state)
   // ============================================================
-  async function getSupa() {
-    if (window.supa) return window.supa;
-    const r = await fetch("/.netlify/functions/spa_env", { cache: "no-store" });
+  async function ensureSupabase() {
+    if (window.__supaClient) return window.__supaClient;
+
+    // Citește cheile din /api/spa_env
+    const r = await fetch("/api/spa_env", { cache: "no-store", credentials: "omit" });
+    if (!r.ok) throw new Error("Nu pot citi /api/spa_env");
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
-    return window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Lipsesc cheile Supabase");
+
+    // folosește supabase global dacă e încărcat, altfel import ESM on-the-fly
+    let createClient = window.supabase?.createClient;
+    if (!createClient) {
+      const mod = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+      createClient = mod.createClient;
+    }
+    window.__supaClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return window.__supaClient;
   }
 
-  async function isAuthenticated() {
+  async function getCurrentUser() {
     try {
-      const supa = await getSupa();
-      const { data: { session } } = await supa.auth.getSession();
-      return !!session?.access_token;
+      const supa = await ensureSupabase();
+      const { data: { user } } = await supa.auth.getUser();
+      return user || null;
     } catch {
-      return false;
+      return null;
     }
   }
 
+  // ============================================================
+  //  INTENȚIE post-login (next redirect)
+  // ============================================================
+  function setPostAuthRedirect(path) {
+    try {
+      sessionStorage.setItem("postAuthRedirect", path);
+    } catch {}
+  }
+  function clearPostAuthRedirect() {
+    try {
+      sessionStorage.removeItem("postAuthRedirect");
+    } catch {}
+  }
+
+  // ============================================================
+  //  GARD AUTENTIFICARE pentru „Oferă servicii”
+  // ============================================================
   function interceptOfferLinks() {
     document.addEventListener("click", async (e) => {
       const a = e.target.closest("a");
       if (!a) return;
+
       const href = a.getAttribute("href") || "";
+      // Tratează strict linkurile către pagina de ofertă
       if (!href.includes("ofera-servicii.html")) return;
 
-      const ok = await isAuthenticated();
-      if (!ok) {
+      const user = await getCurrentUser();
+      if (!user) {
         e.preventDefault();
         e.stopPropagation();
-        window.openRegister?.();
+        // Marchează intenția clară: după login du-mă la Oferă servicii
+        setPostAuthRedirect("/ofera-servicii.html");
+        // deschide modalul de autentificare (login by default)
+        if (typeof window.openLogin === "function") {
+          window.openLogin();
+        } else {
+          // fallback – dacă nu există modal, mergi pe o pagină de autentificare clasică
+          location.href = "/autentificare.html";
+        }
       }
+      // dacă e logat, lăsăm browserul să navigheze normal
     });
   }
 
@@ -162,7 +196,42 @@
   }
 
   // ============================================================
-  //  AJUTORBOT
+  //  BUTOANE MENIU: Autentificare / Înregistrare
+  //  – nu forțează Oferă servicii; întorc userul în pagina curentă
+  // ============================================================
+  function wireAuthButtons() {
+    const btnLogin = document.getElementById("btnLogin");
+    const btnRegister = document.getElementById("btnRegister");
+
+    const backHere = () => {
+      const next = location.pathname + location.search;
+      setPostAuthRedirect(next || "/");
+    };
+
+    if (btnLogin) {
+      btnLogin.addEventListener("click", (e) => {
+        e.preventDefault();
+        backHere(); // după login revii unde ești
+        if (typeof window.openLogin === "function") window.openLogin();
+      });
+    }
+    if (btnRegister) {
+      btnRegister.addEventListener("click", (e) => {
+        e.preventDefault();
+        backHere(); // după înregistrare revii unde ești
+        if (typeof window.openRegister === "function") window.openRegister();
+      });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireAuthButtons);
+  } else {
+    wireAuthButtons();
+  }
+
+  // ============================================================
+  //  AJUTORBOT (neschimbat funcțional)
   // ============================================================
   window.toggleAjb = function () {
     const w = document.getElementById("ajb-widget");
