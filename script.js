@@ -81,7 +81,7 @@
   function closeModal() {
     if (!modal) return;
     modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true";
+    modal.setAttribute("aria-hidden", "true"); // ✅ FIX: paranteză închisă corect
     document.body.style.overflow = "";
     lastFocused?.focus?.();
     start();
@@ -189,7 +189,7 @@
         e.stopPropagation();
         setPostAuthRedirect("/ofera-servicii.html");
         if (typeof window.openLogin === "function") {
-          window.openLogin(); // login tab by default
+          window.openLogin(); // deschide login
         } else {
           location.href = "/autentificare.html";
         }
