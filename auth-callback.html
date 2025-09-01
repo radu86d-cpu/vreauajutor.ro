@@ -44,66 +44,43 @@
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // 1) Obținem cheile din window.ENV sau, dacă nu există, de la funcția Netlify /api/spa_env
+    function setBox(html){ document.getElementById("box").innerHTML = html; }
+
     async function getEnv() {
-      if (window.ENV?.SUPABASE_URL && window.ENV?.SUPABASE_ANON_KEY) {
-        return { url: window.ENV.SUPABASE_URL, anon: window.ENV.SUPABASE_ANON_KEY };
+      // ia cheile din function: /api/spa_env (configurată în netlify.toml)
+      const r = await fetch("/api/spa_env", { credentials: "omit" });
+      if (!r.ok) throw new Error("Nu pot citi /api/spa_env");
+      const j = await r.json();
+      if (!j.SUPABASE_URL || !j.SUPABASE_ANON_KEY) {
+        throw new Error("Lipsesc SUPABASE_URL/SUPABASE_ANON_KEY din /api/spa_env");
       }
-      // încearcă /api/spa_env (redirecționat spre funcția Netlify spa_env)
-      try {
-        const r = await fetch("/api/spa_env", { credentials: "omit" });
-        if (r.ok) {
-          const j = await r.json();
-          if (j.SUPABASE_URL && j.SUPABASE_ANON_KEY) {
-            return { url: j.SUPABASE_URL, anon: j.SUPABASE_ANON_KEY };
-          }
-        }
-      } catch(_) {}
-      // fallback (în unele setup-uri funcția e direct sub /.netlify/functions/)
-      try {
-        const r = await fetch("/.netlify/functions/spa_env", { credentials: "omit" });
-        if (r.ok) {
-          const j = await r.json();
-          if (j.SUPABASE_URL && j.SUPABASE_ANON_KEY) {
-            return { url: j.SUPABASE_URL, anon: j.SUPABASE_ANON_KEY };
-          }
-        }
-      } catch(_) {}
-      throw new Error("Nu găsesc variabilele Supabase. Definește window.ENV sau funcția /api/spa_env.");
+      return j;
     }
 
-    function setBox(html) { document.getElementById("box").innerHTML = html; }
-
-    // 2) Finalizăm sesiunea și redirecționăm
     (async () => {
       try {
-        const env = await getEnv();
-        const supabase = createClient(env.url, env.anon);
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = await getEnv();
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // În unele cazuri (email confirm ON / magic link), sesiunea vine în URL -> facem exchange
-        // Metoda acceptă fie URL-ul curent, fie hash-ul. Încercăm ambele, ignorând erorile benigne.
+        // finalizează sesiunea dacă linkul conține cod (email confirm/magic link)
         try { await supabase.auth.exchangeCodeForSession(window.location.href); } catch {}
         try { await supabase.auth.exchangeCodeForSession(window.location.hash); } catch {}
 
-        // Verifică sesiunea curentă
+        // verifică sesiunea
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          // Dacă confirm email e OFF, de obicei ai sesiune direct după signUp/login fără să ajungi aici.
-          // Dacă totuși nu există sesiune, afișăm un mesaj util.
           setBox(`
             <h1 class="err">Nu am putut finaliza autentificarea</h1>
             <p>Linkul poate fi expirat sau deja folosit.</p>
             <a class="btn" href="/">Înapoi acasă</a>
-            <p class="tiny">Dacă problema persistă, reia autentificarea din pagina principală.</p>
+            <p class="tiny">Reia autentificarea din pagina principală.</p>
           `);
           return;
         }
 
-        // Opțional: citim utilizatorul (pt. debug / salut)
+        // user & redirect
         const { data: { user } } = await supabase.auth.getUser();
-
-        // Determină destinația (poți pasa ?next=/ofera-servicii.html în linkurile tale)
         const usp = new URLSearchParams(window.location.search);
         const next =
           usp.get("next") ||
@@ -117,8 +94,7 @@
           <p class="tiny">Dacă nu se întâmplă nimic, apasă pe „Continuă”.</p>
         `);
 
-        // Redirecționare rapidă
-        setTimeout(() => { window.location.replace(next); }, 600);
+        setTimeout(() => window.location.replace(next), 600);
 
       } catch (e) {
         console.error(e);
@@ -126,14 +102,10 @@
           <h1 class="err">Eroare de configurare</h1>
           <p>${e?.message || e}</p>
           <a class="btn" href="/">Înapoi acasă</a>
-          <p class="tiny">Verifică variabilele Supabase (ENV sau /api/spa_env).</p>
+          <p class="tiny">Verifică variabilele Netlify și existența rutei /api/spa_env.</p>
         `);
       }
     })();
   </script>
-
-  <!-- Dacă ai deja un script care setează window.ENV, îl poți include aici:
-  <script src="/api/spa_env"></script>
-  -->
 </body>
 </html>
