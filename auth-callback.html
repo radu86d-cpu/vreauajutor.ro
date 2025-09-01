@@ -7,30 +7,18 @@
   <style>
     :root { color-scheme: light dark; }
     html,body{height:100%}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      display:grid; place-items:center; background:#0b5fff10;
-    }
-    .card{
-      background:#fff; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08);
-      max-width:460px; width:92%;
-    }
-    h1{font-size:18px;margin:0 0 8px}
-    p{margin:6px 0 0;color:#444}
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      display:grid; place-items:center; background:#0b5fff10; }
+    .card{ background:#fff; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08);
+      max-width:460px; width:92%; }
+    h1{font-size:18px;margin:0 0 8px} p{margin:6px 0 0;color:#444}
     .muted{color:#6b7280;font-size:14px}
     .row{display:flex;align-items:center;gap:10px;margin-top:8px}
-    .spinner{
-      width:18px;height:18px;border-radius:50%;
-      border:3px solid #D1D5DB;border-top-color:#0B5FFF;animation:spin 1s linear infinite
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .ok{color:#10b981}
-    .err{color:#ef4444}
-    .btn{
-      display:inline-block;margin-top:14px;padding:10px 14px;border-radius:10px;text-decoration:none;
-      background:#0B5FFF;color:#fff
-    }
-    .tiny{font-size:12px;color:#6b7280;margin-top:12px}
+    .spinner{ width:18px;height:18px;border-radius:50%;
+      border:3px solid #D1D5DB;border-top-color:#0B5FFF;animation:spin 1s linear infinite }
+    @keyframes spin{to{transform:rotate(360deg)}} .ok{color:#10b981} .err{color:#ef4444}
+    .btn{ display:inline-block;margin-top:14px;padding:10px 14px;border-radius:10px;text-decoration:none;
+      background:#0B5FFF;color:#fff } .tiny{font-size:12px;color:#6b7280;margin-top:12px}
   </style>
 </head>
 <body>
@@ -40,20 +28,16 @@
     <p class="tiny">Dacă rămâi blocat mai mult de câteva secunde, apasă <a href="/">înapoi la Acasă</a>.</p>
   </div>
 
-  <!-- Supabase v2 via jsDelivr (permis în CSP-ul tău) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
     function setBox(html){ document.getElementById("box").innerHTML = html; }
 
     async function getEnv() {
-      // Ia cheile din function: /api/spa_env (configurată în netlify.toml)
       const r = await fetch("/api/spa_env", { cache: "no-store", credentials: "omit" });
       if (!r.ok) throw new Error("Nu pot citi /api/spa_env");
       const j = await r.json();
-      if (!j.SUPABASE_URL || !j.SUPABASE_ANON_KEY) {
-        throw new Error("Lipsesc SUPABASE_URL/SUPABASE_ANON_KEY din /api/spa_env");
-      }
+      if (!j.SUPABASE_URL || !j.SUPABASE_ANON_KEY) throw new Error("Lipsesc cheile Supabase");
       return j;
     }
 
@@ -62,52 +46,36 @@
         const { SUPABASE_URL, SUPABASE_ANON_KEY } = await getEnv();
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // finalizează sesiunea dacă linkul conține cod (email confirm/magic link)
         try { await supabase.auth.exchangeCodeForSession(window.location.href); } catch {}
         try { await supabase.auth.exchangeCodeForSession(window.location.hash); } catch {}
 
-        // verifică sesiunea
         const { data: { session } } = await supabase.auth.getSession();
-
         if (!session) {
-          setBox(`
-            <h1 class="err">Nu am putut finaliza autentificarea</h1>
-            <p>Linkul poate fi expirat sau deja folosit.</p>
-            <a class="btn" href="/">Înapoi acasă</a>
-            <p class="tiny">Reia autentificarea din pagina principală.</p>
-          `);
+          setBox(`<h1 class="err">Nu am putut finaliza autentificarea</h1>
+                  <p>Linkul poate fi expirat sau deja folosit.</p>
+                  <a class="btn" href="/">Înapoi acasă</a>
+                  <p class="tiny">Reia autentificarea din pagina principală.</p>`);
           return;
         }
 
-        // user & redirect
         const { data: { user } } = await supabase.auth.getUser();
         const usp = new URLSearchParams(window.location.search);
         const storedNext = sessionStorage.getItem("postAuthRedirect");
-        const next =
-          usp.get("next") ||
-          storedNext ||
-          "/"; // <-- fallback acum e ACASĂ, nu /ofera-servicii.html
+        const next = usp.get("next") || storedNext || "/";   // <-- ACASĂ ca fallback
+        sessionStorage.removeItem("postAuthRedirect");        // curăță „intenția”
 
-        // curăță semnul după ce îl folosim
-        sessionStorage.removeItem("postAuthRedirect");
-
-        setBox(`
-          <h1 class="ok">Autentificat${user?.email ? ` ca ${user.email}` : ""}</h1>
-          <p>Te redirecționăm…</p>
-          <a class="btn" href="${next}">Continuă</a>
-          <p class="tiny">Dacă nu se întâmplă nimic, apasă pe „Continuă”.</p>
-        `);
+        setBox(`<h1 class="ok">Autentificat${user?.email ? ` ca ${user.email}` : ""}</h1>
+                <p>Te redirecționăm…</p>
+                <a class="btn" href="${next}">Continuă</a>
+                <p class="tiny">Dacă nu se întâmplă nimic, apasă pe „Continuă”.</p>`);
 
         setTimeout(() => window.location.replace(next), 600);
-
       } catch (e) {
         console.error(e);
-        setBox(`
-          <h1 class="err">Eroare de configurare</h1>
-          <p>${e?.message || e}</p>
-          <a class="btn" href="/">Înapoi acasă</a>
-          <p class="tiny">Verifică variabilele Netlify și existența rutei /api/spa_env.</p>
-        `);
+        setBox(`<h1 class="err">Eroare de configurare</h1>
+                <p>${e?.message || e}</p>
+                <a class="btn" href="/">Înapoi acasă</a>
+                <p class="tiny">Verifică variabilele Netlify și ruta /api/spa_env.</p>`);
       }
     })();
   </script>
