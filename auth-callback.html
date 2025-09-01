@@ -40,15 +40,15 @@
     <p class="tiny">Dacă rămâi blocat mai mult de câteva secunde, apasă <a href="/">înapoi la Acasă</a>.</p>
   </div>
 
-  <!-- Supabase v2 via ESM CDN -->
+  <!-- Supabase v2 via jsDelivr (permis în CSP-ul tău) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
     function setBox(html){ document.getElementById("box").innerHTML = html; }
 
     async function getEnv() {
-      // ia cheile din function: /api/spa_env (configurată în netlify.toml)
-      const r = await fetch("/api/spa_env", { credentials: "omit" });
+      // Ia cheile din function: /api/spa_env (configurată în netlify.toml)
+      const r = await fetch("/api/spa_env", { cache: "no-store", credentials: "omit" });
       if (!r.ok) throw new Error("Nu pot citi /api/spa_env");
       const j = await r.json();
       if (!j.SUPABASE_URL || !j.SUPABASE_ANON_KEY) {
@@ -82,10 +82,14 @@
         // user & redirect
         const { data: { user } } = await supabase.auth.getUser();
         const usp = new URLSearchParams(window.location.search);
+        const storedNext = sessionStorage.getItem("postAuthRedirect");
         const next =
           usp.get("next") ||
-          sessionStorage.getItem("postAuthRedirect") ||
-          "/ofera-servicii.html";
+          storedNext ||
+          "/"; // <-- fallback acum e ACASĂ, nu /ofera-servicii.html
+
+        // curăță semnul după ce îl folosim
+        sessionStorage.removeItem("postAuthRedirect");
 
         setBox(`
           <h1 class="ok">Autentificat${user?.email ? ` ca ${user.email}` : ""}</h1>
