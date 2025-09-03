@@ -25,7 +25,7 @@
     document.addEventListener('DOMContentLoaded', () => { if (window.AOS) AOS.init(); });
   </script>
 
-  <!-- Supabase -->
+  <!-- Supabase (global) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -53,7 +53,6 @@
         <button type="button" onclick="autentificare()">Autentificare</button>
 
         <div class="or">SAU</div>
-        <!-- Social login rapid (redirect direct spre ofera-servicii după auth) -->
         <div class="row">
           <button id="loginGoogle" class="btn google-btn" type="button" aria-label="Continuă cu Google" style="flex:1">
             <span class="google-icon" aria-hidden="true">G</span><span>Google</span>
@@ -106,7 +105,7 @@
     <nav>
       <a href="index.html">Acasă</a>
       <a href="furnizori.html">Furnizori</a>
-      <!-- Linkul „Oferă servicii” este protejat: dacă nu ești autentificat -> deschide modalul -->
+      <!-- Oferă servicii: protejat -->
       <a href="ofera-servicii.html" class="cta-suppliers requires-auth" data-requires-auth="true">Oferă servicii</a>
       <a href="chatbot.html">AjutorBot</a>
     </nav>
@@ -114,12 +113,11 @@
     <div class="auth-buttons">
       <button id="btnLogin" onclick="openLogin()">Autentificare</button>
       <button id="btnRegister" onclick="openRegister()">Înregistrare</button>
-      <!-- link informativ – îl păstrăm dar tot protejat -->
       <a href="ofera-servicii.html" class="link-suppliers requires-auth" data-requires-auth="true">Oferă servicii (pentru firme)</a>
     </div>
   </header>
 
-  <!-- HERO SEARCH (bandă albastră deasupra sliderului) -->
+  <!-- HERO SEARCH (bandă albastră) -->
   <section class="hero-search-band" role="search">
     <form class="hero-search" onsubmit="heroSearch(); return false;">
       <input id="heroQuery" type="search" placeholder="Ex: curățenie Cluj-Napoca"
@@ -137,10 +135,8 @@
     <div class="slider-modern">
       <div class="slider-container">
         <div class="slides" id="slides">
-          <!-- Prima imagine: LCP mai rapid -->
           <img src="imagini-chatgpt/curatenie.png" alt="Curățenie"
                loading="eager" fetchpriority="high" decoding="async">
-          <!-- Restul: lazy -->
           <img src="imagini-chatgpt/instal.png" alt="Instalator" loading="lazy" decoding="async">
           <img src="imagini-chatgpt/mecanic.png" alt="Mecanic" loading="lazy" decoding="async">
           <img src="imagini-chatgpt/transport.png" alt="Transport" loading="lazy" decoding="async">
@@ -169,6 +165,18 @@
       <select id="serviciu" aria-label="Serviciu">
         <option value="" selected>Alege serviciul</option>
       </select>
+
+      <!-- ▼▼ ADĂUGAT: SELECT „OPȚIUNE” vizibil în selectorul principal ▼▼ -->
+      <label for="optiune">Opțiune:</label>
+      <select id="optiune" aria-label="Opțiune">
+        <option value="" selected>Selectează opțiune</option>
+        <option value="pret_fix">Preț fix</option>
+        <option value="negociabil">Negociabil</option>
+        <option value="urgent">Urgent</option>
+        <option value="non_stop">Non-stop</option>
+        <option value="cu_factura">Cu factură</option>
+      </select>
+      <!-- ▲▲ ADĂUGAT: SELECT „OPȚIUNE” ▲▲ -->
 
       <button
         type="button"
@@ -200,7 +208,7 @@
           <input type="checkbox" id="has_photos"> Numai cu fotografii
         </label>
 
-        <!-- Subcategorii + copii (pentru căutare avansată) -->
+        <!-- Subcategorii + copii (avansat) -->
         <div id="subcat-wrap" class="advanced-panel" style="margin-top:10px;" hidden>
           <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
             <strong>Subcategorii</strong>
@@ -293,7 +301,7 @@
   <!-- Slider + modal + accesibilitate + vechiul comportament -->
   <script src="script.js"></script>
 
-  <!-- Helpers pentru AJAX simplu -->
+  <!-- Helpers AJAX -->
   <script>
     async function ajx(url){ const r = await fetch(url); if(!r.ok) throw new Error(await r.text()); return r.json(); }
   </script>
@@ -317,7 +325,7 @@
 
     async function loadJudete() {
       try {
-        const { judete } = await ajx('/.netlify/functions/lists');
+        const { judete } = await ajx('/.netlify/functions/lists'); /* dacă ai deja lists aici, las așa */
         setOptions(elJudet, (judete || []).map(j => ({ value: j, label: j })), 'Alege județul');
         setOptions(elOras, [], 'Alege orașul');
         setOptions(elCategorie, [], 'Alege serviciul');
@@ -369,7 +377,7 @@
       if(!q) return;
       try{
         const { judete = [] } = await ajx('/.netlify/functions/lists');
-        const services = []; // nu filtrăm după listă globală
+        const services = []; // placeholder
         const nQ = normalizeRO(q);
         const svc = services.find(s => nQ.includes(normalizeRO(s)));
         const jud = judete.find(j => nQ.includes(normalizeRO(j)));
@@ -384,7 +392,7 @@
     }
   </script>
 
-  <!-- Subcategorii/copii pentru panoul avansat -->
+  <!-- Subcategorii/copii (avansat) -->
   <script>
     function renderChips(container, items, onClick){
       container.innerHTML = '';
@@ -475,6 +483,8 @@
       const judet    = document.getElementById('judet')?.value || '';
       const oras     = document.getElementById('oras')?.value || '';
       const serviciu = document.getElementById('serviciu')?.value || '';
+      const optiune  = document.getElementById('optiune')?.value || ''; // ◀ nou
+
       const subcat   = document.getElementById('subcat')?.value || '';
       const subsub   = document.getElementById('subsub')?.value || '';
 
@@ -487,6 +497,7 @@
       if (judet)    params.set('judet', judet);
       if (oras)     params.set('oras', oras);
       if (serviciu) params.set('service', serviciu);
+      if (optiune)  params.set('option', optiune);   // ◀ nou
       if (subcat)   params.set('subcat', subcat);
       if (subsub)   params.set('subsub', subsub);
       if (priceMax) params.set('pmax', priceMax);
@@ -496,7 +507,7 @@
 
       window.location.href = 'furnizori.html' + (params.toString() ? '?' + params.toString() : '');
     }
-    ['price_max','rating_min','judet','oras','serviciu'].forEach(id=>{
+    ['price_max','rating_min','judet','oras','serviciu','optiune'].forEach(id=>{
       document.getElementById(id)?.addEventListener('keydown', e=>{
         if (e.key === 'Enter') { e.preventDefault(); gotoFurnizori(); }
       });
@@ -520,9 +531,9 @@
     }
 
     (async () => {
-      // 1) ENV din Netlify
+      // 1) ENV din Netlify (folosește redirectul /api/*)
       try {
-        const r = await fetch('/.netlify/functions/spa_env', { cache:'no-store' });
+        const r = await fetch('/api/spa_env', { cache:'no-store' });
         const { SUPABASE_URL, SUPABASE_ANON_KEY } = await r.json();
         window.supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       } catch(e) {
@@ -560,10 +571,9 @@
             if (!session?.access_token) {
               ev.preventDefault();
               rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
-              openRegister(); // sau openLogin(); alegem Register ca default
+              openRegister(); // sau openLogin()
             }
           } catch(e) {
-            // dacă supa nu e gata, tot protejez: deschid modalul
             ev.preventDefault();
             rememberRedirect(a.getAttribute('href') || '/ofera-servicii.html');
             openRegister();
@@ -574,7 +584,6 @@
       // 4) Dacă venim dintr-un flux de login care a setat redirect-ul
       const pending = consumeRedirect();
       if (pending) {
-        // dacă deja suntem logați, du-ne acum
         try {
           const { data:{ session } } = await window.supa.auth.getSession();
           if (session?.access_token) location.replace(pending);
@@ -583,9 +592,8 @@
     })();
   </script>
 
-  <!-- ================== Email/parolă + Social (cu redirect spre ofera-servicii) ================== -->
+  <!-- Email/parolă + Social (cu redirect spre ofera-servicii) -->
   <script>
-    // Mesaj mic în modal
     function toastMsg(t, ok=false){
       try{
         const el = document.getElementById('authTitle');
@@ -595,7 +603,6 @@
     }
     const validPass = (p)=> /(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}/.test(p||'');
 
-    // Social OAuth: mereu cu redirect către ofera-servicii.html
     async function startOAuth(provider){
       if (!window.supa) return;
       try{
@@ -603,12 +610,9 @@
         await window.supa.auth.signInWithOAuth({
           provider,
           options: { redirectTo: window.location.origin + '/auth-callback.html' }
-          // Notă: auth-callback.html va face exchange și apoi te întoarce pe /
-          // iar în onload mai sus te ducem înapoi către redirectul reținut
         });
       }catch(e){ toastMsg(e.message || 'Nu am putut porni autentificarea.'); }
     }
-    // Hook butoane social din ambele tab-uri
     document.getElementById('loginGoogle')   ?.addEventListener('click', ()=> startOAuth('google'));
     document.getElementById('loginApple')    ?.addEventListener('click', ()=> startOAuth('apple'));
     document.getElementById('loginFacebook') ?.addEventListener('click', ()=> startOAuth('facebook'));
@@ -616,7 +620,6 @@
     document.getElementById('registerApple') ?.addEventListener('click', ()=> startOAuth('apple'));
     document.getElementById('registerFacebook')?.addEventListener('click', ()=> startOAuth('facebook'));
 
-    // Înregistrare cu email/parolă -> după confirmarea emailului redirect spre ofera-servicii.html
     async function inregistrare(){
       const email = document.getElementById('register_email')?.value?.trim();
       const pass  = document.getElementById('register_password')?.value||'';
@@ -639,7 +642,6 @@
       }catch(e){ alert('Eroare: ' + (e.message || 'nu s-a putut crea contul')); }
     }
 
-    // Autentificare cu email/parolă -> redirect imediat către ofera-servicii.html
     async function autentificare(){
       const email = document.getElementById('login_email')?.value?.trim();
       const pass  = document.getElementById('login_password')?.value||'';
@@ -654,12 +656,11 @@
       }catch(e){ alert('Eroare: ' + (e.message || 'nu te-am putut autentifica')); }
     }
 
-    // expunem pe window pentru butoanele din HTML
     window.inregistrare = inregistrare;
     window.autentificare = autentificare;
   </script>
 
-  <!-- AjutorBot – widget (apel API prin Netlify redirect) -->
+  <!-- AjutorBot – widget -->
   <script>
     const AJB_API = new URLSearchParams(location.search).get('api') || '/chat';
 
